@@ -1,5 +1,7 @@
 import time
-from typing import List
+import functools
+from typing import List, Callable
+import inspect
 
 
 class TimeComputer:
@@ -37,3 +39,62 @@ class TimeComputer:
             avg_time *= 1000
         return avg_time
 
+
+class TraceDecorator:
+    def __init__(self, func: Callable, verbose: bool = False):
+        self.func = func
+        self.verbose = verbose
+
+    def __call__(self, *args, **kwargs):
+        ...
+        # use self.param1
+        result = self.func(*args, **kwargs)
+        # use self.param2
+        return result
+
+
+def trace(verbose=None):
+
+    def inner_function(func):
+
+        # Get arguments
+        argspecs = inspect.getfullargspec(func)
+        function_args = inspect.signature(func)
+        args_len = len(argspecs.args)
+
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            args_repr = [repr(a) for a in args]  # 1
+            kwargs_repr = [f"{k}={v!r}" for k, v in kwargs.items()]  # 2
+            signature = ", ".join(args_repr + kwargs_repr)  # 3
+            if verbose:
+                input_log = f"Tracing {func.__name__}{function_args}. " \
+                            f"Called with following values: {func.__name__}, {args} -- {kwargs}"
+                print(input_log)
+                print(argspecs)
+
+            print(f"Calling {func.__name__}({signature})")
+            value = func(*args, **kwargs)
+            print(f"{func.__name__!r} returned {value!r}")  # 4
+            return value
+        # print(argspecs)
+        # for i in range(args_len):
+        #     try
+        #
+        # input_log = f"Tracing {func.__name__}{function_args}. " \
+        #             f"Called with following values: {func.__name__}, {args} -- {kwargs}"
+        # if file is None:
+        #     print(input_log)
+        # output = func(*args, **kwargs)
+        # return output
+        return wrapper
+    return inner_function
+
+
+@trace(verbose=True)
+def hi(name, teemo, num = 20, crazy = ''):
+    print(f"Hi, {name}, {teemo},{num}, {crazy}")
+
+
+if __name__ == "__main__":
+    hi("yee", "Captain teemo on duty", crazy=13333)
