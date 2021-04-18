@@ -19,7 +19,7 @@ class TimeComputer:
 
     def __init__(self, accumulated_time: List) -> None:
         if not isinstance(accumulated_time, list):
-            raise TypeError(f"accumulated_time must be a list. "
+            raise TypeError(f"Accumulated_time must be a list. "
                             f"Passed in type: {type(accumulated_time)}")
         self.accumulated_time = accumulated_time
 
