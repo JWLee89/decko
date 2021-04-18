@@ -1,5 +1,5 @@
 # yeezy
 
-A simple utility belt for developers to help them in their daily lives. Yee!
+A simple utility belt for Python developers. Yee ...
 
 ![yee.png](yee.png)
