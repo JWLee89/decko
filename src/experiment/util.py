@@ -1,3 +1,4 @@
+import copy
 import time
 import functools
 from typing import List, Callable
@@ -44,6 +45,8 @@ class TraceDecorator:
     def __init__(self, func: Callable, verbose: bool = False):
         self.func = func
         self.verbose = verbose
+        self.default_index = 0
+        self.argspecs = inspect.getfullargspec(func)
 
     def __call__(self, *args, **kwargs):
         ...
@@ -51,6 +54,27 @@ class TraceDecorator:
         result = self.func(*args, **kwargs)
         # use self.param2
         return result
+
+    def get_default_values(self, *args, **kwargs):
+        args_repr = [repr(a) for a in args]  # 1
+        default_index = 0
+        function_input_str = "Debug: calling --> " + self.func.__name__ + '('
+        for i, test in enumerate(args):
+            if i < len(args):
+                function_input_str += args_repr[i]
+            elif i >= len(args) and test not in kwargs:
+                function_input_str += f"{test}={self.argspecs.defaults[default_index]}"
+                default_index += 1
+            else:
+                function_input_str += f"{test}={kwargs[test]}"
+            # Add commas and space
+            function_input_str += ','
+            function_input_str += ' '
+
+        # remove trailing ', '
+        function_input_str = function_input_str[:-2]
+        function_input_str += ')'
+        return function_input_str
 
 
 def trace(verbose=None):
@@ -60,12 +84,32 @@ def trace(verbose=None):
         # Get arguments
         argspecs = inspect.getfullargspec(func)
         function_args = inspect.signature(func)
-        args_len = len(argspecs.args)
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             args_repr = [repr(a) for a in args]  # 1
             kwargs_repr = [f"{k}={v!r}" for k, v in kwargs.items()]  # 2
+            default_index = 0
+            warning_str = ''
+            function_input_str = "Debug: calling --> " + func.__name__ + '('
+            for i, test in enumerate(argspecs.args):
+                if i < len(args):
+                    value = args_repr[i]
+                elif i >= len(args) and test not in kwargs:
+                    value = argspecs.defaults[default_index]
+                    default_index += 1
+                else:
+                    value = kwargs[test]
+
+                function_input_str += f"{test}={value}"
+                function_input_str += ','
+                function_input_str += ' '
+
+            # remove trailing ', '
+            function_input_str = function_input_str[:-2]
+            function_input_str += ')'
+            print(function_input_str)
+
             signature = ", ".join(args_repr + kwargs_repr)  # 3
             if verbose:
                 input_log = f"Tracing {func.__name__}{function_args}. " \
@@ -74,7 +118,18 @@ def trace(verbose=None):
                 print(argspecs)
 
             print(f"Calling {func.__name__}({signature})")
+
+
+            deep_cpy_args = copy.deepcopy(args)
+            deep_cpy_kwargs = copy.deepcopy(kwargs)
             value = func(*args, **kwargs)
+
+            if deep_cpy_args != args:
+                print("args has been modified")
+
+            if deep_cpy_kwargs != kwargs:
+                print("kwargs has been modified")
+
             print(f"{func.__name__!r} returned {value!r}")  # 4
             return value
         # print(argspecs)
@@ -93,8 +148,10 @@ def trace(verbose=None):
 
 @trace(verbose=True)
 def hi(name, teemo, num = 20, crazy = ''):
+    teemo = "captain teeto on duteeeee"
+    crazy.append(5)
     print(f"Hi, {name}, {teemo},{num}, {crazy}")
 
 
 if __name__ == "__main__":
-    hi("yee", "Captain teemo on duty", crazy=13333)
+    hi("yee", "Captain teemo on duty", crazy=[1, 2, 3, 4])
