@@ -1,19 +1,19 @@
 import copy
 import time
 import functools
-from typing import List, Callable
+from typing import List, Callable, Union
 import inspect
 import sys
-
+from functools import wraps
 
 try:
-    from contextlib import contextmanager
+    from contextlib import ContextDecorator
 except ImportError:
     raise ImportError('cannot import contextmanager from contextlib. '
                       f'Current python version: {sys.version_info}. Requires version >= 3.2')
 
 
-class TimeComputer:
+class TimeComputer(ContextDecorator):
     """
     Class for running experiments for computing the average time taken
     to perform computation over a series of N runs. Example:
@@ -25,21 +25,64 @@ class TimeComputer:
             items = list(range(100000))
      print(f"Avg time elapsed: {TimeComputer.compute_avg_time(time_elapsed_ms, unit=TimeComputer.Units.MS)}")
     """
+
+    # TODO: See if there is a better way of doing things
     class Units:
         MS = 'milliseconds'
+        NS = 'nanoseconds'
 
-    def __init__(self, accumulated_time: List) -> None:
-        if not isinstance(accumulated_time, list):
-            raise TypeError(f"Accumulated_time must be a list. "
-                            f"Passed in type: {type(accumulated_time)}")
-        self.accumulated_time = accumulated_time
+    def __init__(self,
+                 accumulated_time: Union[None, List] = None,
+                 log_interval: int = 1,
+                 log_callback: Callable = print) -> None:
+        self._accumulated_time = accumulated_time
+        self.log_interval = log_interval
+        self.log_callback = log_callback
+
+        # Determines how to handle computation
+        self._handle_computation = None
+
+        self.run_count = 0
+        print("yee")
+        self._init()
 
     def __enter__(self) -> None:
+        self.run_count += 1
+        print(f"Run count: {self.run_count}")
         self.start_time = time.time()
+
+    def _init(self) -> None:
+        self._validate()
+        if isinstance(self._accumulated_time, list):
+            self._handle_computation = self._append_to_list
+        else:
+            self._accumulated_time = 0
+            self._handle_computation = self._compute_int
+
+    def _compute_int(self, time_elapsed: float) -> None:
+        self._accumulated_time += time_elapsed
+
+    def _append_to_list(self, time_elapsed: float) -> None:
+        self._accumulated_time.append(time_elapsed)
+
+    def _validate(self):
+        if not isinstance(self._accumulated_time, list) and self._accumulated_time is not None:
+            raise TypeError(f"Accumulated_time must be a list or None. "
+                            f"Passed in type: {type(self._accumulated_time)}")
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         time_elapsed = time.time() - self.start_time
-        self.accumulated_time.append(time_elapsed)
+        self._handle_computation(time_elapsed)
+        if self.run_count % self.log_interval == 0:
+            self.log_callback(self._accumulated_time, self.run_count)
+
+    # def __call__(self, func):
+    #     print("test")
+    #     @wraps(func)
+    #     def inner(*args, **kwargs):
+    #         with self:
+    #             return func(*args, **kwargs)
+    #     return inner
 
     @staticmethod
     def compute_avg_time(time_list: List, unit: str = None) -> float:
@@ -91,6 +134,7 @@ def trace(silent: bool = True, path: str = None):
     wrapped function called during the
     :param path: If specified, the log will be stored in the specified file
     """
+
     def inner_function(func, count={}):
 
         # Get arguments
@@ -105,7 +149,6 @@ def trace(silent: bool = True, path: str = None):
 
             # Update state variables
             count[func] += 1
-
 
             args_repr = [repr(a) for a in args]  # 1
             kwargs_repr = [f"{k}={v!r}" for k, v in kwargs.items()]  # 2
@@ -133,7 +176,6 @@ def trace(silent: bool = True, path: str = None):
             signature = ", ".join(args_repr + kwargs_repr)  # 3
             print(f"Calling {func.__name__}({signature})")
 
-
             deep_cpy_args = copy.deepcopy(args)
             deep_cpy_kwargs = copy.deepcopy(kwargs)
             value = func(*args, **kwargs)
@@ -146,6 +188,7 @@ def trace(silent: bool = True, path: str = None):
 
             print(f"{func.__name__!r} returned {value!r}")  # 4
             return value
+
         # print(argspecs)
         # for i in range(args_len):
         #     try
@@ -157,16 +200,28 @@ def trace(silent: bool = True, path: str = None):
         # output = func(*args, **kwargs)
         # return output
         return wrapper
+
     return inner_function
 
 
+def log_num(time_elapsed, run_count: int):
+    print(f"Here is how I want to handle this function: {time_elapsed}, Run count: {run_count}, Avg: {time_elapsed / run_count}")
+
+
 @trace(silent=True)
-def hi(name, teemo, num = 20, crazy = ''):
+def hi(name, teemo, num=20, crazy=''):
     teemo = "captain teeto on duteeeee"
     crazy.append(5)
     print(f"Hi, {name}, {teemo},{num}, {crazy}")
 
 
+@TimeComputer(log_interval=5, log_callback=log_num)
+def create_long_list(n = 1000000):
+    test_list = list(range(n))
+    return test_list
+
+
 if __name__ == "__main__":
     for i in range(10):
-        hi("yee", "Captain teemo on duty", crazy=[1, 2, 3, 4])
+        test_list = create_long_list()
+        # hi("yee", "Captain teemo on duty", crazy=[1, 2, 3, 4])
