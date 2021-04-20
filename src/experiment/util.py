@@ -43,7 +43,6 @@ class TimeComputer(ContextDecorator):
         self._handle_computation = None
 
         self.run_count = 0
-        print("yee")
         self._init()
 
     def __enter__(self) -> None:
@@ -67,8 +66,12 @@ class TimeComputer(ContextDecorator):
 
     def _validate(self):
         if not isinstance(self._accumulated_time, list) and self._accumulated_time is not None:
-            raise TypeError(f"Accumulated_time must be a list or None. "
-                            f"Passed in type: {type(self._accumulated_time)}")
+            # Case: passed in decorator as follows: @TimeComputer
+            if isinstance(self._accumulated_time, Callable):
+                self._accumulated_time = 0
+            else:
+                raise TypeError(f"Accumulated_time must be a list or None. "
+                                f"Passed in type: {type(self._accumulated_time)}")
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         time_elapsed = time.time() - self.start_time
@@ -126,6 +129,10 @@ class TraceDecorator:
         function_input_str = function_input_str[:-2]
         function_input_str += ')'
         return function_input_str
+
+
+time_compute = TimeComputer
+
 
 
 def trace(silent: bool = True, path: str = None):
@@ -215,13 +222,13 @@ def hi(name, teemo, num=20, crazy=''):
     print(f"Hi, {name}, {teemo},{num}, {crazy}")
 
 
-@TimeComputer(log_interval=5, log_callback=log_num)
-def create_long_list(n = 1000000):
-    test_list = list(range(n))
-    return test_list
+# @TimeComputer(log_interval=5, log_callback=log_num)
+@time_compute()
+def create_long_list(n: int = 1000000):
+    return list(range(n))
 
 
 if __name__ == "__main__":
     for i in range(10):
-        test_list = create_long_list()
+        test_list = create_long_list(10000000)
         # hi("yee", "Captain teemo on duty", crazy=[1, 2, 3, 4])
