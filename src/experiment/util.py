@@ -3,6 +3,14 @@ import time
 import functools
 from typing import List, Callable
 import inspect
+import sys
+
+
+try:
+    from contextlib import contextmanager
+except ImportError:
+    raise ImportError('cannot import contextmanager from contextlib. '
+                      f'Current python version: {sys.version_info}. Requires version >= 3.2')
 
 
 class TimeComputer:
@@ -77,21 +85,33 @@ class TraceDecorator:
         return function_input_str
 
 
-def trace(verbose=None):
-
-    def inner_function(func):
+def trace(silent: bool = True, path: str = None):
+    """
+    :param silent: Silently accumulates statistics regarding the
+    wrapped function called during the
+    :param path: If specified, the log will be stored in the specified file
+    """
+    def inner_function(func, count={}):
 
         # Get arguments
         argspecs = inspect.getfullargspec(func)
         function_args = inspect.signature(func)
 
+        # State variables
+        count[func] = 0
+
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
+
+            # Update state variables
+            count[func] += 1
+
+
             args_repr = [repr(a) for a in args]  # 1
             kwargs_repr = [f"{k}={v!r}" for k, v in kwargs.items()]  # 2
             default_index = 0
             warning_str = ''
-            function_input_str = "Debug: calling --> " + func.__name__ + '('
+            function_input_str = "Debug: " + func.__name__ + '('
             for i, test in enumerate(argspecs.args):
                 if i < len(args):
                     value = args_repr[i]
@@ -107,16 +127,10 @@ def trace(verbose=None):
 
             # remove trailing ', '
             function_input_str = function_input_str[:-2]
-            function_input_str += ')'
+            function_input_str += f') called {count[func]} times.'
             print(function_input_str)
 
             signature = ", ".join(args_repr + kwargs_repr)  # 3
-            if verbose:
-                input_log = f"Tracing {func.__name__}{function_args}. " \
-                            f"Called with following values: {func.__name__}, {args} -- {kwargs}"
-                print(input_log)
-                print(argspecs)
-
             print(f"Calling {func.__name__}({signature})")
 
 
@@ -146,7 +160,7 @@ def trace(verbose=None):
     return inner_function
 
 
-@trace(verbose=True)
+@trace(silent=True)
 def hi(name, teemo, num = 20, crazy = ''):
     teemo = "captain teeto on duteeeee"
     crazy.append(5)
@@ -154,4 +168,5 @@ def hi(name, teemo, num = 20, crazy = ''):
 
 
 if __name__ == "__main__":
-    hi("yee", "Captain teemo on duty", crazy=[1, 2, 3, 4])
+    for i in range(10):
+        hi("yee", "Captain teemo on duty", crazy=[1, 2, 3, 4])
