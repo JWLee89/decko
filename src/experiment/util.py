@@ -4,6 +4,7 @@ import functools
 from typing import List, Callable, Union
 import inspect
 import sys
+import numba
 from functools import wraps
 
 try:
@@ -130,9 +131,9 @@ class TraceDecorator:
         function_input_str += ')'
         return function_input_str
 
-
+# make TimeComputer callable via using a function_like
+# wrapper
 time_compute = TimeComputer
-
 
 
 def trace(silent: bool = True, path: str = None):
@@ -142,8 +143,8 @@ def trace(silent: bool = True, path: str = None):
     :param path: If specified, the log will be stored in the specified file
     """
 
-    def inner_function(func, count={}):
-
+    def inner_function(func):
+        count = {}
         # Get arguments
         argspecs = inspect.getfullargspec(func)
         function_args = inspect.signature(func)
@@ -212,7 +213,8 @@ def trace(silent: bool = True, path: str = None):
 
 
 def log_num(time_elapsed, run_count: int):
-    print(f"Here is how I want to handle this function: {time_elapsed}, Run count: {run_count}, Avg: {time_elapsed / run_count}")
+    print(f"Time elapsed {time_elapsed:.3f} ms, "
+          f"Run count: {run_count}, Avg: {(time_elapsed / run_count):.3f} ms")
 
 
 @trace(silent=True)
@@ -223,7 +225,8 @@ def hi(name, teemo, num=20, crazy=''):
 
 
 # @TimeComputer(log_interval=5, log_callback=log_num)
-@time_compute()
+# @time_compute(log_callback=log_num)
+@time_compute
 def create_long_list(n: int = 1000000):
     return list(range(n))
 
