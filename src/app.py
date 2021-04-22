@@ -19,6 +19,10 @@ class Yeezy:
         # E.g. "do_work" -- <Callable>
         self.debug_functions = {}
 
+        # Dictionary of custom decorators added by users
+        # Warning: do not modify this dictionary as it may cause unexpected behaviors
+        self.custom_decorators = {}
+
     def trace(self) -> Callable:
         """
         Used for running the trace function
@@ -29,7 +33,9 @@ class Yeezy:
         :rtype:
         """
 
+    def register_decorator(self, decorator_name, *args, **kwargs):
+        if decorator_name in self.custom_decorators:
+           print(f"Warning: decorator name already exist ... Overwriting ...")
+
     def __repr__(self) -> str:
         return "Yee ... yeezy :)"
-
-
