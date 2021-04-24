@@ -12,11 +12,12 @@ class Yeezy:
     -
     """
     def __init__(self,
-                 root_path: str = None):
+                 root_path: str = os.getcwd()):
 
         #: Absolute path to the package on the filesystem. Used to look
         #: up resources contained in the package.
         self.root_path = root_path
+        print(f"Self.root: {root_path}")
 
         # Dictionary mapping function names to debug functions
         # E.g. "do_work" -- <Callable>
@@ -49,3 +50,8 @@ class Yeezy:
         :return:
         :rtype:
         """
+        pass
+
+
+if __name__ == "__main__":
+    yee = Yeezy()
