@@ -1,5 +1,4 @@
-import pytest
-from src.app import Yeezy
+from src.yeezy.app import Yeezy
 
 yee = Yeezy(__file__)
 

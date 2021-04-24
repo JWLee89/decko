@@ -191,6 +191,11 @@ class TraceDecorator:
 # wrapper
 # time_compute = TimeComputer
 
+def check_key_values(orig_items, item_copy):
+    for key in orig_items:
+        key, original, after = key, 
+        print(f"key: {key}, val: {orig_items[key]}, orig: {item_copy[key]}")
+
 
 def trace(silent: bool = True, path: str = None, truncate_from = 200):
     """
@@ -261,15 +266,16 @@ def trace(silent: bool = True, path: str = None, truncate_from = 200):
             write_function(f"Calling {function_name}({signature})")
 
             deep_cpy_args = copy.deepcopy(args)
-            deep_cpy_kwargs = copy.deepcopy(kwargs)
+            original_kwargs = copy.deepcopy(kwargs)
             value = func(*args, **kwargs)
 
-            # Check if function input has been changed ...
+            # Check if function input has been modified ...
             if deep_cpy_args != args:
                 write_function("args has been modified")
 
-            if deep_cpy_kwargs != kwargs:
+            if original_kwargs != kwargs:
                 write_function("kwargs has been modified")
+                check_key_values(original_kwargs, kwargs)
 
             write_function(f"{func.__name__!r} returned {value!r}")  # 4
 
@@ -319,11 +325,11 @@ def do_something(name, num=10):
 
 if __name__ == "__main__":
     large_ass_num = 10000000
-    do_something("yee ...", 20)
-    do_something("yee ...", 20)
+    # do_something("yee ...", 20)
+    # do_something("yee ...", 20)
 
-    for i in range(10):
-        test_list = create_long_list(large_ass_num)
+    # for i in range(10):
+    #     test_list = create_long_list(large_ass_num)
     hi("yee", "Captain teemo on duty", crazy=[1, 2, 3, 4])
 
 

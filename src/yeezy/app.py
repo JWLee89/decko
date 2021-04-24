@@ -6,7 +6,10 @@ from typing import Callable
 class Yeezy:
     """
     Yeeeee ....
-    Entry point of the application
+    Entry point of the application.
+    Architected as follows:
+
+    -
     """
     def __init__(self,
                  root_path: str = None):
@@ -23,7 +26,7 @@ class Yeezy:
         # Warning: do not modify this dictionary as it may cause unexpected behaviors
         self.custom_decorators = {}
 
-    def trace(self) -> Callable:
+    def debug(self) -> Callable:
         """
         Used for running the trace function
         Example:
@@ -33,9 +36,16 @@ class Yeezy:
         :rtype:
         """
 
-    def register_decorator(self, decorator_name, *args, **kwargs):
+    def register(self, decorator_name, *args, **kwargs):
         if decorator_name in self.custom_decorators:
            print(f"Warning: decorator name already exist ... Overwriting ...")
 
     def __repr__(self) -> str:
         return "Yee ... yeezy :)"
+
+    def profile(self) -> None:
+        """
+        Profile all the registered stuff
+        :return:
+        :rtype:
+        """
