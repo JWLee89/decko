@@ -4,7 +4,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="yeezy-pkg-YOUR-USERNAME-HERE", # Replace with your own username
+    name="yeezy-pkg-JWLee89", # Replace with your own username
     version="0.0.1",
     author="Jay Lee",
     author_email="ljay189@gmail.com",
