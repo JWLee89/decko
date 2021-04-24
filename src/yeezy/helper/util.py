@@ -300,7 +300,7 @@ def hi(name, teemo, num=20, crazy=''):
 # @TimeComputer(log_interval=5, log_callback=log_num)
 # @time_compute(log_callback=log_num)
 # @time_compute
-@trace(silent=True, path="yee.log")
+@trace(silent=True, path="../experiment/yee.log")
 def create_long_list(n: int = 1000000):
     return list(range(n))
 
