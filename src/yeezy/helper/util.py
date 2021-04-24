@@ -8,30 +8,30 @@ import inspect
 import logging
 
 # Handle fallback in case ContextDecorator does not work
-try:
-    from contextlib import ContextDecorator
-except ImportError:
-    version_info = sys.version_info
-    python_version = f'{version_info.major}.{version_info.minor}.{version_info.micro}-' \
-                     f'{version_info.releaselevel}'
+# try:
+#     from contextlib import ContextDecorator
+# except ImportError:
+#     version_info = sys.version_info
+#     python_version = f'{version_info.major}.{version_info.minor}.{version_info.micro}-' \
+#                      f'{version_info.releaselevel}'
+#
+#     # TODO: Change this message later
+#     print('cannot import contextmanager from contextlib. '
+#           f'Current python version: {python_version}. Requires version >= 3.2.\n'
+#           f'Attempting to create fallback method ...')
 
-    # TODO: Change this message later
-    print('cannot import contextmanager from contextlib. '
-          f'Current python version: {python_version}. Requires version >= 3.2.\n'
-          f'Attempting to create fallback method ...')
+class ContextDecorator:
+    def __call__(self, func: Callable) -> Callable:
+        self.wrapped_func = func
 
-    class ContextDecorator:
-        def __call__(self, func: Callable) -> Callable:
-            self.wrapped_func = func
+        @wraps(func)
+        def inner(*args, **kwargs):
+            with self:
+                return func(*args, **kwargs)
 
-            @wraps(func)
-            def inner(*args, **kwargs):
-                with self:
-                    return func(*args, **kwargs)
+        return inner
 
-            return inner
-
-    print('Fallback ContextDecorator class successfully created! Yee ...')
+    # print('Fallback ContextDecorator class successfully created! Yee ...')
 
 
 def write_file(file_name: str,
@@ -75,6 +75,10 @@ def truncate(max_length: int) -> Callable:
         truncated_sentence = (sentence[:max_length], ' ...') if len(sentence) > max_length else sentence
         return truncated_sentence
     return do_truncate
+
+
+class ClassDecorator(ContextDecorator):
+    pass
 
 
 class TimeComputer(ContextDecorator):
@@ -149,6 +153,7 @@ class TimeComputer(ContextDecorator):
         if unit == TimeComputer.Units.MS:
             avg_time *= 1000
         return avg_time
+
 
 
 class TraceDecorator:
@@ -285,45 +290,46 @@ def trace(silent: bool = True, path: str = None, truncate_from = 200):
     return inner_function
 
 
-def log_num(time_elapsed, run_count: int):
-    print(f"Time elapsed {time_elapsed:.3f} ms, "
-          f"Run count: {run_count}, Avg: {(time_elapsed / run_count):.3f} ms")
-
-
-@trace(silent=True)
-def hi(name, teemo, num=20, crazy=''):
-    teemo = "captain teeto on duteeeee"
-    crazy.append(5)
-    print(f"Hi, {name}, {teemo},{num}, {crazy}")
-
-
-# @TimeComputer(log_interval=5, log_callback=log_num)
-# @time_compute(log_callback=log_num)
-# @time_compute
-@trace(silent=True, path="../experiment/yee.log")
-def create_long_list(n: int = 1000000):
-    return list(range(n))
-
-
-def yee(func):
-    print(f"Outer ")
-
-    @wraps(func)
-    def inner(*args, **kwargs):
-        output = func(*args, **kwargs)
-        print(f"Returning output: {output}")
-        return output
-    return inner
-
-
-@trace(silent=True, path="do_something.log")
-@yee
-@TimeComputer()
-def do_something(name, num=10):
-    print(f"Blah blah blah ... {name}, {num}")
-
-
 if __name__ == "__main__":
+    def log_num(time_elapsed, run_count: int):
+        print(f"Time elapsed {time_elapsed:.3f} ms, "
+              f"Run count: {run_count}, Avg: {(time_elapsed / run_count):.3f} ms")
+
+
+    @trace(silent=True)
+    def hi(name, teemo, num=20, crazy=''):
+        teemo = "captain teeto on duteeeee"
+        crazy.append(5)
+        print(f"Hi, {name}, {teemo},{num}, {crazy}")
+
+
+    # @TimeComputer(log_interval=5, log_callback=log_num)
+    # @time_compute(log_callback=log_num)
+    # @time_compute
+    @trace(silent=True, path="../experiment/yee.log")
+    def create_long_list(n: int = 1000000):
+        return list(range(n))
+
+
+    def yee(func):
+        print(f"Outer ")
+
+        @wraps(func)
+        def inner(*args, **kwargs):
+            output = func(*args, **kwargs)
+            print(f"Returning output: {output}")
+            return output
+
+        return inner
+
+
+    @trace(silent=True, path="do_something.log")
+    @yee
+    @TimeComputer()
+    def do_something(name, num=10):
+        print(f"Blah blah blah ... {name}, {num}")
+
+
     large_ass_num = 10000000
     # do_something("yee ...", 20)
     # do_something("yee ...", 20)

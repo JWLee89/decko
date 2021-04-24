@@ -18,5 +18,16 @@ def test_class_side_effect_detection():
         def do_side_effect(self, a: List):
             a.append(10)
 
+
+def test_imported_func():
+    from dummy_package.util import long_func
+    yee = Yeezy(__file__)
+
+    long_func = yee.time(long_func)
+
+    for i in range(10):
+        long_func()
+    # run profile
     yee.profile()
-    yee
+
+
