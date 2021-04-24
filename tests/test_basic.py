@@ -20,14 +20,28 @@ def test_class_side_effect_detection():
 
 
 def test_imported_func():
+    """
+    Test to see whether profiling imported function works well
+    :return:
+    :rtype:
+    """
     from dummy_package.util import long_func
     yee = Yeezy(__file__)
 
-    long_func = yee.time(long_func)
+    # Wrap the imported function
+    wrapped_long_func = yee.time(long_func)
+    iteration_count = 10
 
-    for i in range(10):
-        long_func()
-    # run profile
+    for i in range(iteration_count):
+        wrapped_long_func()
+    # run profile ... this should work
     yee.profile()
+
+    assert long_func in yee.time_dict, f"Cannot find function ... {long_func.__name__}"
+    item = yee.time_dict[long_func]
+
+    # If iteration count increased, this means
+    # wrapped function is timing the function
+    assert item['count'] == iteration_count
 
 
