@@ -40,6 +40,15 @@ class TimeProperty:
         self.min_run_time = min(time_elapsed, self.min_run_time)
 
 
+class Test:
+    def print_this(self):
+        print("yeetoo")
+
+
+def create_long_list(n = 1000000, name="test"):
+    return list(range(n)), name
+
+
 class TraceProperty(TimeProperty):
     """
     The information displayed when trace is applied
@@ -53,6 +62,12 @@ class TraceProperty(TimeProperty):
     def __repr__(self):
         prev_str = super().__repr__()
         return prev_str
+
+    def update(self, properties):
+        if "time_elapsed" in properties:
+            super().update(properties['time_elapsed'])
+        for key in properties.key():
+            setattr(self, key, properties[key])
 
 
 if __name__ == "__main__":

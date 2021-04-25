@@ -43,7 +43,7 @@ def test_extension():
             """
 
             def inner_function(func):
-                self._add_function(func, self.custom)
+                self._register_object(func, self.custom)
 
                 @wraps(func)
                 def wrapper(*args, **kwargs):

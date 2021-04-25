@@ -20,6 +20,10 @@ import logging
 #           f'Attempting to create fallback method ...')
 
 
+def is_class_instance(item):
+    return hasattr(item, '__dict__')
+
+
 def flexible_decorator(func):
 
     @wraps(func)
