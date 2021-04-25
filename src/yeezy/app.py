@@ -1,10 +1,13 @@
 import os
+import sys
 import copy
+import types
 from typing import Callable, Union, Dict
 import inspect
 from functools import wraps
 import time as t
 from collections import OrderedDict
+from helper.properties import TimeProperty
 
 try:
     from .exceptions import (
@@ -23,8 +26,8 @@ except:
 
 class InspectMode:
     ALL = 0
-    PRIVATE = 1
-    PUBLIC_ONLY = 2
+    PUBLIC_ONLY = 1
+    PRIVATE_ONLY = 2
 
 
 class Yeezy:
@@ -36,22 +39,38 @@ class Yeezy:
     -
     """
 
-    # This is where default configurations are located
-    #
-    DEFAULT_CONFIGS = {
-
-    }
+    DEFAULT_CONFIGS = OrderedDict({
+        'debug': False,
+        'inspect_mode': InspectMode.PUBLIC_ONLY,
+        'log_path': None
+    })
 
     def __init__(self,
-                 root_path: str = os.getcwd(),
+                 import_name: str,
+                 root_path: str = None,
                  inspect_mode: int = InspectMode.PUBLIC_ONLY,
-                 debug: bool = False):
+                 debug: bool = False,
+                 log_path: str = None):
+
+        #: The name of the package or module that this object belongs
+        #: to. Do not change this once it is set by the constructor.
+        self.import_name = import_name
+
+        #: Absolute path to the package on the filesystem. Used to look
+        #: up resources contained in the package.
+        self.root_path = self.get_root_path() if root_path is None else root_path
+
+        # Inspection Mode:
+        # Note that this only inspection targets that are classes and not functions
+        # ALL: 0 - Inspect all functions regardless of their access modifiers
+        # PUBLIC_ONLY: 1 - Inspect only public methods
+        # PRIVATE_ONLY: 2 -Inspect only "underscore methods" e.g. def _do_something(self, ...)
+        self.inspect_mode = inspect_mode
+
 
         #: Absolute path to the package on the filesystem. Used to look
         #: up resources contained in the package.
         self.root_path = root_path
-        self.inspect_mode = inspect_mode
-        self.bool = debug
 
         # Dictionary mapping function names to debug functions
         # E.g. "do_work" -- <Callable>
@@ -59,26 +78,55 @@ class Yeezy:
 
         # Dictionary of custom decorators added by users
         # Warning: do not modify this dictionary as it may cause unexpected behaviors
-        self.custom_decorators = OrderedDict()
+        self.custom = OrderedDict()
 
         # timing-related properties
         self.time_dict = OrderedDict()
 
-        # Create default configs
-        self.config = self.get_new_configs()
+        # Create default configs dictating behavior of application
+        # during runtime
+        self.config = self.get_new_configs(debug, inspect_mode, log_path)
+
+        self.seen_func_names = set()
 
     @staticmethod
-    def get_new_configs() -> Dict:
+    def get_new_configs(debug: bool,
+                        inspect_mode: int,
+                        log_path: str) -> Dict:
         """
         Creates set of new configurations, which determine the behavior of
         a Yeezy instance.
         :return: A configuration dictionary
         """
         new_config = copy.deepcopy(Yeezy.DEFAULT_CONFIGS)
+        # Override with user_inputs
+        new_config['debug'] = debug
+        new_config['inspect_mode'] = inspect_mode
+        new_config['log_path'] = log_path
         return new_config
+
+    def get_root_path(self) -> str:
+        """
+        Find the root path of a package, or the path that contains a
+        module. If it cannot be found, returns the current working directory.
+        """
+        import_name = self.import_name
+        # Module already imported and has a file attribute. Use that first.
+        mod = sys.modules.get(import_name)
+
+        if mod is not None and hasattr(mod, "__file__"):
+            return os.path.dirname(os.path.abspath(mod.__file__))
+
+        return os.getcwd()
+
+
     # ------------------------
     # ------ Properties ------
     # ------------------------
+
+    @property
+    def debug(self) -> bool:
+        return self.config['debug']
 
     # --------------------------
     # ----- Public Methods -----
@@ -104,77 +152,60 @@ class Yeezy:
              log_interval: int = 1,
              truncate_from: int = 200):
 
-        def inner_function(func):
-            self._add_function(func, self.functions)
-            if func not in self.time_dict:
-                self.time_dict[func] = {}
-            time_dict = self.time_dict[func]
+        def decorator(func):
+            print("troll: ", func)
+            # Register the decorated function
+            self._add_function(func, self.functions, self.time, TimeProperty)
 
-            # State variables
-            time_dict['count'] = 0
-            time_dict['accumulated_time'] = 0
-
+            # TODO: Implement other options
             @wraps(func)
             def wrapper(*args, **kwargs):
-                # TODO: Don't repeat key
-                time_dict['count'] += 1
-                start_time = t.time()
+                time_start = t.time()
                 output = func(*args, **kwargs)
-                time_dict['accumulated_time'] += (t.time() - start_time)
+                time_elapsed = t.time() - time_start
+                self.functions[func].update(time_elapsed)
                 return output
+
             return wrapper
 
-        # Make func callable
         if callable(passed_func):
-            return inner_function(passed_func)
+            return decorator(passed_func)
 
-        return inner_function
+        return decorator
 
-    @staticmethod
-    def _add_function(target_func, target_dict):
+    def print_debug_message(self, msg: str) -> None:
+        if self.debug:
+            print(msg)
 
+    def _add_function(self, target_func, target_dict, decorator_fn, property):
+        func_name = target_func.__name__
+        if func_name in self.seen_func_names:
+            print(f"Function {func_name} already is decorated with " 
+                  f"{decorator_fn.__name__}(). Is this intentional?")
+        else:
+            self.seen_func_names.add(func_name)
+
+        # Add decorator to function methods
         if inspect.isclass(target_func):
             for func in dir(target_func):
                 if callable(getattr(target_func, func)) and not func.startswith("__"):
-                    target_dict[func] = func
-                    print(f"Function: {func.__name__} added")
+                    target_dict[func] = property()
+                    print("Found class: ", target_dict[func])
 
         elif callable(target_func):
             if target_func in target_dict:
                 raise FunctionAlreadyAddedError(f"Function already added. Name: {target_func.__name__}")
-            target_dict[target_func] = target_func
+            target_dict[target_func] = property()
         else:
             # print(inspect.stack()[1][3])  # will give the caller of foos name, if something called foo
             # TODO: Write a method for adding exceptions flexibly
             raise NotClassOrCallableError(f"Object: {target_func} is not a class object or callable")
-
-    def register(self, decorator_func):
-        """
-        :param decorator_func: The function to decorate
-        :param args: Argument
-        :param kwargs: Kwargs
-        :return:
-        """
-        print(f"Name: {decorator_func.__name__}")
-        if decorator_func in self.custom_decorators:
-            print(f"Warning: decorator name already exist ... Overwriting ...")
-        print(f"Registering new function: {decorator_func.__name__}")
-        self._add_function(decorator_func, self.custom_decorators)
-
-        @wraps(decorator_func)
-        def wrapper(*args, **kwargs):
-            output = decorator_func(*args, **kwargs)
-            return output
-        return wrapper
 
     def create_class_decorator(self, callable_func: Callable) -> Callable:
         return util.ClassDecorator(callable_func)
 
     def __repr__(self) -> str:
         return "Yee ... yeezy :)"
-
-    def _do_profile(self):
-        pass
 
     def profile(self) -> None:
         """
@@ -188,17 +219,54 @@ class Yeezy:
         print("-" * 100)
         print("Printing registered functions")
 
-        for func, properties in self.custom_decorators.items():
+        for func, properties in self.functions.items():
+            print(func)
             print(f"Function: {func.__name__}, properties: {properties}")
 
 
 if __name__ == "__main__":
-    yee = Yeezy()
+    yee = Yeezy(__name__, debug=True)
+
+
+    def register(self):
+        """
+        :param decorator_func: The function to decorate
+        :param args: Argument
+        :param kwargs: Kwargs
+        :return:
+        """
+        # print(f"Name: {decorator_func.__name__}")
+        # if decorator_func in self.custom:
+        #     print(f"Warning: decorator name already exist ... Overwriting ...")
+        # print(f"Registering new function: {decorator_func.__name__}")
+        #
+        # # Register to dictionary
+        # self._add_function(decorator_func, self.custom)
+        def decorator(decorator_func):
+            print(f"Name: {decorator_func.__name__}")
+            if decorator_func in self.custom:
+                print(f"Warning: decorator name already exist ... Overwriting ...")
+            print(f"Registering new function: {decorator_func.__name__}")
+
+            # Register to dictionary
+            self._add_function(decorator_func, self.custom)
+
+            @wraps(decorator_func)
+            def wrapper(*args, **kwargs):
+                print(f"args: {args}. Kwargs: {kwargs}")
+                output = decorator_func(*args, **kwargs)
+                return output
+
+            setattr(self, decorator_func.__name__, wrapper)
+
+            return wrapper
+        return decorator
 
     def do_before_do_go():
         print("before do_go()")
 
-    @yee.trace
+
+    @yee.time
     class Test:
         def __init__(self):
             self.test = [1, 2, 3]
@@ -206,9 +274,11 @@ if __name__ == "__main__":
         def mutate(self, num):
             self.test.append(num)
 
-        @yee.trace
         def print_something(self, test):
             print(test)
+
+        def create_long_list(self, n=1000000, name="test"):
+            return list(range(n)), name
 
 
     def print_something(name):
@@ -216,20 +286,20 @@ if __name__ == "__main__":
         num = 10
         # yee.debug(num)
 
-
-    @yee.register
+    @yee.time
     def do_go(num: list):
-        num.append("item")
+        print(f"yee registered running")
 
-
-    @yee.time()
+    @yee.time
     def create_long_list(n = 1000000, name="test"):
         return list(range(n)), name
 
     # create_long_list = yee.double_wrap(create_long_list)
-
+    tom = Test()
     for i in range(10):
         create_long_list(10000000)
+        tom.create_long_list(100)
+
 
     print_something("teemo")
     print("-" * 100)

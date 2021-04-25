@@ -2,7 +2,6 @@ import copy
 import time
 import functools
 from typing import List, Callable, Union
-import sys
 from functools import wraps
 import inspect
 import logging
@@ -19,6 +18,37 @@ import logging
 #     print('cannot import contextmanager from contextlib. '
 #           f'Current python version: {python_version}. Requires version >= 3.2.\n'
 #           f'Attempting to create fallback method ...')
+
+
+def flexible_decorator(func):
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper
+
+
+def create_before_decorator(*args_outer, **kwargs_outer):
+    """
+    Simple utility function for creating before decorators.
+
+    Before decorators are decorators that perform c
+
+    :param func_to_decorate: The function to decorate
+    :param exec_before_func: The function to execute before decorated function
+    :return:
+    :rtype:
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            output = func(*args, **kwargs)
+            return output
+
+        return wrapper
+
+    return decorator
+
 
 class ContextDecorator:
     def __call__(self, func: Callable) -> Callable:

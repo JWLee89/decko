@@ -1,5 +1,6 @@
 from src.yeezy.app import Yeezy
 from typing import List
+from functools import wraps
 
 yee = Yeezy(__file__)
 
@@ -25,6 +26,46 @@ def test_class_side_effect_detection():
             a.append(10)
 
 
+def test_extension():
+    """
+    Unit test extension case.
+    Add a new decorator and test its performance
+    :return:
+    """
+    class Yee(Yeezy):
+        def __init__(self, name):
+            super().__init__(name)
+
+        def yee(self,
+                passed_func: None):
+            """
+            Custom function should work properly
+            """
+
+            def inner_function(func):
+                self._add_function(func, self.custom)
+
+                @wraps(func)
+                def wrapper(*args, **kwargs):
+                    output = func(*args, **kwargs)
+                    return output
+
+                return wrapper
+
+            # Make func callable
+            if callable(passed_func):
+                return inner_function(passed_func)
+
+            return inner_function
+
+    yeezy = Yee(__name__)
+
+    @yeezy.yee
+    def teemo(msg):
+        print(msg)
+
+    for i in range(10):
+        teemo('yee')
 
 
 def test_imported_func():
