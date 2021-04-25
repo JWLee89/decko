@@ -153,20 +153,24 @@ class Yeezy:
              truncate_from: int = 200):
 
         def decorator(func):
-            print("troll: ", func)
             # Register the decorated function
             self._add_function(func, self.functions, self.time, TimeProperty)
 
-            # TODO: Implement other options
-            @wraps(func)
-            def wrapper(*args, **kwargs):
-                time_start = t.time()
-                output = func(*args, **kwargs)
-                time_elapsed = t.time() - time_start
-                self.functions[func].update(time_elapsed)
-                return output
+            # Return original class without wrapping
+            if inspect.isclass(func):
+                return func
+            else:
+                # TODO: Implement other options
+                @wraps(func)
+                def wrapper(*args, **kwargs):
+                    time_start = t.time()
+                    output = func(*args, **kwargs)
+                    time_elapsed = t.time() - time_start
+                    # Compute statistics
+                    self.functions[func].update(time_elapsed)
+                    return output
 
-            return wrapper
+                return wrapper
 
         if callable(passed_func):
             return decorator(passed_func)
@@ -178,6 +182,8 @@ class Yeezy:
             print(msg)
 
     def _add_function(self, target_func, target_dict, decorator_fn, property):
+
+        # Check for seen
         func_name = target_func.__name__
         if func_name in self.seen_func_names:
             print(f"Function {func_name} already is decorated with " 
@@ -189,8 +195,10 @@ class Yeezy:
         if inspect.isclass(target_func):
             for func in dir(target_func):
                 if callable(getattr(target_func, func)) and not func.startswith("__"):
-                    target_dict[func] = property()
-                    print("Found class: ", target_dict[func])
+                    # Get the class method
+                    fn = getattr(target_func, func)
+                    # Decorate the function
+                    setattr(target_func, func, decorator_fn(fn))
 
         elif callable(target_func):
             if target_func in target_dict:
@@ -207,65 +215,31 @@ class Yeezy:
     def __repr__(self) -> str:
         return "Yee ... yeezy :)"
 
-    def profile(self) -> None:
+    def analyze(self) -> None:
         """
         Profile all the registered stuff
         :return:
         :rtype:
         """
         print(f"Printing time-related functions ... ")
+        print("-" * 100)
         for func, properties in self.time_dict.items():
             print(f"Function: {func.__name__}, properties: {properties}")
         print("-" * 100)
         print("Printing registered functions")
-
+        print("-" * 100)
         for func, properties in self.functions.items():
-            print(func)
             print(f"Function: {func.__name__}, properties: {properties}")
+        print("-" * 100)
 
 
 if __name__ == "__main__":
     yee = Yeezy(__name__, debug=True)
 
-
-    def register(self):
-        """
-        :param decorator_func: The function to decorate
-        :param args: Argument
-        :param kwargs: Kwargs
-        :return:
-        """
-        # print(f"Name: {decorator_func.__name__}")
-        # if decorator_func in self.custom:
-        #     print(f"Warning: decorator name already exist ... Overwriting ...")
-        # print(f"Registering new function: {decorator_func.__name__}")
-        #
-        # # Register to dictionary
-        # self._add_function(decorator_func, self.custom)
-        def decorator(decorator_func):
-            print(f"Name: {decorator_func.__name__}")
-            if decorator_func in self.custom:
-                print(f"Warning: decorator name already exist ... Overwriting ...")
-            print(f"Registering new function: {decorator_func.__name__}")
-
-            # Register to dictionary
-            self._add_function(decorator_func, self.custom)
-
-            @wraps(decorator_func)
-            def wrapper(*args, **kwargs):
-                print(f"args: {args}. Kwargs: {kwargs}")
-                output = decorator_func(*args, **kwargs)
-                return output
-
-            setattr(self, decorator_func.__name__, wrapper)
-
-            return wrapper
-        return decorator
-
     def do_before_do_go():
         print("before do_go()")
 
-
+    # This should register all functions inside of class Test()
     @yee.time
     class Test:
         def __init__(self):
@@ -298,11 +272,11 @@ if __name__ == "__main__":
     tom = Test()
     for i in range(10):
         create_long_list(10000000)
-        tom.create_long_list(100)
-
+        tom.create_long_list(100000)
+        tom.mutate(10)
 
     print_something("teemo")
     print("-" * 100)
 
     # Profile and gather information
-    yee.profile()
+    yee.analyze()

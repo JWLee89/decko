@@ -82,7 +82,7 @@ def test_imported_func():
     for i in range(iteration_count):
         wrapped_long_func()
     # run profile ... this should work
-    yee.profile()
+    yee.analyze()
 
     assert long_func in yee.time_dict, f"Cannot find function ... {long_func.__name__}"
     item = yee.time_dict[long_func]
