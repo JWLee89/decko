@@ -1,8 +1,10 @@
 import os
-from typing import Callable, Union
+import copy
+from typing import Callable, Union, Dict
 import inspect
 from functools import wraps
 import time as t
+from collections import OrderedDict
 
 try:
     from .exceptions import (
@@ -34,7 +36,11 @@ class Yeezy:
     -
     """
 
-    # TODO: Add default configurations in this section
+    # This is where default configurations are located
+    #
+    DEFAULT_CONFIGS = {
+
+    }
 
     def __init__(self,
                  root_path: str = os.getcwd(),
@@ -49,19 +55,34 @@ class Yeezy:
 
         # Dictionary mapping function names to debug functions
         # E.g. "do_work" -- <Callable>
-        self.functions = {}
+        self.functions = OrderedDict()
 
         # Dictionary of custom decorators added by users
         # Warning: do not modify this dictionary as it may cause unexpected behaviors
-        self.custom_decorators = {}
-
-        # List of classes to observe / profile
-        self.class_observable = {}
-
-        self.function_observables = {}
+        self.custom_decorators = OrderedDict()
 
         # timing-related properties
-        self.time_dict = {}
+        self.time_dict = OrderedDict()
+
+        # Create default configs
+        self.config = self.get_new_configs()
+
+    @staticmethod
+    def get_new_configs() -> Dict:
+        """
+        Creates set of new configurations, which determine the behavior of
+        a Yeezy instance.
+        :return: A configuration dictionary
+        """
+        new_config = copy.deepcopy(Yeezy.DEFAULT_CONFIGS)
+        return new_config
+    # ------------------------
+    # ------ Properties ------
+    # ------------------------
+
+    # --------------------------
+    # ----- Public Methods -----
+    # --------------------------
 
     def trace(self, target: Union[Callable, object]) -> None:
         """
@@ -77,7 +98,8 @@ class Yeezy:
     def _add_debug(self, target) -> None:
         self._add_function(target, self.functions)
 
-    def time(self, passed_func: Callable = None,
+    def time(self,
+             passed_func: Callable = None,
              path: str = None,
              log_interval: int = 1,
              truncate_from: int = 200):
@@ -126,7 +148,7 @@ class Yeezy:
             # TODO: Write a method for adding exceptions flexibly
             raise NotClassOrCallableError(f"Object: {target_func} is not a class object or callable")
 
-    def register(self, decorator_func, function_to_add):
+    def register(self, decorator_func):
         """
         :param decorator_func: The function to decorate
         :param args: Argument
@@ -141,7 +163,6 @@ class Yeezy:
 
         @wraps(decorator_func)
         def wrapper(*args, **kwargs):
-            function_to_add()
             output = decorator_func(*args, **kwargs)
             return output
         return wrapper
@@ -161,7 +182,13 @@ class Yeezy:
         :return:
         :rtype:
         """
+        print(f"Printing time-related functions ... ")
         for func, properties in self.time_dict.items():
+            print(f"Function: {func.__name__}, properties: {properties}")
+        print("-" * 100)
+        print("Printing registered functions")
+
+        for func, properties in self.custom_decorators.items():
             print(f"Function: {func.__name__}, properties: {properties}")
 
 
@@ -190,20 +217,19 @@ if __name__ == "__main__":
         # yee.debug(num)
 
 
-
-    # @yee.register(do_before_do_go)
+    @yee.register
     def do_go(num: list):
         num.append("item")
 
 
-    @yee.time
+    @yee.time()
     def create_long_list(n = 1000000, name="test"):
         return list(range(n)), name
 
     # create_long_list = yee.double_wrap(create_long_list)
 
-    for i in range(55):
-        create_long_list(1000000000)
+    for i in range(10):
+        create_long_list(10000000)
 
     print_something("teemo")
     print("-" * 100)

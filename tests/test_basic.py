@@ -4,13 +4,19 @@ from typing import List
 yee = Yeezy(__file__)
 
 
-def test_decorator_registration():
-    print(yee)
-    print(__name__)
+def test_initialization():
+    """
+    Test the initialization of the application
+    """
     assert yee is not None
 
 
 def test_class_side_effect_detection():
+    """
+    Unit test should detect side effect
+    inside of method do_side_effect()
+    :return:
+    """
     class Test:
         def __init__(self, ass):
             self.yee = [1, 2, 3, 4, 5]
@@ -19,11 +25,11 @@ def test_class_side_effect_detection():
             a.append(10)
 
 
+
+
 def test_imported_func():
     """
-    Test to see whether profiling imported function works well
-    :return:
-    :rtype:
+    Test to see whether profiling imported function works well.
     """
     from dummy_package.util import long_func
     yee = Yeezy(__file__)
