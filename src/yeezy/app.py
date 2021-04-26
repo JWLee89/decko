@@ -2,7 +2,7 @@ import os
 import sys
 import copy
 import types
-from typing import Callable, Union, Dict
+from typing import Callable, Union, Dict, List
 import inspect
 from functools import wraps
 import time as t
@@ -25,6 +25,11 @@ except:
     from helper import util
 
 
+def get_class_that_defined_method(meth):
+    for cls in inspect.getmro(meth.im_class):
+        if meth.__name__ in cls.__dict__:
+            return cls
+    return None
 
 
 def write_file(file_name: str,
@@ -273,6 +278,27 @@ class Yeezy:
     def _add_debug(self, target) -> None:
         self._register_object(target, self.functions)
 
+    def _get_unique_func_name(self, func):
+        return f'{func.__module__}.{func.__qualname__}'
+
+    def decorate(self, func_to_decorate):
+        """
+        :param func_to_decorate:
+        :return:
+        :rtype:
+        """
+        func_name = self._get_unique_func_name(func_to_decorate)
+        # TODO: register function
+
+        @wraps(func_to_decorate)
+        def inner(*args, **kwargs):
+            # TODO: add behavior
+            output = func_to_decorate(*args, **kwargs)
+
+            # TODO: Compute statistics
+            return output
+        return inner
+
     def time(self,
              passed_func: Callable = None,
              register: bool = True,
@@ -285,8 +311,6 @@ class Yeezy:
                 print("Found duplicate decorator: ", func.__name__)
             else:
                 self.functions[func] = TimeProperty()
-
-            print(f"Func: {func.__name__}")
 
             @wraps(func)
             def wrapper(*args, **kwargs):
@@ -419,8 +443,9 @@ if __name__ == "__main__":
         def print_something(self, test):
             print(test)
 
-        @yee.trace()
-        @yee.time()
+        # @yee.trace()
+        # @yee.time()
+        @yee.decorate
         def create_long_list(self, n=1000000, name="test"):
             name = "troll"
             return torch.tensor(range(n))
@@ -439,13 +464,17 @@ if __name__ == "__main__":
     # create_long_list = yee.double_wrap(create_long_list)
     tom = Test()
 
+    troll = Troll()
+    another_fn = yee.decorate(troll.print_this)
     # Another create long list
     fn = cll
-    fn = yee.trace()(fn)
+    # fn = yee.decorate(fn)
+    # fn = yee.decorate(fn)
 
     for i in range(10):
-        tom.create_long_list(i)
+        # tom.create_long_list(i)
         fn(i)
+        create_long_list(100)
         # tom.create_long_list(1000)
         # tom.mutate(10)
 
