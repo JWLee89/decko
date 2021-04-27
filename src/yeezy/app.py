@@ -278,10 +278,40 @@ class Yeezy:
     def _add_debug(self, target) -> None:
         self._register_object(target, self.functions)
 
-    def _get_unique_func_name(self, func):
+    def _get_unique_func_name(self, func: Callable):
         return f'{func.__module__}.{func.__qualname__}'
 
-    def decorate(self, func_to_decorate):
+    def register(self,
+                 func_name: str,
+                 func: Callable,
+                 function_map: Dict):
+        """
+        Register function
+        :param func_name: The name of the function to register
+        :param func: The function to register
+        :param function_map: The dictionary to register the function to.
+        Performs lookup based on function type
+        :return:
+        """
+        if func not in function_map:
+            function_map[func_name] = func
+
+    def register_decorator(self,
+                           func: Callable) -> bool:
+        """
+        Public API - Add decorators
+        :param func: The function to register
+        :return:
+        """
+        name = self._get_unique_func_name(func)
+        function_exists = name in self.custom
+        if not function_exists:
+            self.custom[name] = function_exists
+
+        return function_exists
+
+    def decorate(self,
+                 func_to_decorate: Callable):
         """
         :param func_to_decorate:
         :return:
@@ -289,6 +319,8 @@ class Yeezy:
         """
         func_name = self._get_unique_func_name(func_to_decorate)
         # TODO: register function
+        self.register(func_name, func_to_decorate, self.functions)
+        print(f"Function: {func_name} registered ... ")
 
         @wraps(func_to_decorate)
         def inner(*args, **kwargs):
@@ -416,8 +448,8 @@ class Yeezy:
         print("-" * 100)
         print("Printing registered functions")
         print("-" * 100)
-        for func, properties in self.functions.items():
-            print(f"Function: {func.__name__}, properties: {properties}")
+        for func_name, properties in self.functions.items():
+            print(f"Function: {func_name}, properties: {properties}")
         print("-" * 100)
 
 
@@ -464,6 +496,7 @@ if __name__ == "__main__":
     # create_long_list = yee.double_wrap(create_long_list)
     tom = Test()
 
+    # We can decorate methods using the following methods
     troll = Troll()
     another_fn = yee.decorate(troll.print_this)
     # Another create long list
