@@ -86,6 +86,14 @@ class API_KEYS:
     FUNCTION = 'func'
 
 
+class CustomFunction(dict):
+    """dot.notation access to dictionary attributes"""
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
+
+
 class Yeezy:
     """
     Yeeeee ....
@@ -134,7 +142,7 @@ class Yeezy:
 
         # Dictionary of custom decorators added by users
         # Warning: do not modify this dictionary as it may cause unexpected behaviors
-        self.custom = OrderedDict()
+        self.custom = CustomFunction()
 
         # timing-related properties
         self.time_dict = OrderedDict()
@@ -146,7 +154,6 @@ class Yeezy:
         self.seen_func_names = set()
 
         self.log = util.logger_factory(log_path, "yeezy") if log_path else print
-
 
     @staticmethod
     def get_new_configs(debug: bool,
@@ -177,7 +184,6 @@ class Yeezy:
             return os.path.dirname(os.path.abspath(mod.__file__))
 
         return os.getcwd()
-
 
     # ------------------------
     # ------ Properties ------
@@ -352,7 +358,7 @@ class Yeezy:
         else:
             self.functions[func_name] = {
                 API_KEYS.FUNCTION: func.__name__,
-                API_KEYS.PROPS: TimeStatistics()
+                API_KEYS.PROPS: TimeStatistics(func)
             }
 
     def time(self,
@@ -508,7 +514,6 @@ if __name__ == "__main__":
     def do_go(num: list):
         print(f"yee registered running")
 
-
     @yee.decorate
     @yee.time
     def create_long_list(n = 1000000, name="test"):
@@ -516,6 +521,18 @@ if __name__ == "__main__":
 
     # create_long_list = yee.double_wrap(create_long_list)
     tom = Test()
+
+    def deco(func):
+        @wraps(func)
+        def yee(*args, **kwargs):
+            print("yee")
+            return func(*args, **kwargs)
+
+        return yee
+
+        # Custom function
+
+    create_long_list = deco(create_long_list)
 
     # We can decorate methods using the following methods
     troll = Troll()
