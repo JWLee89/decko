@@ -1,9 +1,10 @@
 import sys
+import json
+from typing import Callable
 
 
 class Quantity:
     def __set_name__(self, owner, name):
-        print("Name set:: ", name)
         self.name = name
 
     def __get__(self, instance, owner):
@@ -16,7 +17,27 @@ class Quantity:
         instance.__dict__[self.name] = value
 
 
-class TimeProperty:
+class Statistics:
+    def __init__(self, func: Callable) -> None:
+        self.func = func
+
+    def merge(self, statistics):
+        properties = self.__dict__.keys()
+        for key, value in statistics.__dict__:
+            if key not in properties:
+                setattr(self, key, value)
+            else:
+                print(f"Warning:: {key} exists in both {self} and {statistics}")
+
+    def update(self, *args, **kwargs):
+        # TODO: Find way to combine the two functions
+        pass
+
+    def __repr__(self) -> str:
+        return json.dumps(self.__dict__, indent=4)
+
+
+class TimeStatistics:
     """
     Basic descriptor of each class
     """
@@ -28,10 +49,11 @@ class TimeProperty:
         self.min_run_time = sys.maxsize
 
     def __repr__(self) -> str:
-        return f"Total call count: {self.call_count}, " \
-               f"Average run time: {self.avg_run_time}, " \
-               f"Max run time: {self.max_run_time}, " \
-               f"Min run time: {self.min_run_time}"
+        return json.dumps(self.__dict__, indent=4)
+        # return f"Total call count: {self.call_count}, " \
+        #        f"Average run time: {self.avg_run_time}, " \
+        #        f"Max run time: {self.max_run_time}, " \
+        #        f"Min run time: {self.min_run_time}"
 
     def update(self, time_elapsed):
         self.call_count += 1
@@ -49,7 +71,7 @@ def create_long_list(n = 1000000, name="test"):
     return list(range(n)), name
 
 
-class TraceProperty(TimeProperty):
+class TraceStatistics(TimeStatistics):
     """
     The information displayed when trace is applied
     """
@@ -71,7 +93,7 @@ class TraceProperty(TimeProperty):
 
 
 if __name__ == "__main__":
-    a = TraceProperty()
+    a = TraceStatistics()
     import time
 
     for i in range(50):

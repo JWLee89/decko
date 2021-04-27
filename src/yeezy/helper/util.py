@@ -68,9 +68,9 @@ class ContextDecorator:
     # print('Fallback ContextDecorator class successfully created! Yee ...')
 
 
-def write_file(file_name: str,
-               logger_name: str,
-               level=logging.INFO) -> Callable:
+def logger_factory(file_name: str,
+                   logger_name: str,
+                   level=logging.INFO) -> Callable:
     """
     Function for writing information to a file during program execution
     :param file_name: The name of the file to store log
@@ -261,7 +261,7 @@ def trace(silent: bool = True, path: str = None, truncate_from = 200):
 
         # Function that is used to write to certain file
         truncator = truncate(truncate_from)
-        write_function = write_file(path, caller_filename) if path else print
+        write_function = logger_factory(path, caller_filename) if path else print
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs):

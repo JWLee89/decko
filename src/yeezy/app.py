@@ -7,7 +7,7 @@ import inspect
 from functools import wraps
 import time as t
 from collections import OrderedDict
-from helper.properties import TimeProperty, Test as Troll, create_long_list as cll
+from helper.properties import TimeStatistics, Test as Troll, create_long_list as cll
 import logging
 
 try:
@@ -81,6 +81,11 @@ class InspectMode:
     PRIVATE_ONLY = 2
 
 
+class API_KEYS:
+    PROPS = 'props'
+    FUNCTION = 'func'
+
+
 class Yeezy:
     """
     Yeeeee ....
@@ -139,6 +144,9 @@ class Yeezy:
         self.config = self.get_new_configs(debug, inspect_mode, log_path)
 
         self.seen_func_names = set()
+
+        self.log = util.logger_factory(log_path, "yeezy") if log_path else print
+
 
     @staticmethod
     def get_new_configs(debug: bool,
@@ -323,7 +331,7 @@ class Yeezy:
 
         # TODO: register function
         # self.register(func_name, func, self.functions)
-        print(f"Function: {func_name} registered ... ")
+        self.log(f"Function: {func_name} registered ... ")
 
         @wraps(func)
         def inner(*args, **kwargs):
@@ -334,6 +342,19 @@ class Yeezy:
             return output
         return inner
 
+    def _update_decoration_info(self,
+                                func_name: str,
+                                func: Callable) -> None:
+        # Common function for handling duplicates
+        if func_name in self.functions and func.__name__ == self.functions[func_name]['func']:
+            print("Found duplicate decorator with identity: ", func_name)
+            return func
+        else:
+            self.functions[func_name] = {
+                API_KEYS.FUNCTION: func.__name__,
+                API_KEYS.PROPS: TimeStatistics()
+            }
+
     def time(self,
              passed_func: Callable = None,
              register: bool = True,
@@ -342,27 +363,19 @@ class Yeezy:
              truncate_from: int = 200):
 
         def decorator(func):
-            func_name = self._get_unique_func_name(func)
-            print(f"Func name: {func_name}")
 
-            # Common function for handling duplicates
-            if func_name in self.functions and func.__name__ == self.functions[func_name]['func']:
-                print("Found duplicate decorator with identity: ", func_name)
-                return func
-            else:
-                self.functions[func_name] = {
-                    'func': func.__name__,
-                    'props': TimeProperty()
-                }
+            # Update function statistics
+            func_name = self._get_unique_func_name(func)
+            self.log(f"Decorated function with unique id: {func_name}")
+            self._update_decoration_info(func_name, func)
 
             @wraps(func)
             def wrapper(*args, **kwargs):
                 time_start = t.time()
                 output = func(*args, **kwargs)
                 time_elapsed = t.time() - time_start
-                # print(f"Getting func name: {func_name}, {self.functions[func_name]}")
                 # Compute statistics
-                # self.functions[func_name].update(time_elapsed)
+                self.functions[func_name]['props'].update(time_elapsed)
                 return output
             return wrapper
             # @wraps(func)
@@ -393,15 +406,6 @@ class Yeezy:
     def print_debug_message(self, msg: str) -> None:
         if self.debug:
             print(msg)
-
-    def _is_seen(self, name, decorated_fn):
-        seen = name in self.seen_func_names
-        if seen:
-            print(f"Function {name} already is decorated with "
-                  f"{decorated_fn.__name__}(). Is this intentional?")
-        else:
-            self.seen_func_names.add(name)
-        return seen
 
     def _register_class(self,
                         class_definition: object,
@@ -453,21 +457,21 @@ class Yeezy:
         :return:
         :rtype:
         """
-        print(f"Printing time-related functions ... ")
-        print("-" * 100)
+        self.log(f"Printing time-related functions ... ")
+        self.log("-" * 100)
         for func, properties in self.time_dict.items():
-            print(f"Function: {func.__name__}, properties: {properties}")
-        print("-" * 100)
-        print("Printing registered functions")
-        print("-" * 100)
+            self.log(f"Function: {func.__name__}, properties: {properties}")
+        self.log("-" * 100)
+        self.log("Printing registered functions")
+        self.log("-" * 100)
         for func_name, properties in self.functions.items():
-            print(f"Function: {func_name}, properties: {properties}")
-        print("-" * 100)
+            self.log(f"Function: {func_name}, properties: {properties}")
+        self.log("-" * 100)
 
 
 if __name__ == "__main__":
     import torch
-    yee = Yeezy(__name__, debug=True)
+    yee = Yeezy(__name__, debug=True, log_path="test.log")
 
     def do_before_do_go():
         print("before do_go()")
