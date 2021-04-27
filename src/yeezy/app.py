@@ -311,21 +311,24 @@ class Yeezy:
         return function_exists
 
     def decorate(self,
-                 func_to_decorate: Callable):
+                 func: Callable):
         """
-        :param func_to_decorate:
+        :param func:
         :return:
         :rtype:
         """
-        func_name = self._get_unique_func_name(func_to_decorate)
+        func_name = self._get_unique_func_name(func)
+        # if func_name not in self.custom:
+        #     raise ValueError(f"{func_name} is not registered as a decorator!")
+
         # TODO: register function
-        self.register(func_name, func_to_decorate, self.functions)
+        # self.register(func_name, func, self.functions)
         print(f"Function: {func_name} registered ... ")
 
-        @wraps(func_to_decorate)
+        @wraps(func)
         def inner(*args, **kwargs):
             # TODO: add behavior
-            output = func_to_decorate(*args, **kwargs)
+            output = func(*args, **kwargs)
 
             # TODO: Compute statistics
             return output
@@ -339,18 +342,27 @@ class Yeezy:
              truncate_from: int = 200):
 
         def decorator(func):
-            if func in self.functions:
-                print("Found duplicate decorator: ", func.__name__)
+            func_name = self._get_unique_func_name(func)
+            print(f"Func name: {func_name}")
+
+            # Common function for handling duplicates
+            if func_name in self.functions and func.__name__ == self.functions[func_name]['func']:
+                print("Found duplicate decorator with identity: ", func_name)
+                return func
             else:
-                self.functions[func] = TimeProperty()
+                self.functions[func_name] = {
+                    'func': func.__name__,
+                    'props': TimeProperty()
+                }
 
             @wraps(func)
             def wrapper(*args, **kwargs):
                 time_start = t.time()
                 output = func(*args, **kwargs)
                 time_elapsed = t.time() - time_start
+                # print(f"Getting func name: {func_name}, {self.functions[func_name]}")
                 # Compute statistics
-                self.functions[func].update(time_elapsed)
+                # self.functions[func_name].update(time_elapsed)
                 return output
             return wrapper
             # @wraps(func)
@@ -472,11 +484,13 @@ if __name__ == "__main__":
         def mutate(self, num):
             self.test.append(num)
 
+        @yee.decorate
         def print_something(self, test):
             print(test)
 
         # @yee.trace()
-        # @yee.time()
+        @yee.time
+        @yee.time
         @yee.decorate
         def create_long_list(self, n=1000000, name="test"):
             name = "troll"
@@ -490,6 +504,9 @@ if __name__ == "__main__":
     def do_go(num: list):
         print(f"yee registered running")
 
+
+    @yee.decorate
+    @yee.time
     def create_long_list(n = 1000000, name="test"):
         return list(range(n)), name
 
@@ -504,8 +521,8 @@ if __name__ == "__main__":
     # fn = yee.decorate(fn)
     # fn = yee.decorate(fn)
 
-    for i in range(10):
-        # tom.create_long_list(i)
+    for i in range(20):
+        tom.create_long_list(i)
         fn(i)
         create_long_list(100)
         # tom.create_long_list(1000)
