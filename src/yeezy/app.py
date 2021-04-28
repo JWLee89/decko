@@ -560,9 +560,6 @@ if __name__ == "__main__":
     fn = yee.before(cll)
     fn = yee.before(bonk)
 
-    # fn = yee.decorate(fn)
-    # fn = yee.decorate(fn)
-
     for i in range(20):
         tom.create_long_list(i)
         fn(i)
