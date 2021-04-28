@@ -2,41 +2,75 @@ import copy
 import time
 import functools
 from typing import List, Callable, Union
-import sys
 from functools import wraps
 import inspect
 import logging
 
 # Handle fallback in case ContextDecorator does not work
-try:
-    from contextlib import ContextDecorator
-except ImportError:
-    version_info = sys.version_info
-    python_version = f'{version_info.major}.{version_info.minor}.{version_info.micro}-' \
-                     f'{version_info.releaselevel}'
-
-    # TODO: Change this message later
-    print('cannot import contextmanager from contextlib. '
-          f'Current python version: {python_version}. Requires version >= 3.2.\n'
-          f'Attempting to create fallback method ...')
-
-    class ContextDecorator:
-        def __call__(self, func: Callable) -> Callable:
-            self.wrapped_func = func
-
-            @wraps(func)
-            def inner(*args, **kwargs):
-                with self:
-                    return func(*args, **kwargs)
-
-            return inner
-
-    print('Fallback ContextDecorator class successfully created! Yee ...')
+# try:
+#     from contextlib import ContextDecorator
+# except ImportError:
+#     version_info = sys.version_info
+#     python_version = f'{version_info.major}.{version_info.minor}.{version_info.micro}-' \
+#                      f'{version_info.releaselevel}'
+#
+#     # TODO: Change this message later
+#     print('cannot import contextmanager from contextlib. '
+#           f'Current python version: {python_version}. Requires version >= 3.2.\n'
+#           f'Attempting to create fallback method ...')
 
 
-def write_file(file_name: str,
-               logger_name: str,
-               level=logging.INFO) -> Callable:
+def is_class_instance(item):
+    return hasattr(item, '__dict__')
+
+
+def flexible_decorator(func):
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper
+
+
+def create_before_decorator(*args_outer, **kwargs_outer):
+    """
+    Simple utility function for creating before decorators.
+
+    Before decorators are decorators that perform c
+
+    :param func_to_decorate: The function to decorate
+    :param exec_before_func: The function to execute before decorated function
+    :return:
+    :rtype:
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            output = func(*args, **kwargs)
+            return output
+
+        return wrapper
+
+    return decorator
+
+
+class ContextDecorator:
+    def __call__(self, func: Callable) -> Callable:
+        self.wrapped_func = func
+
+        @wraps(func)
+        def inner(*args, **kwargs):
+            with self:
+                return func(*args, **kwargs)
+
+        return inner
+
+    # print('Fallback ContextDecorator class successfully created! Yee ...')
+
+
+def logger_factory(file_name: str,
+                   logger_name: str,
+                   level=logging.INFO) -> Callable:
     """
     Function for writing information to a file during program execution
     :param file_name: The name of the file to store log
@@ -75,6 +109,10 @@ def truncate(max_length: int) -> Callable:
         truncated_sentence = (sentence[:max_length], ' ...') if len(sentence) > max_length else sentence
         return truncated_sentence
     return do_truncate
+
+
+class ClassDecorator(ContextDecorator):
+    pass
 
 
 class TimeComputer(ContextDecorator):
@@ -151,6 +189,7 @@ class TimeComputer(ContextDecorator):
         return avg_time
 
 
+
 class TraceDecorator:
     def __init__(self, func: Callable, verbose: bool = False):
         self.func = func
@@ -222,7 +261,7 @@ def trace(silent: bool = True, path: str = None, truncate_from = 200):
 
         # Function that is used to write to certain file
         truncator = truncate(truncate_from)
-        write_function = write_file(path, caller_filename) if path else print
+        write_function = logger_factory(path, caller_filename) if path else print
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -285,45 +324,46 @@ def trace(silent: bool = True, path: str = None, truncate_from = 200):
     return inner_function
 
 
-def log_num(time_elapsed, run_count: int):
-    print(f"Time elapsed {time_elapsed:.3f} ms, "
-          f"Run count: {run_count}, Avg: {(time_elapsed / run_count):.3f} ms")
-
-
-@trace(silent=True)
-def hi(name, teemo, num=20, crazy=''):
-    teemo = "captain teeto on duteeeee"
-    crazy.append(5)
-    print(f"Hi, {name}, {teemo},{num}, {crazy}")
-
-
-# @TimeComputer(log_interval=5, log_callback=log_num)
-# @time_compute(log_callback=log_num)
-# @time_compute
-@trace(silent=True, path="../experiment/yee.log")
-def create_long_list(n: int = 1000000):
-    return list(range(n))
-
-
-def yee(func):
-    print(f"Outer ")
-
-    @wraps(func)
-    def inner(*args, **kwargs):
-        output = func(*args, **kwargs)
-        print(f"Returning output: {output}")
-        return output
-    return inner
-
-
-@trace(silent=True, path="do_something.log")
-@yee
-@TimeComputer()
-def do_something(name, num=10):
-    print(f"Blah blah blah ... {name}, {num}")
-
-
 if __name__ == "__main__":
+    def log_num(time_elapsed, run_count: int):
+        print(f"Time elapsed {time_elapsed:.3f} ms, "
+              f"Run count: {run_count}, Avg: {(time_elapsed / run_count):.3f} ms")
+
+
+    @trace(silent=True)
+    def hi(name, teemo, num=20, crazy=''):
+        teemo = "captain teeto on duteeeee"
+        crazy.append(5)
+        print(f"Hi, {name}, {teemo},{num}, {crazy}")
+
+
+    # @TimeComputer(log_interval=5, log_callback=log_num)
+    # @time_compute(log_callback=log_num)
+    # @time_compute
+    @trace(silent=True, path="../experiment/yee.log")
+    def create_long_list(n: int = 1000000):
+        return list(range(n))
+
+
+    def yee(func):
+        print(f"Outer ")
+
+        @wraps(func)
+        def inner(*args, **kwargs):
+            output = func(*args, **kwargs)
+            print(f"Returning output: {output}")
+            return output
+
+        return inner
+
+
+    @trace(silent=True, path="do_something.log")
+    @yee
+    @TimeComputer()
+    def do_something(name, num=10):
+        print(f"Blah blah blah ... {name}, {num}")
+
+
     large_ass_num = 10000000
     # do_something("yee ...", 20)
     # do_something("yee ...", 20)
