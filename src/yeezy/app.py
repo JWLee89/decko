@@ -69,9 +69,11 @@ def truncate(max_length: int) -> Callable:
     :param max_length:
     :return: a truncation function
     """
+
     def do_truncate(sentence: str) -> str:
         truncated_sentence = (sentence[:max_length], ' ...') if len(sentence) > max_length else sentence
         return truncated_sentence
+
     return do_truncate
 
 
@@ -91,7 +93,6 @@ class CustomFunction(dict):
     __getattr__ = dict.get
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
-
 
 
 class Yeezy:
@@ -130,7 +131,6 @@ class Yeezy:
         # PUBLIC_ONLY: 1 - Inspect only public methods
         # PRIVATE_ONLY: 2 -Inspect only "underscore methods" e.g. def _do_something(self, ...)
         self.inspect_mode = inspect_mode
-
 
         #: Absolute path to the package on the filesystem. Used to look
         #: up resources contained in the package.
@@ -197,7 +197,11 @@ class Yeezy:
     # ----- Public Methods -----
     # --------------------------
 
-    def trace(self, silent: bool = True, path: str = None, truncate_from = 100):
+    def log_debug(self, msg):
+        if self.debug:
+            self.log(msg)
+
+    def trace(self, silent: bool = True, path: str = None, truncate_from=100):
         """
         :param silent: Silently accumulates statistics regarding the
         wrapped function called during the
@@ -324,28 +328,46 @@ class Yeezy:
 
         return function_exists
 
-    def decorate(self,
-                 func: Callable):
+    def _register(self, func: Callable) -> Callable:
         """
+        Handle registration of a function. Is
+        applied to all functions
         :param func:
         :return:
-        :rtype:
         """
         func_name = self._get_unique_func_name(func)
-        # if func_name not in self.custom:
-        #     raise ValueError(f"{func_name} is not registered as a decorator!")
-
         # TODO: register function
-        # self.register(func_name, func, self.functions)
-        self.log(f"Function: {func_name} registered ... ")
+        self._update_decoration_info(func_name, func)
+        self.log_debug(f"Function: {func_name} registered ... ")
 
-        @wraps(func)
-        def inner(*args, **kwargs):
-            # TODO: add behavior
-            output = func(*args, **kwargs)
+    def before(self,
+               func: Callable,
+               stat_updater: Callable = None) -> Callable:
+        """
+        Create decorator that executes the function prior to
+        the decorated function being executed
+        :param func: The function to execute before the decorated function
+        :stat_updater: If defined, statistics will be computed and updated
+        after each execution.
+        """
+        func_name = self._get_unique_func_name(func)
+        # register function
+        self._update_decoration_info(func_name, func)
+        self.log_debug(f"Function: {func_name} registered ... ")
 
-            # TODO: Compute statistics
-            return output
+        if stat_updater:
+            @wraps(func)
+            def inner(*args, **kwargs):
+                output = func(*args, **kwargs)
+                # TODO: Compute statistics
+                self.functions[func_name]['props'].update(output, *args, **kwargs)
+                return output
+        else:
+            @wraps(func)
+            def inner(*args, **kwargs):
+                output = func(*args, **kwargs)
+                return output
+
         return inner
 
     def _update_decoration_info(self,
@@ -353,7 +375,7 @@ class Yeezy:
                                 func: Callable) -> None:
         # Common function for handling duplicates
         if func_name in self.functions and func.__name__ == self.functions[func_name]['func']:
-            print("Found duplicate decorator with identity: ", func_name)
+            self.log_debug(f"Found duplicate decorator with identity: {func_name}")
             return func
         else:
             self.functions[func_name] = {
@@ -369,7 +391,6 @@ class Yeezy:
              truncate_from: int = 200):
 
         def decorator(func):
-
             # Update function statistics
             func_name = self._get_unique_func_name(func)
             self.log(f"Decorated function with unique id: {func_name}")
@@ -383,6 +404,7 @@ class Yeezy:
                 # Compute statistics
                 self.functions[func_name]['props'].update(time_elapsed)
                 return output
+
             return wrapper
             # @wraps(func)
             # def wrapper(*args, **kwargs):
@@ -477,13 +499,10 @@ class Yeezy:
 
 if __name__ == "__main__":
     import torch
-    yee = Yeezy(__name__, debug=True, log_path="test.log")
 
-    def do_before_do_go():
-        print("before do_go()")
-
-
+    yee = Yeezy(__name__, debug=True, log_path=None)
     item = Troll()
+
 
     # This should register all functions inside of class Test()
     # @yee.time
@@ -494,58 +513,60 @@ if __name__ == "__main__":
         def mutate(self, num):
             self.test.append(num)
 
-        @yee.decorate
         def print_something(self, test):
             print(test)
 
         # @yee.trace()
         @yee.time
-        @yee.time
-        @yee.decorate
         def create_long_list(self, n=1000000, name="test"):
-            name = "troll"
             return torch.tensor(range(n))
+
 
     def print_something(name):
         print(name)
         num = 10
         # yee.debug(num)
 
+
     def do_go(num: list):
         print(f"yee registered running")
 
-    @yee.decorate
+
     @yee.time
-    def create_long_list(n = 1000000, name="test"):
+    def create_long_list(n=1000000, name="test"):
         return list(range(n)), name
+
 
     # create_long_list = yee.double_wrap(create_long_list)
     tom = Test()
 
+
     def deco(func):
         @wraps(func)
         def yee(*args, **kwargs):
-            print("yee")
+            print("yeet")
             return func(*args, **kwargs)
-
         return yee
 
-        # Custom function
-
-    create_long_list = deco(create_long_list)
+   # create_long_list = deco(create_long_list)
 
     # We can decorate methods using the following methods
     troll = Troll()
-    another_fn = yee.decorate(troll.print_this)
+    # another_fn = yee.decorate_before(troll.print_this)
     # Another create long list
-    fn = cll
+    def bonk(*args, **kwargs):
+        print(f"Bonk: {args}, {kwargs}")
+
+    fn = yee.before(cll)
+    fn = yee.before(bonk)
+
     # fn = yee.decorate(fn)
     # fn = yee.decorate(fn)
 
     for i in range(20):
         tom.create_long_list(i)
         fn(i)
-        create_long_list(100)
+        # create_long_list(100)
         # tom.create_long_list(1000)
         # tom.mutate(10)
 
