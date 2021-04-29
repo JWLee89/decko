@@ -23,7 +23,6 @@ def simple_demo():
         def create_long_list(self, n=1000000, name="test"):
             return torch.tensor(range(n))
 
-
     @yee.time
     def create_long_list(n=1000000, name="test"):
         return list(range(n)), name
@@ -36,6 +35,8 @@ def simple_demo():
         print(f"Bonk: {args}, {kwargs}")
 
     # We can also add decorators dynamically
+    # TODO: Right now, we lose the computational information,
+    # so we need to find a way to preserve this
     create_long_list = yee.before(bonk)
 
     for i in range(20):

@@ -374,12 +374,11 @@ class Yeezy:
                                 func_name: str,
                                 func: Callable) -> None:
         # Common function for handling duplicates
-        if func_name in self.functions and func.__name__ == self.functions[func_name]['func']:
+        if func_name in self.functions:
             self.log_debug(f"Found duplicate decorator with identity: {func_name}")
-            return func
         else:
             self.functions[func_name] = {
-                API_KEYS.FUNCTION: func.__name__,
+                API_KEYS.FUNCTION: func_name,
                 API_KEYS.PROPS: TimeStatistics(func)
             }
 
