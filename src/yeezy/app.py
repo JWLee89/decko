@@ -5,6 +5,17 @@ development and debugging.
 Users can also dynamically decorate functions at runtime
 which helps performance.
 
+Basic use case:
+
+yee = Yeezy()
+
+@yee.trace
+def buggy_function(input_1, input_2, ...):
+    ...
+
+# Analyze the function
+yee.analyze()
+
 """
 import os
 import sys

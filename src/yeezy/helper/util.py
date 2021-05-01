@@ -116,7 +116,6 @@ class TimeComputer(ContextDecorator):
         return avg_time
 
 
-
 class TraceDecorator:
     def __init__(self, func: Callable, verbose: bool = False):
         self.func = func
@@ -151,9 +150,3 @@ class TraceDecorator:
         function_input_str = function_input_str[:-2]
         function_input_str += ')'
         return function_input_str
-
-
-def check_key_values(orig_items, item_copy):
-    for key in orig_items:
-        key, original, after = key, 
-        print(f"key: {key}, val: {orig_items[key]}, orig: {item_copy[key]}")
