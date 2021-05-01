@@ -20,13 +20,14 @@ yee.analyze()
 import os
 import sys
 import copy
-from typing import Callable, Union, Dict, List
+from typing import Callable, Dict
 import inspect
 from functools import wraps
 import time as t
 from collections import OrderedDict
+
 from helper.properties import TimeStatistics
-import logging
+from helper.util import get_unique_func_name
 
 try:
     from .exceptions import (
@@ -48,51 +49,6 @@ def get_class_that_defined_method(meth):
         if meth.__name__ in cls.__dict__:
             return cls
     return None
-
-
-def write_file(file_name: str,
-               logger_name: str,
-               level=logging.INFO) -> Callable:
-    """
-    Function for writing information to a file during program execution
-    :param file_name: The name of the file to store log
-    :param logger_name: The name of the function being called
-    :param level: The debug level
-    """
-    file_handler = logging.FileHandler(file_name, 'a')
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                                  '%Y-%m-%d %H:%M:%S')
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(level)
-    logger = logging.getLogger(logger_name)
-
-    for hdlr in logger.handlers[:]:  # remove all old handlers
-        logger.removeHandler(hdlr)
-    logger.addHandler(file_handler)  # set the new handler
-
-    def write(contents_to_write: Union[str, List]) -> None:
-        """
-        When utilizing this function, please note that file I/O is relatively costly,
-        so try calling this function at the end of creating a message string
-        :param contents_to_write: The contents to append to the target log file.
-        """
-        logger.warning(contents_to_write)
-
-    return write
-
-
-def truncate(max_length: int) -> Callable:
-    """
-    Responsible for truncating a sentence based on its length
-    :param max_length:
-    :return: a truncation function
-    """
-
-    def do_truncate(sentence: str) -> str:
-        truncated_sentence = (sentence[:max_length], ' ...') if len(sentence) > max_length else sentence
-        return truncated_sentence
-
-    return do_truncate
 
 
 class InspectMode:
@@ -246,7 +202,6 @@ class Yeezy:
 
             # Function that is used to write to certain file
             truncator = truncate(truncate_from)
-            write_function = write_file(path, caller_filename) if path else print
 
             @wraps(func)
             def wrapper(*args, **kwargs):
@@ -257,7 +212,7 @@ class Yeezy:
                 caller_code = caller_frame_record.code_context
                 debug_properties['call_context'] = f"Called {caller_code[0].strip()} on line no: " \
                                                    f"{caller_frame_record.lineno} from {caller_frame_record.filename}"
-                print(f"{debug_properties['call_context']}")
+                self.log(f"{debug_properties['call_context']}")
                 # Update state variables
                 count[func] += 1
 
@@ -284,7 +239,7 @@ class Yeezy:
                 # remove trailing ', ' --> Handle edge case where function accepts zero arguments
                 function_input_str = function_input_str[:-2] if i > 0 else function_input_str
                 function_input_str += f') called {count[func]} times.'
-                write_function(function_input_str)
+                self.log(function_input_str)
 
                 deep_cpy_args = copy.deepcopy(args)
                 original_kwargs = copy.deepcopy(kwargs)
@@ -303,10 +258,10 @@ class Yeezy:
                     if before != after:
                         print(f"Argument at index: {i} has been modified!: {before} --> {after}")
 
-                write_function(truncated_str_output)  # 4
+                self.log(truncated_str_output)  # 4
                 debug_properties['output'] = truncated_str_output
                 debug_properties['return_type'] = type(value)
-                print(f"Return type: {type(value)}")
+                self.log(f"Return type: {type(value)}")
 
                 return value
 
@@ -316,9 +271,6 @@ class Yeezy:
 
     def _add_debug(self, target) -> None:
         self._register_object(target, self.functions)
-
-    def _get_unique_func_name(self, func: Callable):
-        return f'{func.__module__}.{func.__qualname__}'
 
     def register(self,
                  func_name: str,
@@ -342,7 +294,7 @@ class Yeezy:
         :param func: The function to register
         :return:
         """
-        name = self._get_unique_func_name(func)
+        name = get_unique_func_name(func)
         function_exists = name in self.custom
         if not function_exists:
             self.custom[name] = function_exists
@@ -356,7 +308,7 @@ class Yeezy:
         :param func:
         :return:
         """
-        func_name = self._get_unique_func_name(func)
+        func_name = get_unique_func_name(func)
         # TODO: register function
         self._update_decoration_info(func_name, func)
         self.log_debug(f"Function: {func_name} registered ... ")
@@ -373,7 +325,7 @@ class Yeezy:
         :param stat_updater:
 
         """
-        func_name = self._get_unique_func_name(func)
+        func_name = get_unique_func_name(func)
         # register function
         self._update_decoration_info(func_name, func)
         self.log_debug(f"Function: {func_name} registered ... ")
@@ -419,7 +371,7 @@ class Yeezy:
 
         def decorator(func):
             # Update function statistics
-            func_name = self._get_unique_func_name(func)
+            func_name = get_unique_func_name(func)
             self.log(f"Decorated function with unique id: {func_name}")
             self._update_decoration_info(func_name, func)
 
@@ -503,9 +455,6 @@ class Yeezy:
             target_dict[target] = property_obj()
         else:
             raise NotClassOrCallableError(f"Object: {target} is not a class object or callable")
-
-    def create_class_decorator(self, callable_func: Callable) -> Callable:
-        return util.ClassDecorator(callable_func)
 
     def __repr__(self) -> str:
         return "Yee ... yeezy :)"

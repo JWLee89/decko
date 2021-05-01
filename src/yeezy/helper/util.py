@@ -2,6 +2,7 @@ import time
 from typing import List, Callable, Union
 from functools import wraps
 import inspect
+import logging
 
 
 def is_class_instance(item) -> bool:
@@ -12,6 +13,41 @@ def is_class_instance(item) -> bool:
     :param item: The item to evaluate
     """
     return hasattr(item, '__dict__')
+
+
+def get_unique_func_name(func: Callable):
+    return f'{func.__module__}.{func.__qualname__}'
+
+
+def logger_factory(file_name: str,
+                   logger_name: str,
+                   level=logging.INFO) -> Callable:
+    """
+    Function for writing information to a file during program execution
+    :param file_name: The name of the file to store log
+    :param logger_name: The name of the function being called
+    :param level: The debug level
+    """
+    file_handler = logging.FileHandler(file_name, 'a')
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                                  '%Y-%m-%d %H:%M:%S')
+    file_handler.setFormatter(formatter)
+    file_handler.setLevel(level)
+    logger = logging.getLogger(logger_name)
+
+    for handler in logger.handlers:  # remove all old handlers
+        logger.removeHandler(handler)
+    logger.addHandler(file_handler)  # set the new handler
+
+    def write(contents_to_write: Union[str, List]) -> None:
+        """
+        When utilizing this function, please note that file I/O is relatively costly,
+        so try calling this function at the end of creating a message string
+        :param contents_to_write: The contents to append to the target log file.
+        """
+        logger.warning(contents_to_write)
+
+    return write
 
 
 class ContextDecorator:
