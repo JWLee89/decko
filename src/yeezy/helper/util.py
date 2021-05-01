@@ -1,60 +1,24 @@
-import copy
 import time
-import functools
 from typing import List, Callable, Union
 from functools import wraps
 import inspect
-import logging
-
-# Handle fallback in case ContextDecorator does not work
-# try:
-#     from contextlib import ContextDecorator
-# except ImportError:
-#     version_info = sys.version_info
-#     python_version = f'{version_info.major}.{version_info.minor}.{version_info.micro}-' \
-#                      f'{version_info.releaselevel}'
-#
-#     # TODO: Change this message later
-#     print('cannot import contextmanager from contextlib. '
-#           f'Current python version: {python_version}. Requires version >= 3.2.\n'
-#           f'Attempting to create fallback method ...')
 
 
-def is_class_instance(item):
+def is_class_instance(item) -> bool:
+    """
+    Check if item is a class instance.
+    Note that class instances in Python have
+    the '__dict__' property
+    :param item: The item to evaluate
+    """
     return hasattr(item, '__dict__')
 
 
-def flexible_decorator(func):
-
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        return func(*args, **kwargs)
-    return wrapper
-
-
-def create_before_decorator(*args_outer, **kwargs_outer):
-    """
-    Simple utility function for creating before decorators.
-
-    Before decorators are decorators that perform c
-
-    :param func_to_decorate: The function to decorate
-    :param exec_before_func: The function to execute before decorated function
-    :return:
-    :rtype:
-    """
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            output = func(*args, **kwargs)
-            return output
-
-        return wrapper
-
-    return decorator
-
-
 class ContextDecorator:
+    """
+    Used for creating decorators that behave both
+    as decorators and context managers
+    """
     def __call__(self, func: Callable) -> Callable:
         self.wrapped_func = func
 
@@ -76,10 +40,6 @@ def truncate(max_length: int) -> Callable:
         truncated_sentence = (sentence[:max_length], ' ...') if len(sentence) > max_length else sentence
         return truncated_sentence
     return do_truncate
-
-
-class ClassDecorator(ContextDecorator):
-    pass
 
 
 class TimeComputer(ContextDecorator):
