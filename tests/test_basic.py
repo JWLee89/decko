@@ -22,8 +22,11 @@ def test_class_side_effect_detection():
         def __init__(self, ass):
             self.yee = [1, 2, 3, 4, 5]
 
+        @yee.time
         def do_side_effect(self, a: List):
             a.append(10)
+
+    yee.analyze()
 
 
 def test_extension():

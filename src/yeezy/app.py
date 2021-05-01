@@ -26,16 +26,18 @@ from functools import wraps
 import time as t
 from collections import OrderedDict
 
-from helper.properties import TimeStatistics
-from helper.util import get_unique_func_name
 
 try:
+    from .helper.properties import TimeStatistics
+    from .helper.util import get_unique_func_name
     from .exceptions import (
         NotClassOrCallableError,
         FunctionAlreadyAddedError,
     )
     from .helper import util
 except Exception:
+    from helper.properties import TimeStatistics
+    from helper.util import get_unique_func_name
     # prevent ImportError: attempted relative import with no known parent package
     from exceptions import (
         NotClassOrCallableError,
@@ -80,6 +82,7 @@ class Yeezy:
     -
     """
 
+    # Properties utilized by Yeezy
     DEFAULT_CONFIGS = OrderedDict({
         'debug': False,
         'inspect_mode': InspectMode.PUBLIC_ONLY,
@@ -127,8 +130,8 @@ class Yeezy:
         # during runtime
         self.config = self.get_new_configs(debug, inspect_mode, log_path)
 
-        self.seen_func_names = set()
-
+        # Logging function
+        # If not specified, the default fallback method will be print()
         self.log = util.logger_factory(log_path, "yeezy") if log_path else print
 
     @staticmethod
@@ -173,25 +176,24 @@ class Yeezy:
     # ----- Public Methods -----
     # --------------------------
 
-    def log_debug(self, msg):
+    def log_debug(self, msg) -> None:
         if self.debug:
             self.log(msg)
 
-    def trace(self, silent: bool = True, path: str = None, truncate_from=100):
+    def trace(self,
+              truncate_from: int = 100):
         """
-        :param silent: Silently accumulates statistics regarding the
-        wrapped function called during the
-        :param path: If specified, the log will be stored in the specified file.
+        :param truncate_from: When handling large inputs,
+        truncates the input so that log files
+        do not become too large.
         """
 
         def inner_function(func):
-            count = {}
-
             # Get arguments
             argspecs = inspect.getfullargspec(func)
 
             # State variables
-            count[func] = 0
+            count = {func: 0}
             debug_properties = {}
 
             # call context variables
@@ -200,12 +202,8 @@ class Yeezy:
             caller_code = caller_frame_record.code_context[0].strip()
             debug_properties['call_signature'] = caller_code
 
-            # Function that is used to write to certain file
-            truncator = truncate(truncate_from)
-
             @wraps(func)
             def wrapper(*args, **kwargs):
-                function_name = func.__name__
                 debug_properties = {}
 
                 caller_frame_record = inspect.stack()[1]
@@ -238,6 +236,7 @@ class Yeezy:
 
                 # remove trailing ', ' --> Handle edge case where function accepts zero arguments
                 function_input_str = function_input_str[:-2] if i > 0 else function_input_str
+
                 function_input_str += f') called {count[func]} times.'
                 self.log(function_input_str)
 
@@ -414,10 +413,6 @@ class Yeezy:
 
         return decorator
 
-    def print_debug_message(self, msg: str) -> None:
-        if self.debug:
-            print(msg)
-
     def _register_class(self,
                         class_definition: object,
                         target_dict,
@@ -433,28 +428,13 @@ class Yeezy:
                 # Add name in front of method
                 fn_name = f"{class_definition.__name__}.{fn.__name__}"
 
-                # Register the function
-                self._register_object(fn, fn_name, target_dict, decorator_fn, property_obj)
+                # TODO: Register the function
+                # self._register_object(fn, fn_name, target_dict, decorator_fn, property_obj)
 
                 # # Decorate function and update method
                 # we already registered above
                 decorated_func = decorator_fn(fn)
                 setattr(class_definition, item, decorated_func)
-
-    def _register_object(self,
-                         target,
-                         fn_name,
-                         target_dict,
-                         decorator_fn,
-                         property_obj):
-
-        if callable(target):
-            seen = self._is_seen(fn_name, decorator_fn)
-            if seen:
-                print(f"Function seen: ", fn_name)
-            target_dict[target] = property_obj()
-        else:
-            raise NotClassOrCallableError(f"Object: {target} is not a class object or callable")
 
     def __repr__(self) -> str:
         return "Yee ... yeezy :)"
