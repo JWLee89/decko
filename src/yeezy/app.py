@@ -1,13 +1,20 @@
+"""
+Author: Jay Lee
+Yeezy: A decorator-based application for experimentation,
+development and debugging.
+Users can also dynamically decorate functions at runtime
+which helps performance.
+
+"""
 import os
 import sys
 import copy
-import types
 from typing import Callable, Union, Dict, List
 import inspect
 from functools import wraps
 import time as t
 from collections import OrderedDict
-from helper.properties import TimeStatistics, Test as Troll, create_long_list as cll
+from helper.properties import TimeStatistics
 import logging
 
 try:
@@ -16,7 +23,7 @@ try:
         FunctionAlreadyAddedError,
     )
     from .helper import util
-except:
+except Exception:
     # prevent ImportError: attempted relative import with no known parent package
     from exceptions import (
         NotClassOrCallableError,
@@ -84,7 +91,9 @@ class InspectMode:
 
 
 class API_KEYS:
+    # Properties
     PROPS = 'props'
+    STATS_INPUT = 'input'
     FUNCTION = 'func'
 
 
@@ -210,6 +219,7 @@ class Yeezy:
 
         def inner_function(func):
             count = {}
+
             # Get arguments
             argspecs = inspect.getfullargspec(func)
 
@@ -349,6 +359,8 @@ class Yeezy:
         :param func: The function to execute before the decorated function
         :stat_updater: If defined, statistics will be computed and updated
         after each execution.
+        :param stat_updater:
+
         """
         func_name = self._get_unique_func_name(func)
         # register function
@@ -359,13 +371,18 @@ class Yeezy:
             @wraps(func)
             def inner(*args, **kwargs):
                 output = func(*args, **kwargs)
-                # TODO: Compute statistics
-                self.functions[func_name]['props'].update(output, *args, **kwargs)
+                # TODO: Update statistical computation logic
+                self.functions[func_name]['props'].update(
+                    self.functions[func_name][API_KEYS.STATS_INPUT], *args, **kwargs)
                 return output
         else:
             @wraps(func)
             def inner(*args, **kwargs):
                 output = func(*args, **kwargs)
+                print(self.functions[func_name])
+                if API_KEYS.STATS_INPUT in self.functions[func_name]:
+                    self.functions[func_name][API_KEYS.PROPS].update(
+                        self.functions[func_name][API_KEYS.STATS_INPUT], *args, **kwargs)
                 return output
 
         return inner
@@ -395,13 +412,17 @@ class Yeezy:
             self.log(f"Decorated function with unique id: {func_name}")
             self._update_decoration_info(func_name, func)
 
+            # Initialize input
+            self.functions[func_name][API_KEYS.STATS_INPUT] = 0
+
             @wraps(func)
             def wrapper(*args, **kwargs):
                 time_start = t.time()
                 output = func(*args, **kwargs)
                 time_elapsed = t.time() - time_start
+                self.functions[func_name][API_KEYS.STATS_INPUT] = time_elapsed
                 # Compute statistics
-                self.functions[func_name]['props'].update(time_elapsed)
+                self.functions[func_name][API_KEYS.PROPS].update(time_elapsed)
                 return output
 
             return wrapper
