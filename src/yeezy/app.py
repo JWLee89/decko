@@ -28,7 +28,7 @@ from collections import OrderedDict
 
 
 try:
-    from .helper.properties import TimeStatistics
+    from .helper.properties import TimeStatistics, Statistics
     from .helper.util import get_unique_func_name
     from .exceptions import (
         NotClassOrCallableError,
@@ -36,7 +36,7 @@ try:
     )
     from .helper import util
 except Exception:
-    from helper.properties import TimeStatistics
+    from helper.properties import TimeStatistics, Statistics
     from helper.util import get_unique_func_name
     # prevent ImportError: attempted relative import with no known parent package
     from exceptions import (
@@ -63,6 +63,7 @@ class API_KEYS:
     # Properties
     PROPS = 'props'
     STATS_INPUT = 'input'
+    FUNC_NAME = 'name'
     FUNCTION = 'func'
 
 
@@ -189,6 +190,12 @@ class Yeezy:
         """
 
         def inner_function(func):
+
+            # Update function statistics
+            func_name = get_unique_func_name(func)
+            self.log_debug(f"Decorated function with unique id: {func_name}")
+            self._update_decoration_info(func_name, func, Statistics(func))
+
             # Get arguments
             argspecs = inspect.getfullargspec(func)
 
@@ -198,7 +205,6 @@ class Yeezy:
 
             # call context variables
             caller_frame_record = inspect.stack()[1]
-            caller_filename = caller_frame_record.filename
             caller_code = caller_frame_record.code_context[0].strip()
             debug_properties['call_signature'] = caller_code
 
@@ -351,14 +357,16 @@ class Yeezy:
 
     def _update_decoration_info(self,
                                 func_name: str,
-                                func: Callable) -> None:
+                                func: Callable,
+                                props: Statistics) -> None:
         # Common function for handling duplicates
         if func_name in self.functions:
             self.log_debug(f"Found duplicate decorator with identity: {func_name}")
         else:
             self.functions[func_name] = {
-                API_KEYS.FUNCTION: func_name,
-                API_KEYS.PROPS: TimeStatistics(func)
+                API_KEYS.FUNC_NAME: func_name,
+                API_KEYS.FUNCTION: func,
+                API_KEYS.PROPS: props
             }
 
     def time(self,
@@ -372,7 +380,7 @@ class Yeezy:
             # Update function statistics
             func_name = get_unique_func_name(func)
             self.log(f"Decorated function with unique id: {func_name}")
-            self._update_decoration_info(func_name, func)
+            self._update_decoration_info(func_name, func, TimeStatistics(func))
 
             # Initialize input
             self.functions[func_name][API_KEYS.STATS_INPUT] = 0
