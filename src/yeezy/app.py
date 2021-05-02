@@ -20,30 +20,17 @@ yee.analyze()
 import os
 import sys
 import copy
-from typing import Callable, Dict
+from typing import Callable, Dict, List, Tuple, Union
 import inspect
 from functools import wraps
 import time as t
 from collections import OrderedDict
 
-
-try:
-    from .helper.properties import TimeStatistics, Statistics
-    from .helper.util import get_unique_func_name
-    from .exceptions import (
-        NotClassOrCallableError,
-        FunctionAlreadyAddedError,
-    )
-    from .helper import util
-except Exception:
-    from helper.properties import TimeStatistics, Statistics
-    from helper.util import get_unique_func_name
-    # prevent ImportError: attempted relative import with no known parent package
-    from exceptions import (
-        NotClassOrCallableError,
-        FunctionAlreadyAddedError,
-    )
-    from helper import util
+# Local imports
+from src.yeezy.helper.properties import TimeStatistics, Statistics
+from src.yeezy.helper.util import get_unique_func_name
+from src.yeezy.helper import util
+import src.yeezy.exceptions as exceptions
 
 
 def get_class_that_defined_method(meth):
@@ -72,6 +59,12 @@ class CustomFunction(dict):
     __getattr__ = dict.get
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
+
+
+def _check_if_class(cls):
+    if not util.is_class_instance(cls):
+        raise exceptions.NotClassException("Yeezy.observe() observes only classes. "
+                                           f"{cls} is of type: {type(cls)}")
 
 
 class Yeezy:
@@ -179,9 +172,48 @@ class Yeezy:
 
     def log_debug(self, msg) -> None:
         if self.debug:
-            self.log(msg)
+            self.log(f'DEBUG: {msg}')
+
+    def observe(self,
+                properties: Union[Tuple, List] = None) -> Callable:
+        """
+        Observe properties in a class and log when they are being updated.
+        :param properties: The properties to observe.
+        """
+
+        is_list_or_tuple = isinstance(properties, (list, tuple))
+        is_class = util.is_class_instance(properties)
+
+        def observe_class(cls):
+            _check_if_class(cls)
+            cls_name = f'{cls.__module__}.{cls.__name__}'
+            class_props = [item for item in inspect.getmembers(cls) if not inspect.ismethod(item)]
+            print(f"Props: {class_props}, {dir(cls)}")
+            # Observe passed properties
+            if is_list_or_tuple:
+                for prop in properties:
+                    if prop not in class_props:
+                        raise ValueError(f"Property '{prop}' not found in class <{cls_name}>.\n"
+                                         f"Available props: {class_props}")
+                    # Must pass in string
+                    elif not isinstance(prop, str):
+                        raise ValueError("Properties passed to .observe() should be a string. "
+                                         f"Passed in value '{prop}' of type: {type(prop)}")
+                    else:
+                        pass
+                        # property_value = cls.__getitem__(prop)
+                        # print(f"Prop value: {property_value}")
+            else:
+                pass
+
+        # Called without calling decorator. e.g.
+        # @yee.observe instead of @yee.observe()
+        if is_class:
+            return observe_class(properties)
+        return observe_class
 
     def trace(self,
+              warn_side_effects = True,
               truncate_from: int = 100):
         """
         :param truncate_from: When handling large inputs,
@@ -199,78 +231,82 @@ class Yeezy:
             # Get arguments
             argspecs = inspect.getfullargspec(func)
 
-            # State variables
-            count = {func: 0}
-            debug_properties = {}
-
             # call context variables
             caller_frame_record = inspect.stack()[1]
             caller_code = caller_frame_record.code_context[0].strip()
-            debug_properties['call_signature'] = caller_code
 
             @wraps(func)
             def wrapper(*args, **kwargs):
-                debug_properties = {}
-
-                caller_frame_record = inspect.stack()[1]
-                caller_code = caller_frame_record.code_context
-                debug_properties['call_context'] = f"Called {caller_code[0].strip()} on line no: " \
-                                                   f"{caller_frame_record.lineno} from {caller_frame_record.filename}"
-                self.log(f"{debug_properties['call_context']}")
-                # Update state variables
-                count[func] += 1
-
-                args_repr = [repr(a) for a in args]  # 1
-                kwargs_repr = [f"{k}={v!r}" for k, v in kwargs.items()]  # 2
-                default_index = 0
-                warning_str = ''
-                function_input_str = f"Debug: {caller_code[0].strip().split('(')[0]}("
-                i = 0
-                for test in argspecs.args:
-                    if i < len(args):
-                        value = args_repr[i]
-                    elif i >= len(args) and test not in kwargs:
-                        value = argspecs.defaults[default_index]
-                        default_index += 1
-                    else:
-                        value = kwargs[test]
-
-                    function_input_str += f"{test}={value}"
-                    function_input_str += ','
-                    function_input_str += ' '
-                    i += 1
-
-                # remove trailing ', ' --> Handle edge case where function accepts zero arguments
-                function_input_str = function_input_str[:-2] if i > 0 else function_input_str
-
-                function_input_str += f') called {count[func]} times.'
-                self.log(function_input_str)
-
-                deep_cpy_args = copy.deepcopy(args)
-                original_kwargs = copy.deepcopy(kwargs)
-
-                # Now check of side-effects
-                value = func(*args, **kwargs)
-                truncated_str_output = str(value)[:truncate_from] + ' ...'
-
-                for i in range(len(args)):
-                    before, after = deep_cpy_args[i], args[i]
-                    if before != after:
-                        print(f"Argument at index: {i} has been modified!: {before} --> {after}")
-
-                for key in kwargs.keys():
-                    before, after = original_kwargs[key], kwargs[key]
-                    if before != after:
-                        print(f"Argument at index: {i} has been modified!: {before} --> {after}")
-
-                self.log(truncated_str_output)  # 4
-                debug_properties['output'] = truncated_str_output
-                debug_properties['return_type'] = type(value)
-                self.log(f"Return type: {type(value)}")
-
-                return value
-
+                return func(*args, **kwargs)
             return wrapper
+
+            # @wraps(func)
+            # def wrapper(*args, **kwargs):
+            #     debug_properties = {}
+            #
+            #     caller_frame_record = inspect.stack()[1]
+            #     caller_code = caller_frame_record.code_context
+            #     debug_properties['call_context'] = f"Called {caller_code[0].strip()} on line no: " \
+            #                                        f"{caller_frame_record.lineno} from {caller_frame_record.filename}"
+            #     self.log(f"{debug_properties['call_context']}")
+            #     # Update state variables
+            #     count[func] += 1
+            #
+            #     args_repr = [repr(a) for a in args]  # 1
+            #     kwargs_repr = [f"{k}={v!r}" for k, v in kwargs.items()]  # 2
+            #     default_index = 0
+            #     warning_str = ''
+            #     function_input_str = f"Debug: {caller_code[0].strip().split('(')[0]}("
+            #     i = 0
+            #     for test in argspecs.args:
+            #         if i < len(args):
+            #             value = args_repr[i]
+            #         elif i >= len(args) and test not in kwargs:
+            #             value = argspecs.defaults[default_index]
+            #             default_index += 1
+            #         else:
+            #             value = kwargs[test]
+            #
+            #         function_input_str += f"{test}={value}"
+            #         function_input_str += ','
+            #         function_input_str += ' '
+            #         i += 1
+            #
+            #     # remove trailing ', ' --> Handle edge case where function accepts zero arguments
+            #     function_input_str = function_input_str[:-2] if i > 0 else function_input_str
+            #
+            #     function_input_str += f') called {count[func]} times.'
+            #     self.log(function_input_str)
+            #
+            #     deep_cpy_args = copy.deepcopy(args)
+            #     original_kwargs = copy.deepcopy(kwargs)
+            #
+            #     # Now check of side-effects
+            #     value = func(*args, **kwargs)
+            #     truncated_str_output = str(value)[:truncate_from] + ' ...'
+            #
+            #     # Check for side-effects
+            #     if warn_side_effects:
+            #         for i in range(len(args)):
+            #             before, after = deep_cpy_args[i], args[i]
+            #             if before != after:
+            #                 self.log(f"Argument at index: {i} has been modified!: {before} --> {after}")
+            #
+            #         for key in kwargs.keys():
+            #             before, after = original_kwargs[key], kwargs[key]
+            #             if before != after:
+            #                 self.log(f"Argument at index: {i} has been modified!: {before} --> {after}")
+            #
+            #
+            #     # Log output type
+            #     debug_properties['return_type'] = type(value)
+            #     self.log(truncated_str_output)  # 4
+            #     debug_properties['output'] = truncated_str_output
+            #     self.log(f"Return type: {type(value)}")
+            #
+            #     return value
+            #
+            # return wrapper
 
         return inner_function
 
@@ -463,3 +499,18 @@ class Yeezy:
         for func_name, properties in self.functions.items():
             self.log(f"Function: {func_name}, properties: {properties}")
         self.log("-" * 100)
+
+
+if __name__ == "__main__":
+
+    yee = Yeezy(__name__, debug=True)
+
+    @yee.observe(['test'])
+    class Test:
+        def __init__(self, test, cool):
+            self.test = test
+            self.cool = cool
+
+        def a_method(self):
+            print(f"Test: {self.test}. Cool: {self.cool}")
+
