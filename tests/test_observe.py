@@ -43,4 +43,4 @@ def test_valid_input():
         # observed_test = yee.observe(['cool'])(test)
 
     except ValueError:
-        pytest.fail("The properties  ")
+        pytest.fail("The observable list contains invalid properties")
