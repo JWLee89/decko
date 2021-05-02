@@ -186,6 +186,8 @@ class Yeezy:
         if self.debug:
             self.log(f'DEBUG: {msg}')
 
+    # Compute stats
+    # @util.compute_stats()
     def fire_if(self,
                 events_to_fire: List[Callable],
                 predicate: Callable = lambda x: x) -> Callable:
@@ -472,6 +474,7 @@ class Yeezy:
                 API_KEYS.PROPS: props
             }
 
+    # @util.compute_stats
     def time(self,
              passed_func: Callable = None,
              register: bool = True,
@@ -572,11 +575,17 @@ if __name__ == "__main__":
     yee = Yeezy(__name__, debug=True)
 
 
-    @yee.observe(['test'])
     class Test:
         def __init__(self, test, cool):
             self.test = test
             self.cool = cool
 
+        @yee.time
         def a_method(self):
             print(f"Test: {self.test}. Cool: {self.cool}")
+
+    test = Test(1, 2)
+    for i in range(10):
+        test.a_method()
+
+    yee.analyze()

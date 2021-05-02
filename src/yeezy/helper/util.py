@@ -186,3 +186,14 @@ class TraceDecorator:
         function_input_str = function_input_str[:-2]
         function_input_str += ')'
         return function_input_str
+
+
+def compute_stats(computation_function):
+    def inner_func(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            output = fn(*args, **kwargs)
+            computation_function(output, *args, **kwargs)
+            return output
+        return wrapper
+    return inner_func
