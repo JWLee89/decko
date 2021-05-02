@@ -174,6 +174,55 @@ class Yeezy:
         if self.debug:
             self.log(f'DEBUG: {msg}')
 
+    def fire_if(self,
+                events_to_fire: List[Callable],
+                predicate: Callable = lambda x: x) -> Callable:
+        """
+        Given a list of subscribed callables and an predicate function,
+        create a wrapper that fires events when predicates are fulfilled
+
+        >> Code sample
+        ----------------------------------
+
+        yee = Yeezy(__name__)
+
+        def do_something(output, instance, arr):
+            print(f"Output: {output}. Triggered by array: {arr}")
+
+
+        @yee.fire_if([do_something], lambda x, arr: len(arr) > 5)
+        def do_something(arr):
+            return sum(arr)
+
+        if __name__ == "__main__":
+            # This should fire an event since we called
+            test = do_something([1, 2, 3, 4, 5, 6])
+            print(do_something([20, 30]))
+
+        >> End code sample
+        ----------------------------------
+
+        :param events_to_fire: The subscribed events that will be triggered
+        when predicate is true
+        :param predicate: The condition for triggering the event
+        :return: The wrapped function
+        """
+
+        def wrap(func: Callable) -> Callable:
+
+            @wraps(func)
+            def wrapped(*args, **kwargs):
+                # Whatever function we are wrapping
+                output = func(*args, **kwargs)
+                fire_event = predicate(output, self, *args, **kwargs)
+                # tell everyone about change based on predicate
+                if fire_event:
+                    for event in events_to_fire:
+                        event(output, *args, **kwargs)
+                return output
+            return wrapped
+        return wrap
+
     def observe(self,
                 properties: Union[Tuple, List] = None) -> Callable:
         """
@@ -189,8 +238,10 @@ class Yeezy:
             cls_name = f'{cls.__module__}.{cls.__name__}'
             class_props = [item for item in inspect.getmembers(cls) if not inspect.ismethod(item)]
             print(f"Props: {class_props}, {dir(cls)}")
+
             # Observe passed properties
             if is_list_or_tuple:
+                # Go through all properties
                 for prop in properties:
                     if prop not in class_props:
                         raise ValueError(f"Property '{prop}' not found in class <{cls_name}>.\n"
@@ -203,6 +254,8 @@ class Yeezy:
                         pass
                         # property_value = cls.__getitem__(prop)
                         # print(f"Prop value: {property_value}")
+
+            # Observe all properties
             else:
                 pass
 
@@ -342,7 +395,7 @@ class Yeezy:
 
         return function_exists
 
-    def _register(self, func: Callable) -> Callable:
+    def _register(self, func: Callable) -> None:
         """
         Handle registration of a function. Is
         applied to all functions
