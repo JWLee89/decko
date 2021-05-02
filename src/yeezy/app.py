@@ -166,11 +166,23 @@ class Yeezy:
     def debug(self) -> bool:
         return self.config['debug']
 
+    @debug.setter
+    def debug(self, new_mode):
+        if type(new_mode) != bool:
+            raise TypeError("Yeezy.debug must be set to either True or False. "
+                            f"Set to value: {new_mode} of type {type(new_mode)}")
+        self.config['debug'] = new_mode
+
     # --------------------------
     # ----- Public Methods -----
     # --------------------------
 
     def log_debug(self, msg) -> None:
+        """
+        Print debug message if mode is set to
+        debug mode
+        :param msg: The message to log
+        """
         if self.debug:
             self.log(f'DEBUG: {msg}')
 
@@ -220,7 +232,9 @@ class Yeezy:
                     for event in events_to_fire:
                         event(output, *args, **kwargs)
                 return output
+
             return wrapped
+
         return wrap
 
     def observe(self,
@@ -266,7 +280,7 @@ class Yeezy:
         return observe_class
 
     def trace(self,
-              warn_side_effects = True,
+              warn_side_effects=True,
               truncate_from: int = 100):
         """
         :param truncate_from: When handling large inputs,
@@ -275,7 +289,6 @@ class Yeezy:
         """
 
         def inner_function(func):
-
             # Update function statistics
             func_name = get_unique_func_name(func)
             self.log_debug(f"Decorated function with unique id: {func_name}")
@@ -291,6 +304,7 @@ class Yeezy:
             @wraps(func)
             def wrapper(*args, **kwargs):
                 return func(*args, **kwargs)
+
             return wrapper
 
             # @wraps(func)
@@ -555,8 +569,8 @@ class Yeezy:
 
 
 if __name__ == "__main__":
-
     yee = Yeezy(__name__, debug=True)
+
 
     @yee.observe(['test'])
     class Test:
@@ -566,4 +580,3 @@ if __name__ == "__main__":
 
         def a_method(self):
             print(f"Test: {self.test}. Cool: {self.cool}")
-

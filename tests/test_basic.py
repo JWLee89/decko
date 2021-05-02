@@ -1,7 +1,7 @@
 from src.yeezy.app import Yeezy
 from functools import wraps
 
-yee = Yeezy(__file__)
+yee = Yeezy(__name__)
 
 
 def test_initialization():
