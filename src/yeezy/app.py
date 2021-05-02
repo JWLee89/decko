@@ -1,28 +1,36 @@
+"""
+Author: Jay Lee
+Yeezy: A decorator-based application for experimentation,
+development and debugging.
+Users can also dynamically decorate functions at runtime
+which helps performance.
+
+Basic use case:
+
+yee = Yeezy()
+
+@yee.trace
+def buggy_function(input_1, input_2, ...):
+    ...
+
+# Analyze the function
+yee.analyze()
+
+"""
 import os
 import sys
 import copy
-import types
-from typing import Callable, Union, Dict, List
+from typing import Callable, Dict, List, Tuple, Union
 import inspect
 from functools import wraps
 import time as t
 from collections import OrderedDict
-from helper.properties import TimeStatistics, Test as Troll, create_long_list as cll
-import logging
 
-try:
-    from .exceptions import (
-        NotClassOrCallableError,
-        FunctionAlreadyAddedError,
-    )
-    from .helper import util
-except:
-    # prevent ImportError: attempted relative import with no known parent package
-    from exceptions import (
-        NotClassOrCallableError,
-        FunctionAlreadyAddedError,
-    )
-    from helper import util
+# Local imports
+from src.yeezy.helper.properties import TimeStatistics, Statistics
+from src.yeezy.helper.util import get_unique_func_name
+from src.yeezy.helper import util
+import src.yeezy.exceptions as exceptions
 
 
 def get_class_that_defined_method(meth):
@@ -32,49 +40,6 @@ def get_class_that_defined_method(meth):
     return None
 
 
-def write_file(file_name: str,
-               logger_name: str,
-               level=logging.INFO) -> Callable:
-    """
-    Function for writing information to a file during program execution
-    :param file_name: The name of the file to store log
-    :param logger_name: The name of the function being called
-    :param level: The debug level
-    """
-    file_handler = logging.FileHandler(file_name, 'a')
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                                  '%Y-%m-%d %H:%M:%S')
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(level)
-    logger = logging.getLogger(logger_name)
-
-    for hdlr in logger.handlers[:]:  # remove all old handlers
-        logger.removeHandler(hdlr)
-    logger.addHandler(file_handler)  # set the new handler
-
-    def write(contents_to_write: Union[str, List]) -> None:
-        """
-        When utilizing this function, please note that file I/O is relatively costly,
-        so try calling this function at the end of creating a message string
-        :param contents_to_write: The contents to append to the target log file.
-        """
-        logger.warning(contents_to_write)
-
-    return write
-
-
-def truncate(max_length: int) -> Callable:
-    """
-    Responsible for truncating a sentence based on its length
-    :param max_length:
-    :return: a truncation function
-    """
-    def do_truncate(sentence: str) -> str:
-        truncated_sentence = (sentence[:max_length], ' ...') if len(sentence) > max_length else sentence
-        return truncated_sentence
-    return do_truncate
-
-
 class InspectMode:
     ALL = 0
     PUBLIC_ONLY = 1
@@ -82,7 +47,10 @@ class InspectMode:
 
 
 class API_KEYS:
+    # Properties
     PROPS = 'props'
+    STATS_INPUT = 'input'
+    FUNC_NAME = 'name'
     FUNCTION = 'func'
 
 
@@ -92,6 +60,11 @@ class CustomFunction(dict):
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
+
+def _check_if_class(cls):
+    if not util.is_class_instance(cls):
+        raise exceptions.NotClassException("Yeezy.observe() observes only classes. "
+                                           f"{cls} is of type: {type(cls)}")
 
 
 class Yeezy:
@@ -103,6 +76,7 @@ class Yeezy:
     -
     """
 
+    # Properties utilized by Yeezy
     DEFAULT_CONFIGS = OrderedDict({
         'debug': False,
         'inspect_mode': InspectMode.PUBLIC_ONLY,
@@ -131,7 +105,6 @@ class Yeezy:
         # PRIVATE_ONLY: 2 -Inspect only "underscore methods" e.g. def _do_something(self, ...)
         self.inspect_mode = inspect_mode
 
-
         #: Absolute path to the package on the filesystem. Used to look
         #: up resources contained in the package.
         self.root_path = root_path
@@ -151,8 +124,8 @@ class Yeezy:
         # during runtime
         self.config = self.get_new_configs(debug, inspect_mode, log_path)
 
-        self.seen_func_names = set()
-
+        # Logging function
+        # If not specified, the default fallback method will be print()
         self.log = util.logger_factory(log_path, "yeezy") if log_path else print
 
     @staticmethod
@@ -197,103 +170,148 @@ class Yeezy:
     # ----- Public Methods -----
     # --------------------------
 
-    def trace(self, silent: bool = True, path: str = None, truncate_from = 100):
+    def log_debug(self, msg) -> None:
+        if self.debug:
+            self.log(f'DEBUG: {msg}')
+
+    def observe(self,
+                properties: Union[Tuple, List] = None) -> Callable:
         """
-        :param silent: Silently accumulates statistics regarding the
-        wrapped function called during the
-        :param path: If specified, the log will be stored in the specified file.
+        Observe properties in a class and log when they are being updated.
+        :param properties: The properties to observe.
+        """
+
+        is_list_or_tuple = isinstance(properties, (list, tuple))
+        is_class = util.is_class_instance(properties)
+
+        def observe_class(cls):
+            _check_if_class(cls)
+            cls_name = f'{cls.__module__}.{cls.__name__}'
+            class_props = [item for item in inspect.getmembers(cls) if not inspect.ismethod(item)]
+            print(f"Props: {class_props}, {dir(cls)}")
+            # Observe passed properties
+            if is_list_or_tuple:
+                for prop in properties:
+                    if prop not in class_props:
+                        raise ValueError(f"Property '{prop}' not found in class <{cls_name}>.\n"
+                                         f"Available props: {class_props}")
+                    # Must pass in string
+                    elif not isinstance(prop, str):
+                        raise ValueError("Properties passed to .observe() should be a string. "
+                                         f"Passed in value '{prop}' of type: {type(prop)}")
+                    else:
+                        pass
+                        # property_value = cls.__getitem__(prop)
+                        # print(f"Prop value: {property_value}")
+            else:
+                pass
+
+        # Called without calling decorator. e.g.
+        # @yee.observe instead of @yee.observe()
+        if is_class:
+            return observe_class(properties)
+        return observe_class
+
+    def trace(self,
+              warn_side_effects = True,
+              truncate_from: int = 100):
+        """
+        :param truncate_from: When handling large inputs,
+        truncates the input so that log files
+        do not become too large.
         """
 
         def inner_function(func):
-            count = {}
+
+            # Update function statistics
+            func_name = get_unique_func_name(func)
+            self.log_debug(f"Decorated function with unique id: {func_name}")
+            self._update_decoration_info(func_name, func, Statistics(func))
+
             # Get arguments
             argspecs = inspect.getfullargspec(func)
 
-            # State variables
-            count[func] = 0
-            debug_properties = {}
-
             # call context variables
             caller_frame_record = inspect.stack()[1]
-            caller_filename = caller_frame_record.filename
             caller_code = caller_frame_record.code_context[0].strip()
-            debug_properties['call_signature'] = caller_code
-
-            # Function that is used to write to certain file
-            truncator = truncate(truncate_from)
-            write_function = write_file(path, caller_filename) if path else print
 
             @wraps(func)
             def wrapper(*args, **kwargs):
-                function_name = func.__name__
-                debug_properties = {}
-
-                caller_frame_record = inspect.stack()[1]
-                caller_code = caller_frame_record.code_context
-                debug_properties['call_context'] = f"Called {caller_code[0].strip()} on line no: " \
-                                                   f"{caller_frame_record.lineno} from {caller_frame_record.filename}"
-                print(f"{debug_properties['call_context']}")
-                # Update state variables
-                count[func] += 1
-
-                args_repr = [repr(a) for a in args]  # 1
-                kwargs_repr = [f"{k}={v!r}" for k, v in kwargs.items()]  # 2
-                default_index = 0
-                warning_str = ''
-                function_input_str = f"Debug: {caller_code[0].strip().split('(')[0]}("
-                i = 0
-                for test in argspecs.args:
-                    if i < len(args):
-                        value = args_repr[i]
-                    elif i >= len(args) and test not in kwargs:
-                        value = argspecs.defaults[default_index]
-                        default_index += 1
-                    else:
-                        value = kwargs[test]
-
-                    function_input_str += f"{test}={value}"
-                    function_input_str += ','
-                    function_input_str += ' '
-                    i += 1
-
-                # remove trailing ', ' --> Handle edge case where function accepts zero arguments
-                function_input_str = function_input_str[:-2] if i > 0 else function_input_str
-                function_input_str += f') called {count[func]} times.'
-                write_function(function_input_str)
-
-                deep_cpy_args = copy.deepcopy(args)
-                original_kwargs = copy.deepcopy(kwargs)
-
-                # Now check of side-effects
-                value = func(*args, **kwargs)
-                truncated_str_output = str(value)[:truncate_from] + ' ...'
-
-                for i in range(len(args)):
-                    before, after = deep_cpy_args[i], args[i]
-                    if before != after:
-                        print(f"Argument at index: {i} has been modified!: {before} --> {after}")
-
-                for key in kwargs.keys():
-                    before, after = original_kwargs[key], kwargs[key]
-                    if before != after:
-                        print(f"Argument at index: {i} has been modified!: {before} --> {after}")
-
-                write_function(truncated_str_output)  # 4
-                debug_properties['output'] = truncated_str_output
-                debug_properties['return_type'] = type(value)
-                print(f"Return type: {type(value)}")
-
-                return value
-
+                return func(*args, **kwargs)
             return wrapper
+
+            # @wraps(func)
+            # def wrapper(*args, **kwargs):
+            #     debug_properties = {}
+            #
+            #     caller_frame_record = inspect.stack()[1]
+            #     caller_code = caller_frame_record.code_context
+            #     debug_properties['call_context'] = f"Called {caller_code[0].strip()} on line no: " \
+            #                                        f"{caller_frame_record.lineno} from {caller_frame_record.filename}"
+            #     self.log(f"{debug_properties['call_context']}")
+            #     # Update state variables
+            #     count[func] += 1
+            #
+            #     args_repr = [repr(a) for a in args]  # 1
+            #     kwargs_repr = [f"{k}={v!r}" for k, v in kwargs.items()]  # 2
+            #     default_index = 0
+            #     warning_str = ''
+            #     function_input_str = f"Debug: {caller_code[0].strip().split('(')[0]}("
+            #     i = 0
+            #     for test in argspecs.args:
+            #         if i < len(args):
+            #             value = args_repr[i]
+            #         elif i >= len(args) and test not in kwargs:
+            #             value = argspecs.defaults[default_index]
+            #             default_index += 1
+            #         else:
+            #             value = kwargs[test]
+            #
+            #         function_input_str += f"{test}={value}"
+            #         function_input_str += ','
+            #         function_input_str += ' '
+            #         i += 1
+            #
+            #     # remove trailing ', ' --> Handle edge case where function accepts zero arguments
+            #     function_input_str = function_input_str[:-2] if i > 0 else function_input_str
+            #
+            #     function_input_str += f') called {count[func]} times.'
+            #     self.log(function_input_str)
+            #
+            #     deep_cpy_args = copy.deepcopy(args)
+            #     original_kwargs = copy.deepcopy(kwargs)
+            #
+            #     # Now check of side-effects
+            #     value = func(*args, **kwargs)
+            #     truncated_str_output = str(value)[:truncate_from] + ' ...'
+            #
+            #     # Check for side-effects
+            #     if warn_side_effects:
+            #         for i in range(len(args)):
+            #             before, after = deep_cpy_args[i], args[i]
+            #             if before != after:
+            #                 self.log(f"Argument at index: {i} has been modified!: {before} --> {after}")
+            #
+            #         for key in kwargs.keys():
+            #             before, after = original_kwargs[key], kwargs[key]
+            #             if before != after:
+            #                 self.log(f"Argument at index: {i} has been modified!: {before} --> {after}")
+            #
+            #
+            #     # Log output type
+            #     debug_properties['return_type'] = type(value)
+            #     self.log(truncated_str_output)  # 4
+            #     debug_properties['output'] = truncated_str_output
+            #     self.log(f"Return type: {type(value)}")
+            #
+            #     return value
+            #
+            # return wrapper
 
         return inner_function
 
     def _add_debug(self, target) -> None:
         self._register_object(target, self.functions)
-
-    def _get_unique_func_name(self, func: Callable):
-        return f'{func.__module__}.{func.__qualname__}'
 
     def register(self,
                  func_name: str,
@@ -317,48 +335,74 @@ class Yeezy:
         :param func: The function to register
         :return:
         """
-        name = self._get_unique_func_name(func)
+        name = get_unique_func_name(func)
         function_exists = name in self.custom
         if not function_exists:
             self.custom[name] = function_exists
 
         return function_exists
 
-    def decorate(self,
-                 func: Callable):
+    def _register(self, func: Callable) -> Callable:
         """
+        Handle registration of a function. Is
+        applied to all functions
         :param func:
         :return:
-        :rtype:
         """
-        func_name = self._get_unique_func_name(func)
-        # if func_name not in self.custom:
-        #     raise ValueError(f"{func_name} is not registered as a decorator!")
-
+        func_name = get_unique_func_name(func)
         # TODO: register function
-        # self.register(func_name, func, self.functions)
-        self.log(f"Function: {func_name} registered ... ")
+        self._update_decoration_info(func_name, func)
+        self.log_debug(f"Function: {func_name} registered ... ")
 
-        @wraps(func)
-        def inner(*args, **kwargs):
-            # TODO: add behavior
-            output = func(*args, **kwargs)
+    def before(self,
+               func: Callable,
+               stat_updater: Callable = None) -> Callable:
+        """
+        Create decorator that executes the function prior to
+        the decorated function being executed
+        :param func: The function to execute before the decorated function
+        :stat_updater: If defined, statistics will be computed and updated
+        after each execution.
+        :param stat_updater:
 
-            # TODO: Compute statistics
-            return output
+        """
+        func_name = get_unique_func_name(func)
+        # register function
+        self._update_decoration_info(func_name, func)
+        self.log_debug(f"Function: {func_name} registered ... ")
+
+        if stat_updater:
+            @wraps(func)
+            def inner(*args, **kwargs):
+                output = func(*args, **kwargs)
+                # TODO: Update statistical computation logic
+                self.functions[func_name]['props'].update(
+                    self.functions[func_name][API_KEYS.STATS_INPUT], *args, **kwargs)
+                return output
+        else:
+            @wraps(func)
+            def inner(*args, **kwargs):
+                output = func(*args, **kwargs)
+                print(self.functions[func_name])
+                if API_KEYS.STATS_INPUT in self.functions[func_name]:
+                    self.functions[func_name][API_KEYS.PROPS].update(
+                        self.functions[func_name][API_KEYS.STATS_INPUT], *args, **kwargs)
+                return output
+
         return inner
 
     def _update_decoration_info(self,
                                 func_name: str,
-                                func: Callable) -> None:
+                                func: Callable,
+                                props: Statistics) -> None:
         # Common function for handling duplicates
-        if func_name in self.functions and func.__name__ == self.functions[func_name]['func']:
-            print("Found duplicate decorator with identity: ", func_name)
-            return func
+        if func_name in self.functions:
+            self.log_debug(f"Found duplicate decorator with identity: {func_name}")
         else:
             self.functions[func_name] = {
-                API_KEYS.FUNCTION: func.__name__,
-                API_KEYS.PROPS: TimeStatistics(func)
+                API_KEYS.FUNC_NAME: func_name,
+                API_KEYS.FUNCTION: func,
+                API_KEYS.PROPS: props
             }
 
     def time(self,
@@ -369,20 +413,24 @@ class Yeezy:
              truncate_from: int = 200):
 
         def decorator(func):
-
             # Update function statistics
-            func_name = self._get_unique_func_name(func)
+            func_name = get_unique_func_name(func)
             self.log(f"Decorated function with unique id: {func_name}")
-            self._update_decoration_info(func_name, func)
+            self._update_decoration_info(func_name, func, TimeStatistics(func))
+
+            # Initialize input
+            self.functions[func_name][API_KEYS.STATS_INPUT] = 0
 
             @wraps(func)
             def wrapper(*args, **kwargs):
                 time_start = t.time()
                 output = func(*args, **kwargs)
                 time_elapsed = t.time() - time_start
+                self.functions[func_name][API_KEYS.STATS_INPUT] = time_elapsed
                 # Compute statistics
-                self.functions[func_name]['props'].update(time_elapsed)
+                self.functions[func_name][API_KEYS.PROPS].update(time_elapsed)
                 return output
+
             return wrapper
             # @wraps(func)
             # def wrapper(*args, **kwargs):
@@ -409,10 +457,6 @@ class Yeezy:
 
         return decorator
 
-    def print_debug_message(self, msg: str) -> None:
-        if self.debug:
-            print(msg)
-
     def _register_class(self,
                         class_definition: object,
                         target_dict,
@@ -428,31 +472,13 @@ class Yeezy:
                 # Add name in front of method
                 fn_name = f"{class_definition.__name__}.{fn.__name__}"
 
-                # Register the function
-                self._register_object(fn, fn_name, target_dict, decorator_fn, property_obj)
+                # TODO: Register the function
+                # self._register_object(fn, fn_name, target_dict, decorator_fn, property_obj)
 
                 # # Decorate function and update method
                 # we already registered above
                 decorated_func = decorator_fn(fn)
                 setattr(class_definition, item, decorated_func)
-
-    def _register_object(self,
-                         target,
-                         fn_name,
-                         target_dict,
-                         decorator_fn,
-                         property_obj):
-
-        if callable(target):
-            seen = self._is_seen(fn_name, decorator_fn)
-            if seen:
-                print(f"Function seen: ", fn_name)
-            target_dict[target] = property_obj()
-        else:
-            raise NotClassOrCallableError(f"Object: {target} is not a class object or callable")
-
-    def create_class_decorator(self, callable_func: Callable) -> Callable:
-        return util.ClassDecorator(callable_func)
 
     def __repr__(self) -> str:
         return "Yee ... yeezy :)"
@@ -476,80 +502,15 @@ class Yeezy:
 
 
 if __name__ == "__main__":
-    import torch
-    yee = Yeezy(__name__, debug=True, log_path="test.log")
 
-    def do_before_do_go():
-        print("before do_go()")
+    yee = Yeezy(__name__, debug=True)
 
-
-    item = Troll()
-
-    # This should register all functions inside of class Test()
-    # @yee.time
+    @yee.observe(['test'])
     class Test:
-        def __init__(self):
-            self.test = [1, 2, 3]
+        def __init__(self, test, cool):
+            self.test = test
+            self.cool = cool
 
-        def mutate(self, num):
-            self.test.append(num)
+        def a_method(self):
+            print(f"Test: {self.test}. Cool: {self.cool}")
 
-        @yee.decorate
-        def print_something(self, test):
-            print(test)
-
-        # @yee.trace()
-        @yee.time
-        @yee.time
-        @yee.decorate
-        def create_long_list(self, n=1000000, name="test"):
-            name = "troll"
-            return torch.tensor(range(n))
-
-    def print_something(name):
-        print(name)
-        num = 10
-        # yee.debug(num)
-
-    def do_go(num: list):
-        print(f"yee registered running")
-
-    @yee.decorate
-    @yee.time
-    def create_long_list(n = 1000000, name="test"):
-        return list(range(n)), name
-
-    # create_long_list = yee.double_wrap(create_long_list)
-    tom = Test()
-
-    def deco(func):
-        @wraps(func)
-        def yee(*args, **kwargs):
-            print("yee")
-            return func(*args, **kwargs)
-
-        return yee
-
-        # Custom function
-
-    create_long_list = deco(create_long_list)
-
-    # We can decorate methods using the following methods
-    troll = Troll()
-    another_fn = yee.decorate(troll.print_this)
-    # Another create long list
-    fn = cll
-    # fn = yee.decorate(fn)
-    # fn = yee.decorate(fn)
-
-    for i in range(20):
-        tom.create_long_list(i)
-        fn(i)
-        create_long_list(100)
-        # tom.create_long_list(1000)
-        # tom.mutate(10)
-
-    print("-" * 100)
-
-    # Profile and gather information
-    yee.analyze()

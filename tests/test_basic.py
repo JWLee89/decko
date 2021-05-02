@@ -1,5 +1,4 @@
 from src.yeezy.app import Yeezy
-from typing import List
 from functools import wraps
 
 yee = Yeezy(__file__)
@@ -19,11 +18,18 @@ def test_class_side_effect_detection():
     :return:
     """
     class Test:
-        def __init__(self, ass):
+        def __init__(self):
             self.yee = [1, 2, 3, 4, 5]
 
-        def do_side_effect(self, a: List):
-            a.append(10)
+        @yee.trace()
+        def do_side_effect(self, i):
+            self.yee.append(i)
+
+    test = Test()
+    for i in range(10):
+        test.do_side_effect(i)
+
+    yee.analyze()
 
 
 def test_extension():

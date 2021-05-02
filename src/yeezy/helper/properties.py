@@ -24,6 +24,7 @@ class Statistics(abc.ABC):
     """
     def __init__(self, func: Callable) -> None:
         self.func = func
+        self.call_count = 0
         self._stats = []    # TODO: Maybe implement statistics update like a chain
 
     def merge(self, statistics):
@@ -39,6 +40,11 @@ class Statistics(abc.ABC):
         return json.dumps(self.__dict__, indent=4)
 
 
+class TraceStatistics(Statistics):
+    def __init__(self, func) -> None:
+        super().__init__(func)
+
+
 class TimeStatistics(Statistics):
     """
     Basic descriptor of each class
@@ -46,7 +52,6 @@ class TimeStatistics(Statistics):
 
     def __init__(self, func) -> None:
         super().__init__(func)
-        self.call_count = 0
         self.avg_run_time = 0
         self.max_run_time = 0
         self.min_run_time = sys.maxsize
@@ -58,7 +63,7 @@ class TimeStatistics(Statistics):
                f"Max run time: {self.max_run_time}, " \
                f"Min run time: {self.min_run_time}"
 
-    def update(self, time_elapsed):
+    def update(self, time_elapsed, *args, **kwargs):
         self.call_count += 1
         self.avg_run_time = (time_elapsed / self.call_count)
         self.max_run_time = max(time_elapsed, self.max_run_time)
@@ -66,11 +71,13 @@ class TimeStatistics(Statistics):
 
 
 class Test:
-    def print_this(self):
-        print("yeetoo")
+    @staticmethod
+    def print_this():
+        print("yeetoozzz")
 
 
 def create_long_list(n = 1000000, name="test"):
+    print("create long list")
     return list(range(n)), name
 
 

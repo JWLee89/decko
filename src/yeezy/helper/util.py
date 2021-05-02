@@ -1,71 +1,22 @@
-import copy
 import time
-import functools
 from typing import List, Callable, Union
 from functools import wraps
 import inspect
 import logging
 
-# Handle fallback in case ContextDecorator does not work
-# try:
-#     from contextlib import ContextDecorator
-# except ImportError:
-#     version_info = sys.version_info
-#     python_version = f'{version_info.major}.{version_info.minor}.{version_info.micro}-' \
-#                      f'{version_info.releaselevel}'
-#
-#     # TODO: Change this message later
-#     print('cannot import contextmanager from contextlib. '
-#           f'Current python version: {python_version}. Requires version >= 3.2.\n'
-#           f'Attempting to create fallback method ...')
 
-
-def is_class_instance(item):
+def is_class_instance(item) -> bool:
+    """
+    Check if item is a class instance.
+    Note that class instances in Python have
+    the '__dict__' property
+    :param item: The item to evaluate
+    """
     return hasattr(item, '__dict__')
 
 
-def flexible_decorator(func):
-
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        return func(*args, **kwargs)
-    return wrapper
-
-
-def create_before_decorator(*args_outer, **kwargs_outer):
-    """
-    Simple utility function for creating before decorators.
-
-    Before decorators are decorators that perform c
-
-    :param func_to_decorate: The function to decorate
-    :param exec_before_func: The function to execute before decorated function
-    :return:
-    :rtype:
-    """
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            output = func(*args, **kwargs)
-            return output
-
-        return wrapper
-
-    return decorator
-
-
-class ContextDecorator:
-    def __call__(self, func: Callable) -> Callable:
-        self.wrapped_func = func
-
-        @wraps(func)
-        def inner(*args, **kwargs):
-            with self:
-                return func(*args, **kwargs)
-
-        return inner
-
-    # print('Fallback ContextDecorator class successfully created! Yee ...')
+def get_unique_func_name(func: Callable):
+    return f'{func.__module__}.{func.__qualname__}'
 
 
 def logger_factory(file_name: str,
@@ -84,8 +35,8 @@ def logger_factory(file_name: str,
     file_handler.setLevel(level)
     logger = logging.getLogger(logger_name)
 
-    for hdlr in logger.handlers[:]:  # remove all old handlers
-        logger.removeHandler(hdlr)
+    for handler in logger.handlers:  # remove all old handlers
+        logger.removeHandler(handler)
     logger.addHandler(file_handler)  # set the new handler
 
     def write(contents_to_write: Union[str, List]) -> None:
@@ -99,6 +50,22 @@ def logger_factory(file_name: str,
     return write
 
 
+class ContextDecorator:
+    """
+    Used for creating decorators that behave both
+    as decorators and context managers
+    """
+    def __call__(self, func: Callable) -> Callable:
+        self.wrapped_func = func
+
+        @wraps(func)
+        def inner(*args, **kwargs):
+            with self:
+                return func(*args, **kwargs)
+
+        return inner
+
+
 def truncate(max_length: int) -> Callable:
     """
     Responsible for truncating a sentence based on its length
@@ -109,10 +76,6 @@ def truncate(max_length: int) -> Callable:
         truncated_sentence = (sentence[:max_length], ' ...') if len(sentence) > max_length else sentence
         return truncated_sentence
     return do_truncate
-
-
-class ClassDecorator(ContextDecorator):
-    pass
 
 
 class TimeComputer(ContextDecorator):
@@ -189,7 +152,6 @@ class TimeComputer(ContextDecorator):
         return avg_time
 
 
-
 class TraceDecorator:
     def __init__(self, func: Callable, verbose: bool = False):
         self.func = func
@@ -224,152 +186,3 @@ class TraceDecorator:
         function_input_str = function_input_str[:-2]
         function_input_str += ')'
         return function_input_str
-
-
-# make TimeComputer callable via using a function_like
-# wrapper
-# time_compute = TimeComputer
-
-def check_key_values(orig_items, item_copy):
-    for key in orig_items:
-        key, original, after = key, 
-        print(f"key: {key}, val: {orig_items[key]}, orig: {item_copy[key]}")
-
-
-def trace(silent: bool = True, path: str = None, truncate_from = 200):
-    """
-    :param silent: Silently accumulates statistics regarding the
-    wrapped function called during the
-    :param path: If specified, the log will be stored in the specified file.
-    """
-
-    def inner_function(func):
-        count = {}
-        # Get arguments
-        argspecs = inspect.getfullargspec(func)
-        function_args = inspect.signature(func)
-
-        # State variables
-        count[func] = 0
-
-        # call context variables
-        caller_frame_record = inspect.stack()[1]
-        caller_filename = caller_frame_record.filename
-        caller_code = caller_frame_record.code_context
-        print(f"YEEEEEEEE ----- File at : {caller_filename}")
-        print(f"YEEEEEEEE ----- Code: {caller_code}")
-
-        # Function that is used to write to certain file
-        truncator = truncate(truncate_from)
-        write_function = logger_factory(path, caller_filename) if path else print
-
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            function_name = func.__name__
-
-            caller_frame_record = inspect.stack()[1]
-            caller_code = caller_frame_record.code_context
-            print(f"Code: {caller_code}")
-
-            # Update state variables
-            count[func] += 1
-
-            args_repr = [repr(a) for a in args]  # 1
-            kwargs_repr = [f"{k}={v!r}" for k, v in kwargs.items()]  # 2
-            default_index = 0
-            warning_str = ''
-            function_input_str = f"Debug: {function_name}("
-            i = 0
-            for test in argspecs.args:
-                if i < len(args):
-                    value = args_repr[i]
-                elif i >= len(args) and test not in kwargs:
-                    value = argspecs.defaults[default_index]
-                    default_index += 1
-                else:
-                    value = kwargs[test]
-
-                function_input_str += f"{test}={value}"
-                function_input_str += ','
-                function_input_str += ' '
-                i += 1
-
-            # remove trailing ', ' --> Handle edge case where function accepts zero arguments
-            function_input_str = function_input_str[:-2] if i > 0 else function_input_str
-            function_input_str += f') called {count[func]} times.'
-            write_function(function_input_str)
-
-            # Get signature of current function
-            # TODO: refactor this function as soon as you can ...
-            signature = ", ".join(args_repr + kwargs_repr)
-            write_function(f"Calling {function_name}({signature})")
-
-            deep_cpy_args = copy.deepcopy(args)
-            original_kwargs = copy.deepcopy(kwargs)
-            value = func(*args, **kwargs)
-
-            # Check if function input has been modified ...
-            if deep_cpy_args != args:
-                write_function("args has been modified")
-
-            if original_kwargs != kwargs:
-                write_function("kwargs has been modified")
-                check_key_values(original_kwargs, kwargs)
-
-            write_function(f"{func.__name__!r} returned {value!r}")  # 4
-
-            return value
-        return wrapper
-
-    return inner_function
-
-
-if __name__ == "__main__":
-    def log_num(time_elapsed, run_count: int):
-        print(f"Time elapsed {time_elapsed:.3f} ms, "
-              f"Run count: {run_count}, Avg: {(time_elapsed / run_count):.3f} ms")
-
-
-    @trace(silent=True)
-    def hi(name, teemo, num=20, crazy=''):
-        teemo = "captain teeto on duteeeee"
-        crazy.append(5)
-        print(f"Hi, {name}, {teemo},{num}, {crazy}")
-
-
-    # @TimeComputer(log_interval=5, log_callback=log_num)
-    # @time_compute(log_callback=log_num)
-    # @time_compute
-    @trace(silent=True, path="../experiment/yee.log")
-    def create_long_list(n: int = 1000000):
-        return list(range(n))
-
-
-    def yee(func):
-        print(f"Outer ")
-
-        @wraps(func)
-        def inner(*args, **kwargs):
-            output = func(*args, **kwargs)
-            print(f"Returning output: {output}")
-            return output
-
-        return inner
-
-
-    @trace(silent=True, path="do_something.log")
-    @yee
-    @TimeComputer()
-    def do_something(name, num=10):
-        print(f"Blah blah blah ... {name}, {num}")
-
-
-    large_ass_num = 10000000
-    # do_something("yee ...", 20)
-    # do_something("yee ...", 20)
-
-    # for i in range(10):
-    #     test_list = create_long_list(large_ass_num)
-    hi("yee", "Captain teemo on duty", crazy=[1, 2, 3, 4])
-
-
