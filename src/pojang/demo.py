@@ -1,10 +1,10 @@
-from app import Yeezy
+from app import Pojang
 
 
 def simple_demo():
     import torch
 
-    yee = Yeezy(__name__, debug=True, log_path=None)
+    yee = Pojang(__name__, debug=True, log_path=None)
 
     # This should register all functions inside of class Test()
     # @yee.time

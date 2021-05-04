@@ -18,6 +18,14 @@ class Quantity:
         instance.__dict__[self.name] = value
 
 
+def ComplexHandler(Obj):
+    if hasattr(Obj, 'jsonable'):
+        return Obj.jsonable()
+    else:
+        raise TypeError(f'Object of type {type(Obj)} with value of '
+                        f'{repr(Obj)} is not JSON serializable')
+
+
 class Statistics(abc.ABC):
     """
     Base class for creating statistics
@@ -32,9 +40,6 @@ class Statistics(abc.ABC):
         for key, value in statistics.__dict__:
             if key not in properties:
                 setattr(self, key, value)
-            else:
-                print(f"Warning:: {key} exists in both {self} and {statistics}."
-                      f" Not setting")
 
     def __repr__(self) -> str:
         return json.dumps(self.__dict__, indent=4)
@@ -56,12 +61,12 @@ class TimeStatistics(Statistics):
         self.max_run_time = 0
         self.min_run_time = sys.maxsize
 
-    def __repr__(self) -> str:
-        # return json.dumps(self.__dict__, indent=4)
-        return f"Total call count: {self.call_count}, " \
-               f"Average run time: {self.avg_run_time}, " \
-               f"Max run time: {self.max_run_time}, " \
-               f"Min run time: {self.min_run_time}"
+    # def __repr__(self) -> str:
+    #     # return json.dumps(self.__dict__, indent=4)
+    #     return f"Total call count: {self.call_count}, " \
+    #            f"Average run time: {self.avg_run_time}, " \
+    #            f"Max run time: {self.max_run_time}, " \
+    #            f"Min run time: {self.min_run_time}"
 
     def update(self, time_elapsed, *args, **kwargs):
         self.call_count += 1
