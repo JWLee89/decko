@@ -7,7 +7,7 @@ aid developers in debugging their python applications.
 
 ## Getting Started
 
-Yeezy is a decorated-based module for debugging. 
+Pojang is a decorated-based module for debugging. 
 It also provides useful decorators to speed up programming and provides utility 
 function for easier decorator usage. Here is an example
 
