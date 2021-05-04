@@ -27,10 +27,10 @@ import time as t
 from collections import OrderedDict
 
 # Local imports
-from src.yeezy.helper.properties import TimeStatistics, Statistics
-from src.yeezy.helper.util import get_unique_func_name
-from src.yeezy.helper import util
-import src.yeezy.exceptions as exceptions
+from src.pojang.helper.properties import TimeStatistics, Statistics
+from src.pojang.helper.util import get_unique_func_name
+from src.pojang.helper import util
+import src.pojang.exceptions as exceptions
 
 
 def get_class_that_defined_method(meth):
@@ -67,7 +67,7 @@ def _check_if_class(cls):
                                            f"{cls} is of type: {type(cls)}")
 
 
-class Yeezy:
+class Pojang:
     """
     Yeeeee ....
     Entry point of the application.
@@ -126,7 +126,7 @@ class Yeezy:
 
         # Logging function
         # If not specified, the default fallback method will be print()
-        self.log = util.logger_factory(log_path, "yeezy") if log_path else print
+        self.log = util.logger_factory(log_path, "pojang") if log_path else print
 
     @staticmethod
     def get_new_configs(debug: bool,
@@ -137,7 +137,7 @@ class Yeezy:
         a Yeezy instance.
         :return: A configuration dictionary
         """
-        new_config = copy.deepcopy(Yeezy.DEFAULT_CONFIGS)
+        new_config = copy.deepcopy(Pojang.DEFAULT_CONFIGS)
         # Override with user_inputs
         new_config['debug'] = debug
         new_config['inspect_mode'] = inspect_mode
@@ -308,74 +308,6 @@ class Yeezy:
                 return func(*args, **kwargs)
 
             return wrapper
-
-            # @wraps(func)
-            # def wrapper(*args, **kwargs):
-            #     debug_properties = {}
-            #
-            #     caller_frame_record = inspect.stack()[1]
-            #     caller_code = caller_frame_record.code_context
-            #     debug_properties['call_context'] = f"Called {caller_code[0].strip()} on line no: " \
-            #                                        f"{caller_frame_record.lineno} from {caller_frame_record.filename}"
-            #     self.log(f"{debug_properties['call_context']}")
-            #     # Update state variables
-            #     count[func] += 1
-            #
-            #     args_repr = [repr(a) for a in args]  # 1
-            #     kwargs_repr = [f"{k}={v!r}" for k, v in kwargs.items()]  # 2
-            #     default_index = 0
-            #     warning_str = ''
-            #     function_input_str = f"Debug: {caller_code[0].strip().split('(')[0]}("
-            #     i = 0
-            #     for test in argspecs.args:
-            #         if i < len(args):
-            #             value = args_repr[i]
-            #         elif i >= len(args) and test not in kwargs:
-            #             value = argspecs.defaults[default_index]
-            #             default_index += 1
-            #         else:
-            #             value = kwargs[test]
-            #
-            #         function_input_str += f"{test}={value}"
-            #         function_input_str += ','
-            #         function_input_str += ' '
-            #         i += 1
-            #
-            #     # remove trailing ', ' --> Handle edge case where function accepts zero arguments
-            #     function_input_str = function_input_str[:-2] if i > 0 else function_input_str
-            #
-            #     function_input_str += f') called {count[func]} times.'
-            #     self.log(function_input_str)
-            #
-            #     deep_cpy_args = copy.deepcopy(args)
-            #     original_kwargs = copy.deepcopy(kwargs)
-            #
-            #     # Now check of side-effects
-            #     value = func(*args, **kwargs)
-            #     truncated_str_output = str(value)[:truncate_from] + ' ...'
-            #
-            #     # Check for side-effects
-            #     if warn_side_effects:
-            #         for i in range(len(args)):
-            #             before, after = deep_cpy_args[i], args[i]
-            #             if before != after:
-            #                 self.log(f"Argument at index: {i} has been modified!: {before} --> {after}")
-            #
-            #         for key in kwargs.keys():
-            #             before, after = original_kwargs[key], kwargs[key]
-            #             if before != after:
-            #                 self.log(f"Argument at index: {i} has been modified!: {before} --> {after}")
-            #
-            #
-            #     # Log output type
-            #     debug_properties['return_type'] = type(value)
-            #     self.log(truncated_str_output)  # 4
-            #     debug_properties['output'] = truncated_str_output
-            #     self.log(f"Return type: {type(value)}")
-            #
-            #     return value
-            #
-            # return wrapper
 
         return inner_function
 
@@ -551,7 +483,7 @@ class Yeezy:
                 setattr(class_definition, item, decorated_func)
 
     def __repr__(self) -> str:
-        return "Yee ... yeezy :)"
+        return "Yee ... pojang :)"
 
     def analyze(self) -> None:
         """
@@ -572,20 +504,36 @@ class Yeezy:
 
 
 if __name__ == "__main__":
-    yee = Yeezy(__name__, debug=True)
+    # yee = Yeezy(__name__, debug=True)
+    #
+    #
+    # class Test:
+    #     def __init__(self, test, cool):
+    #         self.test = test
+    #         self.cool = cool
+    #
+    #     @yee.time
+    #     def a_method(self):
+    #         print(f"Test: {self.test}. Cool: {self.cool}")
+    #
+    # test = Test(1, 2)
+    # for i in range(10):
+    #     test.a_method()
+    #
+    # yee.analyze()
+
+    pj = Pojang(__name__)
 
 
-    class Test:
-        def __init__(self, test, cool):
-            self.test = test
-            self.cool = cool
+    def trigger_me(output, *args, **kwargs):
+        print(f"Output: {output}.")
 
-        @yee.time
-        def a_method(self):
-            print(f"Test: {self.test}. Cool: {self.cool}")
 
-    test = Test(1, 2)
-    for i in range(10):
-        test.a_method()
+    @pj.fire_if([trigger_me], lambda output, self, arr: len(arr) > 4)
+    def do_something(arr):
+        return sum(arr)
 
-    yee.analyze()
+
+    # This should fire an event since we called
+    test = do_something([1, 2, 3, 4, 5, 6])
+    do_something([20, 30])

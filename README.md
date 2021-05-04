@@ -1,6 +1,7 @@
-# Yeezy
+# Pojang
 
-A simple utility belt for Python developers. Yee ...
+A decorator based utility module for Python developers. The module is designed to 
+aid developers in debugging their python applications.
 
 ![yee.png](yee.png)
 
@@ -11,15 +12,15 @@ It also provides useful decorators to speed up programming and provides utility
 function for easier decorator usage. Here is an example
 
 ```python
-from yeezy import Yeezy
+from pojang import Pojang
 
-yee = Yeezy(__name__, debug = True)
+pj = Pojang(__name__, debug = True)
 
-@yee.time
+@pj.time
 def create_list(n = 1000000):
     return list(range(n))
 
 # Returns statistics on time
-yee.analyze()
+pj.analyze()
 
 ```

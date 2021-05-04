@@ -1,7 +1,7 @@
-from src.yeezy.app import Yeezy
+from src.pojang.app import Pojang
 import pytest
 
-yee = Yeezy(__name__)
+pj = Pojang(__name__)
 
 
 def test_set_debug() -> None:
@@ -10,12 +10,12 @@ def test_set_debug() -> None:
     setting debug to a boolean value
     """
     try:
-        yee.debug = True
-        yee.debug = False
+        pj.debug = True
+        pj.debug = False
     except TypeError:
         pytest.fail("This should not occur since .debug must "
                     "be set to boolean value.")
-    assert not yee.debug, f"Expected: 'False', actual: {yee.debug}"
+    assert not pj.debug, f"Expected: 'False', actual: {pj.debug}"
 
 
 def test_invalid_set_debug() -> None:
@@ -24,4 +24,4 @@ def test_invalid_set_debug() -> None:
     setting debug to a string value
     """
     with pytest.raises(TypeError) as e_info:
-        yee.debug = "False"
+        pj.debug = "False"
