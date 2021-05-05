@@ -461,8 +461,6 @@ class Pojang:
             return inner
         return wrapper
 
-
-    # @util.compute_stats
     def stopwatch(self,
                   passed_func: Callable = None,
                   register: bool = True,
@@ -566,7 +564,7 @@ if __name__ == "__main__":
     def trigger_me(output, *args, **kwargs):
         print(f"Output: {output}.")
 
-
+    @pj.stopwatch
     @pj.fire_if([trigger_me], lambda output, self, arr: len(arr) > 4)
     def do_something(arr):
         return sum(arr)
@@ -587,3 +585,5 @@ if __name__ == "__main__":
     # This should fire an event since we called
     test = do_something([1, 2, 3, 4, 5, 6])
     do_something([20, 30])
+
+    pj.analyze()
