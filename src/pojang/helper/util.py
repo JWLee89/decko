@@ -45,7 +45,7 @@ def logger_factory(file_name: str,
         so try calling this function at the end of creating a message string
         :param contents_to_write: The contents to append to the target log file.
         """
-        logger.warning(contents_to_write)
+        logger.log(contents_to_write)
 
     return write
 
