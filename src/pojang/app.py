@@ -126,7 +126,7 @@ class Pojang:
 
         # Logging function
         # If not specified, the default fallback method will be print()
-        self.log = util.logger_factory(log_path, no_side_effects) if log_path else print
+        self.log = util.logger_factory(log_path, module_name) if log_path else print
 
         # Will raise an error if the wrapped function raises side_effect
         # Note: This behavior can be changed at runtime and also overridden
@@ -537,7 +537,7 @@ class Pojang:
                 setattr(class_definition, item, decorated_func)
 
     def __repr__(self) -> str:
-        return "Yee ... pojang :)"
+        return f"Pojang: {self._}"
 
     def analyze(self) -> None:
         """
@@ -559,7 +559,6 @@ class Pojang:
 
 if __name__ == "__main__":
     pj = Pojang(__name__)
-
 
     def trigger_me(output, *args, **kwargs):
         print(f"Output: {output}.")
@@ -587,3 +586,4 @@ if __name__ == "__main__":
     do_something([20, 30])
 
     pj.analyze()
+    print(pj)
