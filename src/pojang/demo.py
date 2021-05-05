@@ -19,11 +19,11 @@ def simple_demo():
             print(test)
 
         # @yee.trace()
-        @yee.time
+        @yee.stopwatch
         def create_long_list(self, n=1000000, name="test"):
             return torch.tensor(range(n))
 
-    @yee.time
+    @yee.stopwatch
     def create_long_list(n=1000000, name="test"):
         return list(range(n)), name
 

@@ -5,6 +5,24 @@ import inspect
 import logging
 
 
+def is_iterable(obj) -> bool:
+    iterable = True
+    try:
+        iter(obj)
+    except TypeError:
+        iterable = False
+    return iterable
+
+
+def validate_type(obj, key, target_type):
+    if key in obj:
+        prop_val = obj[key]
+        if type(prop_val) != target_type:
+            raise TypeError(f"{key} must be of type boolean. "
+                            f"Passed in value: '{prop_val}' "
+                            f"of type: {type(prop_val)}")
+
+
 def is_class_instance(item) -> bool:
     """
     Check if item is a class instance.
@@ -45,7 +63,7 @@ def logger_factory(file_name: str,
         so try calling this function at the end of creating a message string
         :param contents_to_write: The contents to append to the target log file.
         """
-        logger.warning(contents_to_write)
+        logger.log(contents_to_write)
 
     return write
 

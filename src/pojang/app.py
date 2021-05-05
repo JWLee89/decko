@@ -1,13 +1,13 @@
 """
 Author: Jay Lee
-Yeezy: A decorator-based application for experimentation,
+Pojang: A decorator-based application for experimentation,
 development and debugging.
 Users can also dynamically decorate functions at runtime
 which helps performance.
 
 Basic use case:
 
-yee = Yeezy()
+yee = Pojang()
 
 @yee.trace
 def buggy_function(input_1, input_2, ...):
@@ -23,7 +23,7 @@ import copy
 from typing import Callable, Dict, List, Tuple, Union
 import inspect
 from functools import wraps
-import time as t
+import time
 from collections import OrderedDict
 
 # Local imports
@@ -31,13 +31,8 @@ from src.pojang.helper.properties import TimeStatistics, Statistics
 from src.pojang.helper.util import get_unique_func_name
 from src.pojang.helper import util
 import src.pojang.exceptions as exceptions
-
-
-def get_class_that_defined_method(meth):
-    for cls in inspect.getmro(meth.im_class):
-        if meth.__name__ in cls.__dict__:
-            return cls
-    return None
+from flask import Flask
+app = Flask(__name__)
 
 
 class InspectMode:
@@ -71,8 +66,7 @@ class Pojang:
     """
     Yeeeee ....
     Entry point of the application.
-    Architected as follows:
-
+    Architected as follows: Note: TODO
     -
     """
 
@@ -83,16 +77,22 @@ class Pojang:
         'log_path': None
     })
 
+    # Key value pairs of required properties
+    FUNCTION_PROPS = OrderedDict({
+        'no_side_effect': bool
+    })
+
     def __init__(self,
-                 import_name: str,
+                 module_name: str,
                  root_path: str = None,
                  inspect_mode: int = InspectMode.PUBLIC_ONLY,
                  debug: bool = False,
-                 log_path: str = None):
+                 log_path: str = None,
+                 no_side_effects: bool = False):
 
         #: The name of the package or module that this object belongs
         #: to. Do not change this once it is set by the constructor.
-        self.import_name = import_name
+        self.module_name = module_name
 
         #: Absolute path to the package on the filesystem. Used to look
         #: up resources contained in the package.
@@ -126,7 +126,38 @@ class Pojang:
 
         # Logging function
         # If not specified, the default fallback method will be print()
-        self.log = util.logger_factory(log_path, "pojang") if log_path else print
+        self.log = util.logger_factory(log_path, no_side_effects) if log_path else print
+
+        # Will raise an error if the wrapped function raises side_effect
+        # Note: This behavior can be changed at runtime and also overridden
+        # for each function
+        self.no_side_effects = no_side_effects
+
+    def add_class_decorator_rule(self, cls, **kwargs) -> None:
+        """
+        If the decorated object is a class, we will add different rules.
+        For example, these rules include which types of functions to decorate
+        :param cls: The class we are decorating
+        :param kwargs:
+        :return:
+        """
+        pass
+
+    def add_decorator_rule(self, func: Callable, **kwargs) -> None:
+        """
+        Add common rules to registered decorator which includes
+        the following options:
+            - kwargs:
+        :param func:
+        :param kwargs:
+        :return:
+        """
+        properties = {}
+        # Validate and add properties
+        for key, data_type in Pojang.FUNCTION_PROPS.items():
+            util.validate_type(kwargs, key, data_type)
+            properties[key] = kwargs[key]
+
 
     @staticmethod
     def get_new_configs(debug: bool,
@@ -149,7 +180,7 @@ class Pojang:
         Find the root path of a package, or the path that contains a
         module. If it cannot be found, returns the current working directory.
         """
-        import_name = self.import_name
+        import_name = self.module_name
         # Module already imported and has a file attribute. Use that first.
         mod = sys.modules.get(import_name)
 
@@ -326,20 +357,20 @@ class Pojang:
         Performs lookup based on function type
         :return:
         """
-        if func not in function_map:
+        if func_name not in function_map:
             function_map[func_name] = func
 
     def register_decorator(self,
                            func: Callable) -> bool:
         """
-        Public API - Add decorators
+        Public API - Register the decorator as a pojang custom method
         :param func: The function to register
         :return:
         """
         name = get_unique_func_name(func)
         function_exists = name in self.custom
         if not function_exists:
-            self.custom[name] = function_exists
+            self.custom[name] = func
 
         return function_exists
 
@@ -406,13 +437,36 @@ class Pojang:
                 API_KEYS.PROPS: props
             }
 
-    # @util.compute_stats
-    def time(self,
-             passed_func: Callable = None,
-             register: bool = True,
-             path: str = None,
-             log_interval: int = 1,
-             truncate_from: int = 200):
+    def run_before(self, functions: Union[List[Callable], List]):
+        """
+        This allows users to wrap a function without registering
+        :param functions: A function or a list of functions that
+        will be executed prior
+        """
+        if util.is_iterable(functions):
+            def preprocess(funcs, *args, **kwargs):
+                for f in funcs:
+                    f(*args, **kwargs)
+        else:
+            def preprocess(func, *args, **kwargs):
+                func(*args, **kwargs)
+
+        def wrapper(fn):
+
+            @wraps(fn)
+            def inner(*args, **kwargs):
+                preprocess(functions, *args, **kwargs)
+                output = fn(*args, **kwargs)
+                return output
+            return inner
+        return wrapper
+
+    def stopwatch(self,
+                  passed_func: Callable = None,
+                  register: bool = True,
+                  path: str = None,
+                  log_interval: int = 1,
+                  truncate_from: int = 200):
 
         def decorator(func):
             # Update function statistics
@@ -425,9 +479,9 @@ class Pojang:
 
             @wraps(func)
             def wrapper(*args, **kwargs):
-                time_start = t.time()
+                time_start = time.time()
                 output = func(*args, **kwargs)
-                time_elapsed = t.time() - time_start
+                time_elapsed = time.time() - time_start
                 self.functions[func_name][API_KEYS.STATS_INPUT] = time_elapsed
                 # Compute statistics
                 self.functions[func_name][API_KEYS.PROPS].update(time_elapsed)
@@ -504,36 +558,32 @@ class Pojang:
 
 
 if __name__ == "__main__":
-    # yee = Yeezy(__name__, debug=True)
-    #
-    #
-    # class Test:
-    #     def __init__(self, test, cool):
-    #         self.test = test
-    #         self.cool = cool
-    #
-    #     @yee.time
-    #     def a_method(self):
-    #         print(f"Test: {self.test}. Cool: {self.cool}")
-    #
-    # test = Test(1, 2)
-    # for i in range(10):
-    #     test.a_method()
-    #
-    # yee.analyze()
-
     pj = Pojang(__name__)
 
 
     def trigger_me(output, *args, **kwargs):
         print(f"Output: {output}.")
 
-
+    @pj.stopwatch
     @pj.fire_if([trigger_me], lambda output, self, arr: len(arr) > 4)
     def do_something(arr):
         return sum(arr)
 
+    def ding():
+        print("ding")
+
+    def dong():
+        print("dong")
+
+    @pj.run_before([ding, dong])
+    def dang():
+        print("dang")
+
+    # This should print "ding dong"
+    dang()
 
     # This should fire an event since we called
     test = do_something([1, 2, 3, 4, 5, 6])
     do_something([20, 30])
+
+    pj.analyze()

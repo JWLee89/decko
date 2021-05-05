@@ -61,12 +61,12 @@ class TimeStatistics(Statistics):
         self.max_run_time = 0
         self.min_run_time = sys.maxsize
 
-    # def __repr__(self) -> str:
-    #     # return json.dumps(self.__dict__, indent=4)
-    #     return f"Total call count: {self.call_count}, " \
-    #            f"Average run time: {self.avg_run_time}, " \
-    #            f"Max run time: {self.max_run_time}, " \
-    #            f"Min run time: {self.min_run_time}"
+    def __repr__(self) -> str:
+        # return json.dumps(self.__dict__, indent=4)
+        return f"Total call count: {self.call_count}, " \
+               f"Average run time: {self.avg_run_time}, " \
+               f"Max run time: {self.max_run_time}, " \
+               f"Min run time: {self.min_run_time}"
 
     def update(self, time_elapsed, *args, **kwargs):
         self.call_count += 1
