@@ -31,6 +31,8 @@ from src.pojang.helper.properties import TimeStatistics, Statistics
 from src.pojang.helper.util import get_unique_func_name
 from src.pojang.helper import util
 import src.pojang.exceptions as exceptions
+from flask import Flask
+app = Flask(__name__)
 
 
 class InspectMode:
@@ -73,6 +75,11 @@ class Pojang:
         'debug': False,
         'inspect_mode': InspectMode.PUBLIC_ONLY,
         'log_path': None
+    })
+
+    # Key value pairs of required properties
+    FUNCTION_PROPS = OrderedDict({
+        'no_side_effect': bool
     })
 
     def __init__(self,
@@ -125,6 +132,32 @@ class Pojang:
         # Note: This behavior can be changed at runtime and also overridden
         # for each function
         self.no_side_effects = no_side_effects
+
+    def add_class_decorator_rule(self, cls, **kwargs) -> None:
+        """
+        If the decorated object is a class, we will add different rules.
+        For example, these rules include which types of functions to decorate
+        :param cls: The class we are decorating
+        :param kwargs:
+        :return:
+        """
+        pass
+
+    def add_decorator_rule(self, func: Callable, **kwargs) -> None:
+        """
+        Add common rules to registered decorator which includes
+        the following options:
+            - kwargs:
+        :param func:
+        :param kwargs:
+        :return:
+        """
+        properties = {}
+        # Validate and add properties
+        for key, data_type in Pojang.FUNCTION_PROPS.items():
+            util.validate_type(kwargs, key, data_type)
+            properties[key] = kwargs[key]
+
 
     @staticmethod
     def get_new_configs(debug: bool,
