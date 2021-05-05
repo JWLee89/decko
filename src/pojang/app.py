@@ -318,7 +318,7 @@ class Pojang:
         Performs lookup based on function type
         :return:
         """
-        if func not in function_map:
+        if func_name not in function_map:
             function_map[func_name] = func
 
     def register_decorator(self,
@@ -331,7 +331,7 @@ class Pojang:
         name = get_unique_func_name(func)
         function_exists = name in self.custom
         if not function_exists:
-            self.custom[name] = function_exists
+            self.custom[name] = func
 
         return function_exists
 
@@ -397,6 +397,31 @@ class Pojang:
                 API_KEYS.FUNCTION: func,
                 API_KEYS.PROPS: props
             }
+
+    def run_before(self, functions: Union[List[Callable], List]):
+        """
+        This allows users to wrap a function without registering
+        :param functions: A function or a list of functions that
+        will be executed prior
+        """
+        if util.is_iterable(functions):
+            def preprocess(funcs, *args, **kwargs):
+                for f in funcs:
+                    f(*args, **kwargs)
+        else:
+            def preprocess(func, *args, **kwargs):
+                func(*args, **kwargs)
+
+        def wrapper(fn):
+
+            @wraps(fn)
+            def inner(*args, **kwargs):
+                preprocess(functions, *args, **kwargs)
+                output = fn(*args, **kwargs)
+                return output
+            return inner
+        return wrapper
+
 
     # @util.compute_stats
     def stopwatch(self,
@@ -506,6 +531,19 @@ if __name__ == "__main__":
     @pj.fire_if([trigger_me], lambda output, self, arr: len(arr) > 4)
     def do_something(arr):
         return sum(arr)
+
+    def ding():
+        print("ding")
+
+    def dong():
+        print("dong")
+
+    @pj.run_before([ding, dong])
+    def dang():
+        print("dang")
+
+    # This should print "ding dong"
+    dang()
 
     # This should fire an event since we called
     test = do_something([1, 2, 3, 4, 5, 6])

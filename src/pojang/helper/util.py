@@ -5,6 +5,15 @@ import inspect
 import logging
 
 
+def is_iterable(obj) -> bool:
+    iterable = True
+    try:
+        iter(obj)
+    except TypeError:
+        iterable = False
+    return iterable
+
+
 def is_class_instance(item) -> bool:
     """
     Check if item is a class instance.
