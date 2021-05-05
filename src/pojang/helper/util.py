@@ -15,12 +15,11 @@ def is_iterable(obj) -> bool:
 
 
 def validate_type(obj, key, target_type):
-    if key in obj:
-        prop_val = obj[key]
-        if type(prop_val) != target_type:
-            raise TypeError(f"{key} must be of type boolean. "
-                            f"Passed in value: '{prop_val}' "
-                            f"of type: {type(prop_val)}")
+    prop_val = obj[key]
+    if type(prop_val) != target_type:
+        raise TypeError(f"{key} must be of type boolean. "
+                        f"Passed in value: '{prop_val}' "
+                        f"of type: {type(prop_val)}")
 
 
 def is_class_instance(item) -> bool:

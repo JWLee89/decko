@@ -25,14 +25,14 @@ import inspect
 from functools import wraps
 import time
 from collections import OrderedDict
+import tracemalloc
+from multiprocessing import Process
 
 # Local imports
 from src.pojang.helper.properties import TimeStatistics, Statistics
 from src.pojang.helper.util import get_unique_func_name
 from src.pojang.helper import util
 import src.pojang.exceptions as exceptions
-from flask import Flask
-app = Flask(__name__)
 
 
 class InspectMode:
@@ -79,7 +79,8 @@ class Pojang:
 
     # Key value pairs of required properties
     FUNCTION_PROPS = OrderedDict({
-        'no_side_effect': bool
+        'no_side_effect': (bool, False),
+        'compute_statistics': (bool, True),
     })
 
     def __init__(self,
@@ -133,7 +134,27 @@ class Pojang:
         # for each function
         self.no_side_effects = no_side_effects
 
-    def add_class_decorator_rule(self, cls, **kwargs) -> None:
+    # TODO: Create parallel decorator for parallel processing
+
+    def trace_memory(self, func):
+        tracemalloc.start()
+
+        @wraps(func)
+        def inner(*args, **kwargs):
+            snapshot1 = tracemalloc.take_snapshot()
+            output = func(*args, **kwargs)
+            # ... call the function to profile
+            snapshot2 = tracemalloc.take_snapshot()
+            top_stats = snapshot2.compare_to(snapshot1, 'lineno')
+
+            print("[ Top 10 differences ]")
+            for stat in top_stats[:10]:
+                print(stat)
+            return output
+
+        return inner
+
+    def _add_class_decorator_rule(self, cls, **kwargs) -> None:
         """
         If the decorated object is a class, we will add different rules.
         For example, these rules include which types of functions to decorate
@@ -143,21 +164,36 @@ class Pojang:
         """
         pass
 
-    def add_decorator_rule(self, func: Callable, **kwargs) -> None:
+    def _add_function_decorator_rule(self, func: Callable, **kwargs) -> None:
+        properties = {}
+        # Validate and add properties
+        for key, (data_type, default_value) in Pojang.FUNCTION_PROPS.items():
+            if key in kwargs:
+                util.validate_type(kwargs, key, data_type)
+                properties[key] = kwargs[key]
+            else:
+                properties[key] = default_value
+
+        # Register the function
+        func_name = get_unique_func_name(func)
+        self._update_decoration_info(func_name, func)
+
+        # Add message if set to debug
+        self.log_debug(f"Function: {func_name} registered ... ")
+
+    def add_decorator_rule(self, obj_to_decorate, **kwargs) -> None:
         """
         Add common rules to registered decorator which includes
         the following options:
             - kwargs:
-        :param func:
+        :param obj_to_decorate:
         :param kwargs:
         :return:
         """
-        properties = {}
-        # Validate and add properties
-        for key, data_type in Pojang.FUNCTION_PROPS.items():
-            util.validate_type(kwargs, key, data_type)
-            properties[key] = kwargs[key]
-
+        if util.is_class_instance(obj_to_decorate):
+            self._add_class_decorator_rule(obj_to_decorate, **kwargs)
+        else:
+            self._add_function_decorator_rule(obj_to_decorate, **kwargs)
 
     @staticmethod
     def get_new_configs(debug: bool,
@@ -537,7 +573,7 @@ class Pojang:
                 setattr(class_definition, item, decorated_func)
 
     def __repr__(self) -> str:
-        return f"Pojang: {self._}"
+        return f"pojang"
 
     def analyze(self) -> None:
         """
@@ -558,7 +594,7 @@ class Pojang:
 
 
 if __name__ == "__main__":
-    pj = Pojang(__name__)
+    pj = Pojang(__name__, debug=True)
 
     def trigger_me(output, *args, **kwargs):
         print(f"Output: {output}.")
@@ -574,6 +610,7 @@ if __name__ == "__main__":
     def dong():
         print("dong")
 
+    @pj.trace_memory
     @pj.run_before([ding, dong])
     def dang():
         print("dang")
