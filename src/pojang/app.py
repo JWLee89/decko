@@ -76,15 +76,16 @@ class Pojang:
     })
 
     def __init__(self,
-                 import_name: str,
+                 module_name: str,
                  root_path: str = None,
                  inspect_mode: int = InspectMode.PUBLIC_ONLY,
                  debug: bool = False,
-                 log_path: str = None):
+                 log_path: str = None,
+                 no_side_effects: bool = False):
 
         #: The name of the package or module that this object belongs
         #: to. Do not change this once it is set by the constructor.
-        self.import_name = import_name
+        self.module_name = module_name
 
         #: Absolute path to the package on the filesystem. Used to look
         #: up resources contained in the package.
@@ -118,7 +119,12 @@ class Pojang:
 
         # Logging function
         # If not specified, the default fallback method will be print()
-        self.log = util.logger_factory(log_path, "pojang") if log_path else print
+        self.log = util.logger_factory(log_path, no_side_effects) if log_path else print
+
+        # Will raise an error if the wrapped function raises side_effect
+        # Note: This behavior can be changed at runtime and also overridden
+        # for each function
+        self.no_side_effects = no_side_effects
 
     @staticmethod
     def get_new_configs(debug: bool,
@@ -141,7 +147,7 @@ class Pojang:
         Find the root path of a package, or the path that contains a
         module. If it cannot be found, returns the current working directory.
         """
-        import_name = self.import_name
+        import_name = self.module_name
         # Module already imported and has a file attribute. Use that first.
         mod = sys.modules.get(import_name)
 
