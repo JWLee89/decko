@@ -82,7 +82,7 @@ def test_imported_func():
     yee = Pojang(__file__)
 
     # Wrap the imported function
-    wrapped_long_func = yee.time(long_func)
+    wrapped_long_func = yee.stopwatch(long_func)
     iteration_count = 10
 
     for i in range(iteration_count):

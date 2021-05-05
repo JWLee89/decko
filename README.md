@@ -14,11 +14,13 @@ function for easier decorator usage. Here is an example
 ```python
 from pojang import Pojang
 
-pj = Pojang(__name__, debug = True)
+pj = Pojang(__name__, debug=True)
 
-@pj.time
-def create_list(n = 1000000):
+
+@pj.stopwatch
+def create_list(n=1000000):
     return list(range(n))
+
 
 # Returns statistics on time
 pj.analyze()

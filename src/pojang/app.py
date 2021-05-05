@@ -1,13 +1,13 @@
 """
 Author: Jay Lee
-Yeezy: A decorator-based application for experimentation,
+Pojang: A decorator-based application for experimentation,
 development and debugging.
 Users can also dynamically decorate functions at runtime
 which helps performance.
 
 Basic use case:
 
-yee = Yeezy()
+yee = Pojang()
 
 @yee.trace
 def buggy_function(input_1, input_2, ...):
@@ -23,7 +23,7 @@ import copy
 from typing import Callable, Dict, List, Tuple, Union
 import inspect
 from functools import wraps
-import time as t
+import time
 from collections import OrderedDict
 
 # Local imports
@@ -31,13 +31,6 @@ from src.pojang.helper.properties import TimeStatistics, Statistics
 from src.pojang.helper.util import get_unique_func_name
 from src.pojang.helper import util
 import src.pojang.exceptions as exceptions
-
-
-def get_class_that_defined_method(meth):
-    for cls in inspect.getmro(meth.im_class):
-        if meth.__name__ in cls.__dict__:
-            return cls
-    return None
 
 
 class InspectMode:
@@ -71,8 +64,7 @@ class Pojang:
     """
     Yeeeee ....
     Entry point of the application.
-    Architected as follows:
-
+    Architected as follows: Note: TODO
     -
     """
 
@@ -407,12 +399,12 @@ class Pojang:
             }
 
     # @util.compute_stats
-    def time(self,
-             passed_func: Callable = None,
-             register: bool = True,
-             path: str = None,
-             log_interval: int = 1,
-             truncate_from: int = 200):
+    def stopwatch(self,
+                  passed_func: Callable = None,
+                  register: bool = True,
+                  path: str = None,
+                  log_interval: int = 1,
+                  truncate_from: int = 200):
 
         def decorator(func):
             # Update function statistics
@@ -425,9 +417,9 @@ class Pojang:
 
             @wraps(func)
             def wrapper(*args, **kwargs):
-                time_start = t.time()
+                time_start = time.time()
                 output = func(*args, **kwargs)
-                time_elapsed = t.time() - time_start
+                time_elapsed = time.time() - time_start
                 self.functions[func_name][API_KEYS.STATS_INPUT] = time_elapsed
                 # Compute statistics
                 self.functions[func_name][API_KEYS.PROPS].update(time_elapsed)
