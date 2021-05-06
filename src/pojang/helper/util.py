@@ -1,5 +1,5 @@
 import time
-from typing import List, Callable, Union
+from typing import List, Callable, Union, Dict, Tuple
 from functools import wraps
 import inspect
 import logging
@@ -20,6 +20,47 @@ def validate_type(obj, key, target_type):
         raise TypeError(f"{key} must be of type boolean. "
                         f"Passed in value: '{prop_val}' "
                         f"of type: {type(prop_val)}")
+
+
+def get_args_dict(fn: Callable, args: Tuple, kwargs: Dict):
+    """
+    Return key value pair comprised of
+        key: The name of the variable
+        value: The value passed
+    :param fn: The target function to evaluate
+    :param args:
+    :param kwargs:
+    :return: Dict of key value pairs
+    """
+    code = fn.__code__
+    args_names = code.co_varnames[:code.co_argcount]
+
+    # Add defaults
+    parameters = inspect.signature(fn).parameters
+
+    if len(args) < len(parameters):
+        for k, v in parameters.items():
+            if v.default is not inspect.Parameter.empty:
+                kwargs[k] = v.default
+
+    return {**dict(zip(args_names, args)), **kwargs}
+
+
+def create_properties(valid_properties: Dict, **kwargs) -> Dict:
+    """
+    Add properties from kwargs to valid_properties
+    :param valid_properties: A dictionary containing valid properties
+    :param kwargs:
+    """
+    properties = {}
+    # Validate and add properties
+    for key, (data_type, default_value) in valid_properties.items():
+        if key in kwargs:
+            validate_type(kwargs, key, data_type)
+            properties[key] = kwargs[key]
+        else:
+            properties[key] = default_value
+    return properties
 
 
 def is_class_instance(item) -> bool:

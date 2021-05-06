@@ -20,13 +20,12 @@ yee.analyze()
 import os
 import sys
 import copy
-from typing import Callable, Dict, List, Tuple, Union
+from typing import Callable, Dict, List, Tuple, Union, Type
 import inspect
 from functools import wraps
 import time
 from collections import OrderedDict
 import tracemalloc
-from multiprocessing import Process
 
 # Local imports
 from src.pojang.helper.properties import TimeStatistics, Statistics
@@ -79,7 +78,6 @@ class Pojang:
 
     # Key value pairs of required properties
     FUNCTION_PROPS = OrderedDict({
-        'no_side_effect': (bool, False),
         'compute_statistics': (bool, True),
     })
 
@@ -132,7 +130,8 @@ class Pojang:
         # Will raise an error if the wrapped function raises side_effect
         # Note: This behavior can be changed at runtime and also overridden
         # for each function
-        self.no_side_effects = no_side_effects
+        # TODO: Remove and convert no_side_effect --> pure_input
+        # self.no_side_effects = no_side_effects
 
     # TODO: Create parallel decorator for parallel processing
 
@@ -154,6 +153,49 @@ class Pojang:
 
         return inner
 
+    def pure(self,
+             event_cb: Callable = None,
+             **kw) -> Callable:
+        """
+        Check to see whether a given function is pure.
+        Note: Purity is determined purely by examining object interactions.
+        This function will not check for I/O to determine purity.
+        :param event_cb: The callback function raised when impurity is discovered.
+        :param kw:
+        :return:
+        """
+
+        if event_cb is None:
+            def event_cb(msg):
+                raise exceptions.MutatedReferenceError(msg)
+
+        def wrapper(function: Union[Type, Callable]):
+            self.add_decorator_rule(function, **kw)
+
+            @wraps(function)
+            def inner(*args, **kwargs):
+                print(f"Original input: {args}, {kwargs}")
+                # Creating deep copies can be very inefficient, especially
+                # in our case where we have extremely large tensors
+                # that take up a lot of space ...
+                # TODO: Come up with a better way of checking
+                input_variables = util.get_args_dict(function, args, kwargs)
+                original_input = copy.deepcopy(input_variables)
+
+                # Get output of function
+                output = function(*args, **kwargs)
+                # check inputs
+                for key, value in input_variables.items():
+                    if value != original_input[key]:
+                        event_cb(f"Original input modified: {key}. Before: {original_input[key]}, "
+                                 f"after: {input_variables[key]}")
+
+                return output
+
+            return inner
+
+        return wrapper
+
     def _add_class_decorator_rule(self, cls, **kwargs) -> None:
         """
         If the decorated object is a class, we will add different rules.
@@ -165,15 +207,8 @@ class Pojang:
         pass
 
     def _add_function_decorator_rule(self, func: Callable, **kwargs) -> None:
-        properties = {}
-        # Validate and add properties
-        for key, (data_type, default_value) in Pojang.FUNCTION_PROPS.items():
-            if key in kwargs:
-                util.validate_type(kwargs, key, data_type)
-                properties[key] = kwargs[key]
-            else:
-                properties[key] = default_value
-
+        properties = util.create_properties(Pojang.FUNCTION_PROPS, **kwargs)
+        print(f"Properties: {properties}")
         # Register the function
         func_name = get_unique_func_name(func)
         self._update_decoration_info(func_name, func)
@@ -181,13 +216,15 @@ class Pojang:
         # Add message if set to debug
         self.log_debug(f"Function: {func_name} registered ... ")
 
-    def add_decorator_rule(self, obj_to_decorate, **kwargs) -> None:
+    def add_decorator_rule(self, obj_to_decorate: Union[Callable, Type],
+                           **kwargs) -> None:
         """
         Add common rules to registered decorator which includes
         the following options:
             - kwargs:
-        :param obj_to_decorate:
-        :param kwargs:
+        :param obj_to_decorate: the object to decorate. Can either be
+        class instance or a function.
+        :param kwargs: Keyword args added to decorator
         :return:
         """
         if util.is_class_instance(obj_to_decorate):
@@ -236,7 +273,7 @@ class Pojang:
     @debug.setter
     def debug(self, new_mode):
         if type(new_mode) != bool:
-            raise TypeError("Yeezy.debug must be set to either True or False. "
+            raise TypeError("Pojang.debug must be set to either True or False. "
                             f"Set to value: {new_mode} of type {type(new_mode)}")
         self.config['debug'] = new_mode
 
@@ -253,8 +290,6 @@ class Pojang:
         if self.debug:
             self.log(f'DEBUG: {msg}')
 
-    # Compute stats
-    # @util.compute_stats()
     def fire_if(self,
                 events_to_fire: List[Callable],
                 predicate: Callable = lambda x: x) -> Callable:
@@ -494,7 +529,9 @@ class Pojang:
                 preprocess(functions, *args, **kwargs)
                 output = fn(*args, **kwargs)
                 return output
+
             return inner
+
         return wrapper
 
     def stopwatch(self,
@@ -596,31 +633,50 @@ class Pojang:
 if __name__ == "__main__":
     pj = Pojang(__name__, debug=True)
 
+
     def trigger_me(output, *args, **kwargs):
         print(f"Output: {output}.")
+
 
     @pj.stopwatch
     @pj.fire_if([trigger_me], lambda output, self, arr: len(arr) > 4)
     def do_something(arr):
         return sum(arr)
 
+
     def ding():
         print("ding")
 
+
     def dong():
+        item = list(range(10000))
         print("dong")
 
-    @pj.trace_memory
-    @pj.run_before([ding, dong])
-    def dang():
-        print("dang")
 
-    # This should print "ding dong"
-    dang()
+    # @pj.trace_memory
+    # @pj.run_before([ding, dong])
+    # def dang():
+    #     item = list(range(10000))
+    #     print("dang")
+    #
+    #
+    # # This should print "ding dong"
+    # dang()
+    #
+    # # This should fire an event since we called
+    # test = do_something([1, 2, 3, 4, 5, 6])
+    # do_something([20, 30])
+    #
+    # pj.analyze()
+    # print(pj)
 
-    # This should fire an event since we called
-    test = do_something([1, 2, 3, 4, 5, 6])
-    do_something([20, 30])
+    @pj.pure()
+    def input_output_what_how(a, b, c=[]):
+        c.append(10)
+        return c
 
-    pj.analyze()
-    print(pj)
+
+    item = []
+    output = input_output_what_how(10, 20, item)
+    yee = input_output_what_how(10, 20, item)
+    print(f"yee: {yee}")
