@@ -1,5 +1,5 @@
 import time
-from typing import List, Callable, Union, Dict, Tuple
+from typing import List, Callable, Union, Dict, Tuple, Type
 from functools import wraps
 import inspect
 import logging
@@ -14,7 +14,7 @@ def is_iterable(obj) -> bool:
     return iterable
 
 
-def validate_type(obj, key, target_type):
+def validate_type(obj: Dict, key: str, target_type: Type):
     prop_val = obj[key]
     if type(prop_val) != target_type:
         raise TypeError(f"{key} must be of type boolean. "
@@ -33,7 +33,7 @@ def get_args_dict(fn: Callable, args: Tuple, kwargs: Dict):
     :return: Dict of key value pairs
     """
     code = fn.__code__
-    args_names = code.co_varnames[:code.co_argcount]
+    args_names: str = code.co_varnames[:code.co_argcount]
 
     # Add defaults
     parameters = inspect.signature(fn).parameters
@@ -52,7 +52,7 @@ def create_properties(valid_properties: Dict, **kwargs) -> Dict:
     :param valid_properties: A dictionary containing valid properties
     :param kwargs:
     """
-    properties = {}
+    properties: Dict = {}
     # Validate and add properties
     for key, (data_type, default_value) in valid_properties.items():
         if key in kwargs:
@@ -73,7 +73,7 @@ def is_class_instance(item) -> bool:
     return hasattr(item, '__dict__')
 
 
-def get_unique_func_name(func: Callable):
+def get_unique_func_name(func: Callable) -> str:
     return f'{func.__module__}.{func.__qualname__}'
 
 

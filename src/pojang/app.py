@@ -174,7 +174,6 @@ class Pojang:
 
             @wraps(function)
             def inner(*args, **kwargs):
-                print(f"Original input: {args}, {kwargs}")
                 # Creating deep copies can be very inefficient, especially
                 # in our case where we have extremely large tensors
                 # that take up a lot of space ...
@@ -207,10 +206,10 @@ class Pojang:
         pass
 
     def _add_function_decorator_rule(self, func: Callable, **kwargs) -> None:
-        properties = util.create_properties(Pojang.FUNCTION_PROPS, **kwargs)
+        properties: Dict = util.create_properties(Pojang.FUNCTION_PROPS, **kwargs)
         print(f"Properties: {properties}")
         # Register the function
-        func_name = get_unique_func_name(func)
+        func_name: str = get_unique_func_name(func)
         self._update_decoration_info(func_name, func)
 
         # Add message if set to debug
@@ -241,7 +240,7 @@ class Pojang:
         a Yeezy instance.
         :return: A configuration dictionary
         """
-        new_config = copy.deepcopy(Pojang.DEFAULT_CONFIGS)
+        new_config: OrderedDict = copy.deepcopy(Pojang.DEFAULT_CONFIGS)
         # Override with user_inputs
         new_config['debug'] = debug
         new_config['inspect_mode'] = inspect_mode
@@ -253,7 +252,7 @@ class Pojang:
         Find the root path of a package, or the path that contains a
         module. If it cannot be found, returns the current working directory.
         """
-        import_name = self.module_name
+        import_name: str = self.module_name
         # Module already imported and has a file attribute. Use that first.
         mod = sys.modules.get(import_name)
 
@@ -348,13 +347,13 @@ class Pojang:
         :param properties: The properties to observe.
         """
 
-        is_list_or_tuple = isinstance(properties, (list, tuple))
-        is_class = util.is_class_instance(properties)
+        is_list_or_tuple: bool = isinstance(properties, (list, tuple))
+        is_class: bool = util.is_class_instance(properties)
 
         def observe_class(cls):
             _check_if_class(cls)
-            cls_name = f'{cls.__module__}.{cls.__name__}'
-            class_props = [item for item in inspect.getmembers(cls) if not inspect.ismethod(item)]
+            cls_name: str = f'{cls.__module__}.{cls.__name__}'
+            class_props: List = [item for item in inspect.getmembers(cls) if not inspect.ismethod(item)]
             print(f"Props: {class_props}, {dir(cls)}")
 
             # Observe passed properties
@@ -394,7 +393,7 @@ class Pojang:
 
         def inner_function(func):
             # Update function statistics
-            func_name = get_unique_func_name(func)
+            func_name: str = get_unique_func_name(func)
             self.log_debug(f"Decorated function with unique id: {func_name}")
             self._update_decoration_info(func_name, func, Statistics(func))
 
@@ -438,8 +437,8 @@ class Pojang:
         :param func: The function to register
         :return:
         """
-        name = get_unique_func_name(func)
-        function_exists = name in self.custom
+        name: str = get_unique_func_name(func)
+        function_exists: bool = name in self.custom
         if not function_exists:
             self.custom[name] = func
 
@@ -452,7 +451,7 @@ class Pojang:
         :param func:
         :return:
         """
-        func_name = get_unique_func_name(func)
+        func_name: str = get_unique_func_name(func)
         # TODO: register function
         self._update_decoration_info(func_name, func)
         self.log_debug(f"Function: {func_name} registered ... ")
@@ -469,7 +468,7 @@ class Pojang:
         :param stat_updater:
 
         """
-        func_name = get_unique_func_name(func)
+        func_name: str = get_unique_func_name(func)
         # register function
         self._update_decoration_info(func_name, func)
         self.log_debug(f"Function: {func_name} registered ... ")
