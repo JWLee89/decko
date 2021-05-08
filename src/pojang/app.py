@@ -20,6 +20,7 @@ yee.analyze()
 import os
 import sys
 import copy
+import itertools
 from typing import Callable, Dict, List, Tuple, Union, Type
 import inspect
 from functools import wraps
@@ -87,8 +88,7 @@ class Pojang:
                  root_path: str = None,
                  inspect_mode: int = InspectMode.PUBLIC_ONLY,
                  debug: bool = False,
-                 log_path: str = None,
-                 no_side_effects: bool = False):
+                 log_path: str = None):
 
         #: The name of the package or module that this object belongs
         #: to. Do not change this once it is set by the constructor.
@@ -166,10 +166,10 @@ class Pojang:
 
         # Raise exception by default if modified.
         if undefined_event_cb:
-            def event_cb(key, before, after):
+            def event_cb(argument_name, before, after):
                 raise exceptions.MutatedReferenceError(
-                    f"Original input modified: {key}. Before: {before[key]}, "
-                    f"after: {after[key]}"
+                    f"Original input modified: {argument_name}. Before: {before}, "
+                    f"after: {after}"
                 )
 
         def wrapper(function: Union[Type, Callable]):
@@ -181,7 +181,7 @@ class Pojang:
                 # in our case where we have extremely large tensors
                 # that take up a lot of space ...
                 # TODO: Come up with a better way of checking
-                input_data = util.get_args_dict(function, args, kwargs)
+                input_data = util.get_shallow_default_arg_dict(function, args)
                 original_input = copy.deepcopy(input_data)
                 # Get output of function
                 output = function(*args, **kwargs)
@@ -194,7 +194,6 @@ class Pojang:
                         event_cb(key, before, after)
 
                 return output
-
             return inner
         return wrapper
 
@@ -528,7 +527,7 @@ class Pojang:
                 API_KEYS.PROPS: props
             }
 
-    def run_before(self, functions: Union[List[Callable], List]):
+    def run_before(self, functions: Union[List[Callable], Callable]):
         """
         This allows users to wrap a function without registering
         :param functions: A function or a list of functions that
@@ -546,6 +545,7 @@ class Pojang:
 
             @wraps(fn)
             def inner(*args, **kwargs):
+                util.fill_default_kwargs(fn, args, kwargs)
                 preprocess(functions, *args, **kwargs)
                 output = fn(*args, **kwargs)
                 return output
