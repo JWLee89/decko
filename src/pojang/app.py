@@ -162,10 +162,15 @@ class Pojang:
         :param kw:
         :return:
         """
+        undefined_event_cb = event_cb is None
 
-        if event_cb is None:
-            def event_cb(msg):
-                raise exceptions.MutatedReferenceError(msg)
+        # Raise exception by default if modified.
+        if undefined_event_cb:
+            def event_cb(key, before, after):
+                raise exceptions.MutatedReferenceError(
+                    f"Original input modified: {key}. Before: {before[key]}, "
+                    f"after: {after[key]}"
+                )
 
         def wrapper(function: Union[Type, Callable]):
             self.add_decorator_rule(function, **kw)
@@ -176,21 +181,21 @@ class Pojang:
                 # in our case where we have extremely large tensors
                 # that take up a lot of space ...
                 # TODO: Come up with a better way of checking
-                input_variables = util.get_args_dict(function, args, kwargs)
-                original_input = copy.deepcopy(input_variables)
-
+                input_data = util.get_args_dict(function, args, kwargs)
+                original_input = copy.deepcopy(input_data)
                 # Get output of function
                 output = function(*args, **kwargs)
                 # check inputs
-                for key, value in input_variables.items():
+                for key, value in input_data.items():
+                    # If value has been modified, fire event!
                     if value != original_input[key]:
-                        event_cb(f"Original input modified: {key}. Before: {original_input[key]}, "
-                                 f"after: {input_variables[key]}")
+                        before = original_input[key]
+                        after = input_data[key]
+                        event_cb(key, before, after)
 
                 return output
 
             return inner
-
         return wrapper
 
     def _add_class_decorator_rule(self, cls, **kwargs) -> None:
