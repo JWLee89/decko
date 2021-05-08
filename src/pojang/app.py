@@ -282,6 +282,14 @@ class Pojang:
     # ----- Public Methods -----
     # --------------------------
 
+    def print_profile(self, sort_by: str = 'ncalls') -> None:
+        stats = pstats.Stats(self._profiler).strip_dirs().sort_stats(sort_by)
+        stats.print_stats()
+
+    def dump_profile(self, file_path: str, sort_by: str = 'ncalls'):
+        stats = pstats.Stats(self._profiler).strip_dirs().sort_stats(sort_by)
+        stats.dump_stats(file_path)
+
     def log_debug(self, msg) -> None:
         """
         Print debug message if mode is set to

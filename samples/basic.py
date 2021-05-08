@@ -29,5 +29,4 @@ if __name__ == "__main__":
 
     output = expensive_func(10, 20, 10000)
 
-    stats = pstats.Stats(pj._profiler).sort_stats('ncalls')
-    stats.print_stats()
+    pj.print_profile()
