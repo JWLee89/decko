@@ -26,6 +26,7 @@ from functools import wraps
 import time
 from collections import OrderedDict
 import tracemalloc
+import cProfile, pstats
 
 # Local imports
 from src.pojang.helper.properties import TimeStatistics, Statistics
@@ -127,13 +128,10 @@ class Pojang:
         # If not specified, the default fallback method will be print()
         self.log = util.logger_factory(log_path, module_name) if log_path else print
 
-        # Will raise an error if the wrapped function raises side_effect
-        # Note: This behavior can be changed at runtime and also overridden
-        # for each function
-        # TODO: Remove and convert no_side_effect --> pure_input
-        # self.no_side_effects = no_side_effects
+        # Initialize cProfiler
+        self._profiler = cProfile.Profile()
 
-    # TODO: Create parallel decorator for parallel processing
+        # TODO: Create parallel decorator for parallel processing
 
     def trace_memory(self, func):
         tracemalloc.start()
@@ -339,6 +337,24 @@ class Pojang:
             return wrapped
 
         return wrap
+
+    def profile(self, func: Callable) -> Callable:
+        """
+        Profile all instances
+        :param func:
+        :type func:
+        :return:
+        :rtype:
+        """
+
+        @wraps(func)
+        def wrapped(*args, **kwargs):
+            self._profiler.enable()
+            output = func(*args, **kwargs)
+            self._profiler.disable()
+            return output
+
+        return wrapped
 
     def observe(self,
                 properties: Union[Tuple, List] = None) -> Callable:
@@ -633,43 +649,8 @@ if __name__ == "__main__":
     pj = Pojang(__name__, debug=True)
 
 
-    def trigger_me(output, *args, **kwargs):
-        print(f"Output: {output}.")
-
-
-    @pj.stopwatch
-    @pj.fire_if([trigger_me], lambda output, self, arr: len(arr) > 4)
-    def do_something(arr):
-        return sum(arr)
-
-
-    def ding():
-        print("ding")
-
-
-    def dong():
-        item = list(range(10000))
-        print("dong")
-
-
-    # @pj.trace_memory
-    # @pj.run_before([ding, dong])
-    # def dang():
-    #     item = list(range(10000))
-    #     print("dang")
-    #
-    #
-    # # This should print "ding dong"
-    # dang()
-    #
-    # # This should fire an event since we called
-    # test = do_something([1, 2, 3, 4, 5, 6])
-    # do_something([20, 30])
-    #
-    # pj.analyze()
-    # print(pj)
-
-    @pj.pure()
+    @pj.pure(print)
+    @pj.profile
     def input_output_what_how(a, b, c=[]):
         c.append(10)
         return c
@@ -679,3 +660,15 @@ if __name__ == "__main__":
     output = input_output_what_how(10, 20, item)
     yee = input_output_what_how(10, 20, item)
     print(f"yee: {yee}")
+
+
+    @pj.profile
+    def long_list(n=100000):
+        return list(range(n))
+
+
+    for i in range(10):
+        long_list()
+    #
+    stats = pstats.Stats(pj._profiler).sort_stats('ncalls')
+    stats.print_stats()
