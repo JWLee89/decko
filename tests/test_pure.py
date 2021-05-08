@@ -27,4 +27,6 @@ def test_basic_pure():
         # If this is not caught, "yee" will be an array of size 2.
         # yee = [10, 10]
         yee = input_output_what_how(10, 20)
-
+        assert len(yee) == 3, "Side effect should result in array of size 3"
+        # They should point to same object
+        assert item is yee, "They don't point to the same object? What???"
