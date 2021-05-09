@@ -206,9 +206,7 @@ class Pojang:
         :return:
         """
         properties: Dict = util.create_properties(Pojang.FUNCTION_PROPS, **kwargs)
-        # Register the function
-        func_name: str = get_unique_func_name(func)
-        self._update_decoration_info(func_name, func, properties)
+        self._update_decoration_info(func, properties)
 
     def add_decorator_rule(self,
                            obj_to_decorate: Union[Callable, Type],
@@ -301,9 +299,6 @@ class Pojang:
         :param func:
         :return:
         """
-        # Update function statistics
-        func_name: str = get_unique_func_name(func)
-        self.log_debug(f"Decorated function with unique id: {func_name}")
         # Decorate the function
         self.add_decorator_rule(func)
 
@@ -450,24 +445,12 @@ class Pojang:
 
         return function_exists
 
-    def _register(self, func: Callable) -> None:
-        """
-        Handle registration of a function. Is
-        applied to all functions
-        :param func:
-        :return:
-        """
-        func_name: str = get_unique_func_name(func)
-        # TODO: register function
-        self._update_decoration_info(func_name, func)
-        self.log_debug(f"Function: {func_name} registered ... ")
-
     def _update_decoration_info(self,
-                                func_name: str,
                                 func: Callable,
                                 props: Dict) -> None:
         # Common function for handling duplicates
-        print(f"Func name: {func_name}")
+        # Update function statistics
+        func_name: str = get_unique_func_name(func)
         if func_name in self.functions:
             self.log_debug(f"Found duplicate decorator with identity: {func_name}", logging.WARNING)
         else:
@@ -478,7 +461,7 @@ class Pojang:
                 # API_KEYS.DECORATED_WITH: [func_name]
             }
             # Add message if set to debug
-            self.log_debug(f"Function: {func_name} registered ... ")
+            self.log_debug(f"Decorated function with unique id: {func_name}")
 
     def run_before(self, functions: Union[List[Callable], Callable], **kw):
         """
@@ -515,22 +498,19 @@ class Pojang:
                   truncate_from: int = 200):
 
         def decorator(func):
-            # Update function statistics
-            func_name = get_unique_func_name(func)
-            self.log(f"Decorated function with unique id: {func_name}")
-            self._update_decoration_info(func_name, func, TimeStatistics(func))
+            self._decorate(func)
 
-            # Initialize input
-            self.functions[func_name][API_KEYS.STATS_INPUT] = 0
+            # # Initialize input
+            # self.functions[func_name][API_KEYS.STATS_INPUT] = 0
 
             @wraps(func)
             def wrapper(*args, **kwargs):
                 time_start = time.time()
                 output = func(*args, **kwargs)
                 time_elapsed = time.time() - time_start
-                self.functions[func_name][API_KEYS.STATS_INPUT] = time_elapsed
-                # Compute statistics
-                self.functions[func_name][API_KEYS.PROPS].update(time_elapsed)
+                # self.functions[func_name][API_KEYS.STATS_INPUT] = time_elapsed
+                # # Compute statistics
+                # self.functions[func_name][API_KEYS.PROPS].update(time_elapsed)
                 return output
 
             return wrapper

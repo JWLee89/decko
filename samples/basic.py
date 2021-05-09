@@ -12,8 +12,8 @@ if __name__ == "__main__":
 
     @pj.run_before(i_run_before)
     @pj.run_before(i_run_before)
-    @pj.pure(log_impurity)
-    @pj.profile
+    # @pj.pure(log_impurity)
+    # @pj.profile
     def expensive_func(a,
                        b,
                        c=1000000,
@@ -31,8 +31,8 @@ if __name__ == "__main__":
         def __init__(self, item):
             self.item = item
 
-        @pj.pure(log_impurity)
-        @pj.profile
+        # @pj.pure(log_impurity)
+        # @pj.profile
         def set_item(self, item):
             self.item = item
 
