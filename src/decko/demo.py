@@ -1,10 +1,10 @@
-from app import Pojang
+from app import Decok
 
 
 def simple_demo():
     import torch
 
-    yee = Pojang(__name__, debug=True, log_path=None)
+    yee = Decok(__name__, debug=True, log_path=None)
 
     # This should register all functions inside of class Test()
     # @yee.time

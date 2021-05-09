@@ -1,4 +1,4 @@
-# Pojang
+# Decko
 
 A decorator based utility module for Python developers. The module is designed to 
 aid developers in debugging their python applications.
@@ -7,14 +7,14 @@ aid developers in debugging their python applications.
 
 ## Getting Started
 
-Pojang is a decorated-based module for debugging. 
+Decko is a decorated-based module for debugging. 
 It also provides useful decorators to speed up programming and provides utility 
 function for easier decorator usage. Here is an example
 
 ```python
-from pojang import Pojang
+from decko import Decko
 
-pj = Pojang(__name__, debug=True)
+pj = Decko(__name__, debug=True)
 
 
 @pj.stopwatch
@@ -28,24 +28,26 @@ pj.analyze()
 
 ### Features
 
-Pojang detects and raises customized, informative errors such as `DuplicateDecoratorError`.
+Decko detects and raises customized, informative errors such as `DuplicateDecoratorError`.
 This helps in debugging and extending features with minimal modifications to the existing
 codebase.
 
 ```python
-from src.pojang import Pojang
+from src.decko import Decok
 
-pj = Pojang(__name__, debug=True)
+pj = Decok(__name__, debug=True)
 
 
 def log_impurity(argument, before, after):
     print(f"Argument: {argument} modified. Before: {before}, after: {after}")
 
+
 def i_run_before(a, b, c, item):
     print(f"Run before func: {a}, {b}, {c}, {item}")
 
+
 @pj.run_before(i_run_before)
-@pj.run_before(i_run_before)     # This should not be allowed
+@pj.run_before(i_run_before)  # This should not be allowed
 @pj.pure(log_impurity)
 # @pj.profile
 def expensive_func(a,
@@ -60,6 +62,7 @@ def expensive_func(a,
     b += a
     total = a + b
     return total
+
 
 class DummyClass:
     def __init__(self, item):
@@ -98,7 +101,7 @@ Traceback (most recent call last):
     self.handle_error(f"Found duplicate decorator with identity: {func_name}",
   File "path", line 325, in handle_error
     raise error_type(msg)
-src.pojang.exceptions.DuplicateDecoratorError: Found duplicate decorator with identity: __main__.expensive_func
+src.decko.exceptions.DuplicateDecoratorError: Found duplicate decorator with identity: __main__.expensive_func
 ```
 
 

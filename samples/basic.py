@@ -1,6 +1,6 @@
-from src.pojang import Pojang
+from src.decko import Decok
 
-pj = Pojang(__name__, debug=True)
+pj = Decok(__name__, debug=True)
 
 if __name__ == "__main__":
 

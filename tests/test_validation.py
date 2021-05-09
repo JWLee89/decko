@@ -1,7 +1,7 @@
-from src.pojang.app import Pojang
+from src.decko.app import Decok
 import pytest
 
-pj = Pojang(__name__)
+pj = Decok(__name__)
 
 
 def test_set_debug() -> None:

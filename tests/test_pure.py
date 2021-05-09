@@ -1,9 +1,9 @@
 import pytest
 
-from src.pojang.app import Pojang
-from src.pojang.exceptions import MutatedReferenceError
+from src.decko.app import Decok
+from src.decko.exceptions import MutatedReferenceError
 
-pj = Pojang(__name__)
+pj = Decok(__name__)
 
 
 def test_basic_pure():

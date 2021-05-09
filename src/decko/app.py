@@ -1,13 +1,13 @@
 """
 Author: Jay Lee
-Pojang: A decorator-based application for experimentation,
+Decko: A decorator-based application for experimentation,
 development and debugging.
 Users can also dynamically decorate functions at runtime
 which helps performance.
 
 Basic use case:
 
-yee = Pojang()
+yee = Decko()
 
 @yee.trace
 def buggy_function(input_1, input_2, ...):
@@ -31,10 +31,10 @@ import tracemalloc
 import cProfile, pstats
 
 # Local imports
-from src.pojang.helper.properties import TimeStatistics, Statistics
-from src.pojang.helper.util import get_unique_func_name
-from src.pojang.helper import util
-import src.pojang.exceptions as exceptions
+from src.decko.helper.properties import TimeStatistics, Statistics
+from src.decko.helper.util import get_unique_func_name
+from src.decko.helper import util
+import src.decko.exceptions as exceptions
 
 
 class InspectMode:
@@ -65,7 +65,7 @@ def _check_if_class(cls):
                                            f"{cls} is of type: {type(cls)}")
 
 
-class Pojang:
+class Decok:
     """
     Yeeeee ....
     Entry point of the application.
@@ -209,7 +209,7 @@ class Pojang:
         :param kwargs:
         :return:
         """
-        properties: Dict = util.create_properties(Pojang.FUNCTION_PROPS, **kwargs)
+        properties: Dict = util.create_properties(Decok.FUNCTION_PROPS, **kwargs)
         self._update_decoration_info(decorator_func, func, properties)
 
     def add_decorator_rule(self,
@@ -250,7 +250,7 @@ class Pojang:
         a Yeezy instance.
         :return: A configuration dictionary
         """
-        new_config: OrderedDict = copy.deepcopy(Pojang.DEFAULT_CONFIGS)
+        new_config: OrderedDict = copy.deepcopy(Decok.DEFAULT_CONFIGS)
         # Override with user_inputs
         new_config['debug'] = debug
         new_config['inspect_mode'] = inspect_mode
@@ -282,7 +282,7 @@ class Pojang:
     @debug.setter
     def debug(self, new_mode):
         if type(new_mode) != bool:
-            raise TypeError("Pojang.debug must be set to either True or False. "
+            raise TypeError("Decko.debug must be set to either True or False. "
                             f"Set to value: {new_mode} of type {type(new_mode)}")
         self.config['debug'] = new_mode
 
@@ -465,7 +465,7 @@ class Pojang:
     def register_decorator(self,
                            func: Callable) -> bool:
         """
-        Public API - Register the decorator as a pojang custom method
+        Public API - Register the decorator as a decko custom method
         :param func: The function to register
         :return:
         """
@@ -603,7 +603,7 @@ class Pojang:
                 setattr(class_definition, item, decorated_func)
 
     def __repr__(self) -> str:
-        return f"pojang"
+        return f"decko"
 
     def analyze(self) -> None:
         """
@@ -624,7 +624,7 @@ class Pojang:
 
 
 if __name__ == "__main__":
-    pj = Pojang(__name__, debug=True)
+    pj = Decok(__name__, debug=True)
 
 
     @pj.pure(print)

@@ -1,7 +1,7 @@
-from src.pojang.app import Pojang
+from src.decko.app import Decok
 from functools import wraps
 
-pj = Pojang(__name__)
+pj = Decok(__name__)
 
 
 def test_initialization():
@@ -38,7 +38,7 @@ def test_extension():
     Add a new decorator and test its performance
     :return:
     """
-    class Yee(Pojang):
+    class Yee(Decok):
         def __init__(self, name):
             super().__init__(name)
 
@@ -79,7 +79,7 @@ def test_imported_func():
     Test to see whether profiling imported function works well.
     """
     from dummy_package.util import long_func
-    yee = Pojang(__file__)
+    yee = Decok(__file__)
 
     # Wrap the imported function
     wrapped_long_func = yee.stopwatch(long_func)
