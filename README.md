@@ -3,8 +3,6 @@
 A decorator based utility module for Python developers. The module is designed to 
 aid developers in debugging their python applications.
 
-![yee.png](yee.png)
-
 ## Getting Started
 
 Decko is a decorated-based module for debugging. 
