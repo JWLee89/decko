@@ -17,6 +17,7 @@ def buggy_function(input_1, input_2, ...):
 yee.analyze()
 
 """
+import logging
 import os
 import sys
 import copy
@@ -48,6 +49,7 @@ class API_KEYS:
     STATS_INPUT = 'input'
     FUNC_NAME = 'name'
     FUNCTION = 'func'
+    DECORATED_WITH = 'decorated_with'
 
 
 class CustomFunction(dict):
@@ -162,7 +164,7 @@ class Pojang:
                 )
 
         def wrapper(function: Union[Type, Callable]):
-            self.add_decorator_rule(function, **kw)
+            self._decorate(function)
 
             @wraps(function)
             def inner(*args, **kwargs):
@@ -197,14 +199,19 @@ class Pojang:
         pass
 
     def _add_function_decorator_rule(self, func: Callable, **kwargs) -> None:
+        """
+        Add common metadata regarding the decorated function.
+        :param func:
+        :param kwargs:
+        :return:
+        """
         properties: Dict = util.create_properties(Pojang.FUNCTION_PROPS, **kwargs)
         # Register the function
         func_name: str = get_unique_func_name(func)
         self._update_decoration_info(func_name, func, properties)
-        # Add message if set to debug
-        self.log_debug(f"Function: {func_name} registered ... ")
 
-    def add_decorator_rule(self, obj_to_decorate: Union[Callable, Type],
+    def add_decorator_rule(self,
+                           obj_to_decorate: Union[Callable, Type],
                            **kwargs) -> None:
         """
         Add common rules to registered decorator which includes
@@ -277,14 +284,16 @@ class Pojang:
         stats = pstats.Stats(self._profiler).strip_dirs().sort_stats(sort_by)
         stats.dump_stats(file_path)
 
-    def log_debug(self, msg) -> None:
+    def log_debug(self, msg: str, logging_type: int = logging.DEBUG) -> None:
         """
         Print debug message if mode is set to
         debug mode
         :param msg: The message to log
+        :param logging_type: The logging type as specified
+        in the logging module
         """
         if self.debug:
-            self.log(f'DEBUG: {msg}')
+            self.log(msg, logging_type)
 
     def _decorate(self, func: Callable) -> Callable:
         """
@@ -453,52 +462,23 @@ class Pojang:
         self._update_decoration_info(func_name, func)
         self.log_debug(f"Function: {func_name} registered ... ")
 
-    def before(self,
-               func: Callable,
-               stat_updater: Callable = None) -> Callable:
-        """
-        Create decorator that executes the function prior to
-        the decorated function being executed
-        :param func: The function to execute before the decorated function
-        :stat_updater: If defined, statistics will be computed and updated
-        after each execution.
-        :param stat_updater:
-
-        """
-        func_name: str = get_unique_func_name(func)
-        self._decorate(func)
-        if stat_updater:
-            @wraps(func)
-            def inner(*args, **kwargs):
-                output = func(*args, **kwargs)
-                # TODO: Update statistical computation logic
-                self.functions[func_name]['props'].update(
-                    self.functions[func_name][API_KEYS.STATS_INPUT], *args, **kwargs)
-                return output
-        else:
-            @wraps(func)
-            def inner(*args, **kwargs):
-                output = func(*args, **kwargs)
-                if API_KEYS.STATS_INPUT in self.functions[func_name]:
-                    self.functions[func_name][API_KEYS.PROPS].update(
-                        self.functions[func_name][API_KEYS.STATS_INPUT], *args, **kwargs)
-                return output
-
-        return inner
-
     def _update_decoration_info(self,
                                 func_name: str,
                                 func: Callable,
-                                props: Statistics) -> None:
+                                props: Dict) -> None:
         # Common function for handling duplicates
+        print(f"Func name: {func_name}")
         if func_name in self.functions:
-            self.log_debug(f"Found duplicate decorator with identity: {func_name}")
+            self.log_debug(f"Found duplicate decorator with identity: {func_name}", logging.WARNING)
         else:
             self.functions[func_name] = {
                 API_KEYS.FUNC_NAME: func_name,
                 API_KEYS.FUNCTION: func,
-                API_KEYS.PROPS: props
+                API_KEYS.PROPS: props,
+                # API_KEYS.DECORATED_WITH: [func_name]
             }
+            # Add message if set to debug
+            self.log_debug(f"Function: {func_name} registered ... ")
 
     def run_before(self, functions: Union[List[Callable], Callable], **kw):
         """

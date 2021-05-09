@@ -110,11 +110,10 @@ def create_properties(valid_properties: Dict, **kwargs) -> Dict:
 def is_class_instance(item) -> bool:
     """
     Check if item is a class instance.
-    Note that class instances in Python have
-    the '__dict__' property
     :param item: The item to evaluate
     """
-    return hasattr(item, '__dict__')
+    # return hasattr(item, '__dict__')
+    return inspect.isclass(item)
 
 
 def get_unique_func_name(func: Callable) -> str:
