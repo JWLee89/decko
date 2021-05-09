@@ -407,45 +407,45 @@ class Decko:
 
         return wrapped
 
-    def observe(self,
-                properties: Union[Tuple, List] = None) -> Callable:
-        """
-        Observe properties in a class and log when they are being updated.
-        :param properties: The properties to observe.
-        """
-
-        is_list_or_tuple: bool = isinstance(properties, (list, tuple))
-        is_class: bool = util.is_class_instance(properties)
-
-        def observe_class(cls):
-            _check_if_class(cls)
-            cls_name: str = f'{cls.__module__}.{cls.__name__}'
-            class_props: List = [item for item in inspect.getmembers(cls) if not inspect.ismethod(item)]
-            # Observe passed properties
-            if is_list_or_tuple:
-                # Go through all properties
-                for prop in properties:
-                    if prop not in class_props:
-                        raise ValueError(f"Property '{prop}' not found in class <{cls_name}>.\n"
-                                         f"Available props: {class_props}")
-                    # Must pass in string
-                    elif not isinstance(prop, str):
-                        raise ValueError("Properties passed to .observe() should be a string. "
-                                         f"Passed in value '{prop}' of type: {type(prop)}")
-                    else:
-                        pass
-                        # property_value = cls.__getitem__(prop)
-                        # print(f"Prop value: {property_value}")
-
-            # Observe all properties
-            else:
-                pass
-
-        # Called without calling decorator. e.g.
-        # @yee.observe instead of @yee.observe()
-        if is_class:
-            return observe_class(properties)
-        return observe_class
+    # def observe(self,
+    #             properties: Union[Tuple, List] = None) -> Callable:
+    #     """
+    #     Observe properties in a class and log when they are being updated.
+    #     :param properties: The properties to observe.
+    #     """
+    #
+    #     is_list_or_tuple: bool = isinstance(properties, (list, tuple))
+    #     is_class: bool = util.is_class_instance(properties)
+    #
+    #     def observe_class(cls):
+    #         _check_if_class(cls)
+    #         cls_name: str = f'{cls.__module__}.{cls.__name__}'
+    #         class_props: List = [item for item in inspect.getmembers(cls) if not inspect.ismethod(item)]
+    #         # Observe passed properties
+    #         if is_list_or_tuple:
+    #             # Go through all properties
+    #             for prop in properties:
+    #                 if prop not in class_props:
+    #                     raise ValueError(f"Property '{prop}' not found in class <{cls_name}>.\n"
+    #                                      f"Available props: {class_props}")
+    #                 # Must pass in string
+    #                 elif not isinstance(prop, str):
+    #                     raise ValueError("Properties passed to .observe() should be a string. "
+    #                                      f"Passed in value '{prop}' of type: {type(prop)}")
+    #                 else:
+    #                     pass
+    #                     # property_value = cls.__getitem__(prop)
+    #                     # print(f"Prop value: {property_value}")
+    #
+    #         # Observe all properties
+    #         else:
+    #             pass
+    #
+    #     # Called without calling decorator. e.g.
+    #     # @yee.observe instead of @yee.observe()
+    #     if is_class:
+    #         return observe_class(properties)
+    #     return observe_class
 
     def register(self,
                  func_name: str,
