@@ -399,8 +399,6 @@ class Pojang:
             _check_if_class(cls)
             cls_name: str = f'{cls.__module__}.{cls.__name__}'
             class_props: List = [item for item in inspect.getmembers(cls) if not inspect.ismethod(item)]
-            print(f"Props: {class_props}, {dir(cls)}")
-
             # Observe passed properties
             if is_list_or_tuple:
                 # Go through all properties
@@ -426,36 +424,6 @@ class Pojang:
         if is_class:
             return observe_class(properties)
         return observe_class
-
-    def trace(self,
-              warn_side_effects=True,
-              truncate_from: int = 100):
-        """
-        :param truncate_from: When handling large inputs,
-        truncates the input so that log files
-        do not become too large.
-        """
-
-        def inner_function(func):
-            # Update function statistics
-            func_name: str = get_unique_func_name(func)
-            self.log_debug(f"Decorated function with unique id: {func_name}")
-            self._update_decoration_info(func_name, func, Statistics(func))
-
-            # Get arguments
-            argspecs = inspect.getfullargspec(func)
-
-            # call context variables
-            caller_frame_record = inspect.stack()[1]
-            caller_code = caller_frame_record.code_context[0].strip()
-
-            @wraps(func)
-            def wrapper(*args, **kwargs):
-                return func(*args, **kwargs)
-
-            return wrapper
-
-        return inner_function
 
     def register(self,
                  func_name: str,
@@ -511,10 +479,7 @@ class Pojang:
 
         """
         func_name: str = get_unique_func_name(func)
-        # register function
-        self._update_decoration_info(func_name, func)
-        self.log_debug(f"Function: {func_name} registered ... ")
-
+        self._decorate(func)
         if stat_updater:
             @wraps(func)
             def inner(*args, **kwargs):
