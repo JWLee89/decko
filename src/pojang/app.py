@@ -126,7 +126,8 @@ class Pojang:
 
         # Logging function
         # If not specified, the default fallback method will be print()
-        self.log = util.logger_factory(log_path, module_name) if log_path else print
+        self.log = util.logger_factory(module_name, log_also_to_console=True) if log_path else \
+            util.logger_factory(module_name, file_name=log_path, log_also_to_console=True)
 
         # Initialize cProfiler
         self._profiler = cProfile.Profile()
