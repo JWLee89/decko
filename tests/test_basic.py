@@ -1,7 +1,7 @@
-from src.decko.app import Decok
+from src.decko.app import Decko
 from functools import wraps
 
-dk = Decok(__name__)
+dk = Decko(__name__)
 
 
 def test_initialization():
@@ -38,7 +38,7 @@ def test_extension():
     Add a new decorator and test its performance
     :return:
     """
-    class Yee(Decok):
+    class Yee(Decko):
         def __init__(self, name):
             super().__init__(name)
 
@@ -79,7 +79,7 @@ def test_imported_func():
     Test to see whether profiling imported function works well.
     """
     from dummy_package.util import long_func
-    yee = Decok(__file__)
+    yee = Decko(__file__)
 
     # Wrap the imported function
     wrapped_long_func = yee.stopwatch(long_func)

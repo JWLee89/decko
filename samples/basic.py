@@ -1,6 +1,6 @@
-from src.decko import Decok
+from src.decko import Decko
 
-dk = Decok(__name__, debug=True)
+dk = Decko(__name__, debug=True)
 
 if __name__ == "__main__":
 

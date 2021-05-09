@@ -1,7 +1,7 @@
-from src.decko.app import Decok
+from src.decko.app import Decko
 import pytest
 
-dk = Decok(__name__)
+dk = Decko(__name__)
 
 
 def test_set_debug() -> None:
