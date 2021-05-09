@@ -15,12 +15,10 @@ def is_iterable(obj) -> bool:
     return iterable
 
 
-def validate_type(obj: Dict, key: str, target_type: Type):
-    prop_val = obj[key]
-    if type(prop_val) != target_type:
-        raise TypeError(f"{key} must be of type boolean. "
-                        f"Passed in value: '{prop_val}' "
-                        f"of type: {type(prop_val)}")
+def validate_type(value, target_type: Type):
+    if type(value) != target_type:
+        raise TypeError(f"{value} must be of type boolean. "
+                        f"{value} is of type: {type(value)}")
 
 
 def get_deepcopy_args_kwargs(fn: Callable, args: Tuple, kwargs: Dict):
@@ -97,7 +95,12 @@ def create_properties(valid_properties: Dict, **kwargs) -> Dict:
     # Validate and add properties
     for key, (data_type, default_value) in valid_properties.items():
         if key in kwargs:
-            validate_type(kwargs, key, data_type)
+            current_property = kwargs[key]
+            if isinstance(current_property, Tuple):
+                for item in current_property:
+                    validate_type(item, data_type)
+            else:
+                validate_type(current_property, data_type)
             properties[key] = kwargs[key]
         else:
             properties[key] = default_value
@@ -107,11 +110,10 @@ def create_properties(valid_properties: Dict, **kwargs) -> Dict:
 def is_class_instance(item) -> bool:
     """
     Check if item is a class instance.
-    Note that class instances in Python have
-    the '__dict__' property
     :param item: The item to evaluate
     """
-    return hasattr(item, '__dict__')
+    # return hasattr(item, '__dict__')
+    return inspect.isclass(item)
 
 
 def get_unique_func_name(func: Callable) -> str:
@@ -124,35 +126,89 @@ def dict_is_empty(dictionary: Dict):
     return False
 
 
-def logger_factory(file_name: str,
-                   logger_name: str,
-                   level=logging.INFO) -> Callable:
+class LoggingLevelError(ValueError):
+    """
+    Occurs if users pass in an invalid logging type
+    to logging function
+    """
+    def __init__(self, msg):
+        super().__init__(msg)
+
+
+def logger_factory(logger_name: str,
+                   level: int = logging.DEBUG,
+                   file_name: str = None,
+                   log_also_to_console: bool = True) -> Callable:
     """
     Function for writing information to a file during program execution
     :param file_name: The name of the file to store log
     :param logger_name: The name of the function being called
     :param level: The debug level
+    :param log_also_to_console: If set to true, logging will be
+    performed both to the file and the console
     """
-    file_handler = logging.FileHandler(file_name, 'a')
+    # This is required for logging rules to apply
+    logging.basicConfig(level=level)
+
+    logger = logging.getLogger(logger_name)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                                   '%Y-%m-%d %H:%M:%S')
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(level)
-    logger = logging.getLogger(logger_name)
 
-    for handler in logger.handlers:  # remove all old handlers
+    # remove all old handlers
+    for handler in logger.handlers:
         logger.removeHandler(handler)
-    logger.addHandler(file_handler)  # set the new handler
 
-    def write(contents_to_write: Union[str, List]) -> None:
+    # add file logging
+    if file_name is not None:
+        file_handler = logging.FileHandler(file_name, 'a')
+
+        file_handler.setFormatter(formatter)
+        file_handler.setLevel(level)
+        # set the new handler
+        logger.addHandler(file_handler)
+
+    # Add console handler with same formatter
+    if log_also_to_console:
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        console_handler.setLevel(level)
+        logger.addHandler(console_handler)
+
+    def log_msg(contents_to_log: Union[str, List],
+                log_level: int = logging.DEBUG) -> None:
         """
         When utilizing this function, please note that file I/O is relatively costly,
         so try calling this function at the end of creating a message string
-        :param contents_to_write: The contents to append to the target log file.
-        """
-        logger.log(contents_to_write)
+        :param contents_to_log: The contents to append to the target log file.
+        :param log_level: The log level specified by the python logging module
+        which are as follows:
 
-    return write
+            Level	Numeric value
+            CRITICAL	50
+            ERROR	    40
+            WARNING	    30
+            INFO	    20
+            DEBUG	    10
+            NOTSET	    0
+
+        """
+        # Log levels will likely not be added in the future
+        if logging.INFO == log_level:
+            log_to_file = logger.info
+        elif logging.DEBUG == log_level:
+            log_to_file = logger.debug
+        elif logging.WARNING == log_level:
+            log_to_file = logger.warning
+        elif logging.ERROR == log_level:
+            log_to_file = logger.error
+        elif logging.CRITICAL == log_level:
+            log_to_file = logger.critical
+        else:
+            raise LoggingLevelError("Invalid log level passed to log_msg(contents_to_log, log_level): "
+                                    f"log_level={log_level} is invalid.")
+        log_to_file(contents_to_log)
+
+    return log_msg
 
 
 class ContextDecorator:

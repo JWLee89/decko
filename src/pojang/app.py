@@ -17,6 +17,7 @@ def buggy_function(input_1, input_2, ...):
 yee.analyze()
 
 """
+import logging
 import os
 import sys
 import copy
@@ -48,6 +49,7 @@ class API_KEYS:
     STATS_INPUT = 'input'
     FUNC_NAME = 'name'
     FUNCTION = 'func'
+    DECORATED_WITH = 'decorated_with'
 
 
 class CustomFunction(dict):
@@ -79,8 +81,14 @@ class Pojang:
     })
 
     # Key value pairs of required properties
+    # First element is the type of the keyword parameter
+    # The second is the default value to assign
     FUNCTION_PROPS = OrderedDict({
         'compute_statistics': (bool, True),
+    })
+
+    CLASS_PROPS = OrderedDict({
+        'prefix_filter': (str, ('_', '__'))
     })
 
     def __init__(self,
@@ -126,30 +134,13 @@ class Pojang:
 
         # Logging function
         # If not specified, the default fallback method will be print()
-        self.log = util.logger_factory(log_path, module_name) if log_path else print
+        self.log = util.logger_factory(module_name, log_also_to_console=True) if log_path else \
+            util.logger_factory(module_name, file_name=log_path, log_also_to_console=True)
 
         # Initialize cProfiler
         self._profiler = cProfile.Profile()
 
         # TODO: Create parallel decorator for parallel processing
-
-    def trace_memory(self, func):
-        tracemalloc.start()
-
-        @wraps(func)
-        def inner(*args, **kwargs):
-            snapshot1 = tracemalloc.take_snapshot()
-            output = func(*args, **kwargs)
-            # ... call the function to profile
-            snapshot2 = tracemalloc.take_snapshot()
-            top_stats = snapshot2.compare_to(snapshot1, 'lineno')
-
-            print("[ Top 10 differences ]")
-            for stat in top_stats[:10]:
-                print(stat)
-            return output
-
-        return inner
 
     def pure(self,
              event_cb: Callable = None,
@@ -173,7 +164,7 @@ class Pojang:
                 )
 
         def wrapper(function: Union[Type, Callable]):
-            self.add_decorator_rule(function, **kw)
+            self._decorate(self.pure, function)
 
             @wraps(function)
             def inner(*args, **kwargs):
@@ -197,7 +188,8 @@ class Pojang:
             return inner
         return wrapper
 
-    def _add_class_decorator_rule(self, cls, **kwargs) -> None:
+    def _add_class_decorator_rule(self, decorator_func: Callable,
+                                  cls, **kwargs) -> None:
         """
         If the decorated object is a class, we will add different rules.
         For example, these rules include which types of functions to decorate
@@ -207,31 +199,47 @@ class Pojang:
         """
         pass
 
-    def _add_function_decorator_rule(self, func: Callable, **kwargs) -> None:
+    def _add_function_decorator_rule(self,
+                                     decorator_func: Callable,
+                                     func: Callable, **kwargs) -> None:
+        """
+        Add common metadata regarding the decorated function.
+        :param decorator_func:
+        :param func:
+        :param kwargs:
+        :return:
+        """
         properties: Dict = util.create_properties(Pojang.FUNCTION_PROPS, **kwargs)
-        # Register the function
-        func_name: str = get_unique_func_name(func)
-        self._update_decoration_info(func_name, func)
+        self._update_decoration_info(decorator_func, func, properties)
 
-
-        # Add message if set to debug
-        self.log_debug(f"Function: {func_name} registered ... ")
-
-    def add_decorator_rule(self, obj_to_decorate: Union[Callable, Type],
+    def add_decorator_rule(self,
+                           decorator_func: Callable,
+                           obj_to_decorate: Union[Callable, Type],
                            **kwargs) -> None:
         """
         Add common rules to registered decorator which includes
         the following options:
             - kwargs:
-        :param obj_to_decorate: the object to decorate. Can either be
+        :param decorator_func: The decorator function applied to
+        obj_to_decorate.
+
+        E.g.
+
+        @decorator_func
+        def obj_to_decorate():
+            pass
+
+        :param obj_to_decorate: The object to decorate. Can either be
         class instance or a function.
         :param kwargs: Keyword args added to decorator
         :return:
         """
         if util.is_class_instance(obj_to_decorate):
-            self._add_class_decorator_rule(obj_to_decorate, **kwargs)
+            self._add_class_decorator_rule(decorator_func ,
+                                           obj_to_decorate, **kwargs)
         else:
-            self._add_function_decorator_rule(obj_to_decorate, **kwargs)
+            self._add_function_decorator_rule(decorator_func,
+                                              obj_to_decorate, **kwargs)
 
     @staticmethod
     def get_new_configs(debug: bool,
@@ -283,33 +291,47 @@ class Pojang:
     # --------------------------
 
     def print_profile(self, sort_by: str = 'ncalls') -> None:
-        stats = pstats.Stats(self._profiler).strip_dirs().sort_stats(sort_by)
-        stats.print_stats()
+        try:
+            stats = pstats.Stats(self._profiler).strip_dirs().sort_stats(sort_by)
+            stats.print_stats()
+        except TypeError as ex:
+            self.log_debug(f"||||||| You probably did not profile any functions. "
+                           f"Check your code |||||||\nStacktrace: {ex}", logging.ERROR)
 
     def dump_profile(self, file_path: str, sort_by: str = 'ncalls'):
         stats = pstats.Stats(self._profiler).strip_dirs().sort_stats(sort_by)
         stats.dump_stats(file_path)
 
-    def log_debug(self, msg) -> None:
+    def log_debug(self, msg: str, logging_type: int = logging.DEBUG) -> None:
         """
         Print debug message if mode is set to
         debug mode
         :param msg: The message to log
+        :param logging_type: The logging type as specified
+        in the logging module
         """
         if self.debug:
-            self.log(f'DEBUG: {msg}')
+            self.log(msg, logging_type)
 
-    def _decorate(self, func: Callable) -> Callable:
+    def handle_error(self,
+                     msg: str,
+                     error_type) -> None:
+        """
+        Log the error to the console and file, and also raise an exception
+        :param msg: The message to display
+        :param error_type: The type of error to raise. E.g. ValueError()
+        """
+        self.log(msg, logging.ERROR)
+        raise error_type(msg)
+
+    def _decorate(self, decorator_func: Callable, func: Callable) -> Callable:
         """
         Common function for decorating functions such as registration
         :param func:
         :return:
         """
-        # Update function statistics
-        func_name: str = get_unique_func_name(func)
-        self.log_debug(f"Decorated function with unique id: {func_name}")
         # Decorate the function
-        self.add_decorator_rule(func)
+        self.add_decorator_rule(decorator_func, func)
 
         @wraps(func)
         def wrapped(*args, **kwargs):
@@ -454,66 +476,33 @@ class Pojang:
 
         return function_exists
 
-    def _register(self, func: Callable) -> None:
-        """
-        Handle registration of a function. Is
-        applied to all functions
-        :param func:
-        :return:
-        """
-        func_name: str = get_unique_func_name(func)
-        # TODO: register function
-        self._update_decoration_info(func_name, func)
-        self.log_debug(f"Function: {func_name} registered ... ")
-
-    def before(self,
-               func: Callable,
-               stat_updater: Callable = None) -> Callable:
-        """
-        Create decorator that executes the function prior to
-        the decorated function being executed
-        :param func: The function to execute before the decorated function
-        :stat_updater: If defined, statistics will be computed and updated
-        after each execution.
-        :param stat_updater:
-
-        """
-        func_name: str = get_unique_func_name(func)
-        self._decorate(func)
-        if stat_updater:
-            @wraps(func)
-            def inner(*args, **kwargs):
-                output = func(*args, **kwargs)
-                # TODO: Update statistical computation logic
-                self.functions[func_name]['props'].update(
-                    self.functions[func_name][API_KEYS.STATS_INPUT], *args, **kwargs)
-                return output
-        else:
-            @wraps(func)
-            def inner(*args, **kwargs):
-                output = func(*args, **kwargs)
-                if API_KEYS.STATS_INPUT in self.functions[func_name]:
-                    self.functions[func_name][API_KEYS.PROPS].update(
-                        self.functions[func_name][API_KEYS.STATS_INPUT], *args, **kwargs)
-                return output
-
-        return inner
-
     def _update_decoration_info(self,
-                                func_name: str,
-                                func: Callable,
-                                props: Statistics) -> None:
+                                decorator_func,
+                                func_to_decorate: Callable,
+                                props: Dict) -> None:
         # Common function for handling duplicates
+        func_name: str = get_unique_func_name(func_to_decorate)
+        decorator_func_name: str = get_unique_func_name(decorator_func)
         if func_name in self.functions:
-            self.log_debug(f"Found duplicate decorator with identity: {func_name}")
+            # Check if function is already decorated with same decorator
+            registered_decorators: List = self.functions[func_name][API_KEYS.DECORATED_WITH]
+            if decorator_func_name in registered_decorators:
+                self.handle_error(f"Found duplicate decorator with identity: {func_name}",
+                                  exceptions.DuplicateDecoratorError)
+            else:
+                registered_decorators.append(decorator_func_name)
         else:
+            # Register new function
             self.functions[func_name] = {
                 API_KEYS.FUNC_NAME: func_name,
-                API_KEYS.FUNCTION: func,
-                API_KEYS.PROPS: props
+                API_KEYS.FUNCTION: func_to_decorate,
+                API_KEYS.PROPS: props,
+                API_KEYS.DECORATED_WITH: [decorator_func_name]
             }
+            # Add message if set to debug
+        self.log_debug(f"Decorated function with unique id: {func_name}")
 
-    def run_before(self, functions: Union[List[Callable], Callable]):
+    def run_before(self, functions: Union[List[Callable], Callable], **kw):
         """
         This allows users to wrap a function without registering
         :param functions: A function or a list of functions that
@@ -530,7 +519,7 @@ class Pojang:
         def wrapper(fn: Callable) -> Callable:
 
             # Add basic decoration
-            fn: Callable = self._decorate(fn)
+            fn: Callable = self._decorate(self.run_before, fn)
 
             @wraps(fn)
             def inner(*args, **kwargs):
@@ -548,22 +537,20 @@ class Pojang:
                   truncate_from: int = 200):
 
         def decorator(func):
-            # Update function statistics
-            func_name = get_unique_func_name(func)
-            self.log(f"Decorated function with unique id: {func_name}")
-            self._update_decoration_info(func_name, func, TimeStatistics(func))
+            self._decorate(self.stopwatch, func)
 
-            # Initialize input
-            self.functions[func_name][API_KEYS.STATS_INPUT] = 0
+            # # Initialize input
+            # self.functions[func_name][API_KEYS.STATS_INPUT] = 0
 
             @wraps(func)
             def wrapper(*args, **kwargs):
                 time_start = time.time()
                 output = func(*args, **kwargs)
                 time_elapsed = time.time() - time_start
-                self.functions[func_name][API_KEYS.STATS_INPUT] = time_elapsed
-                # Compute statistics
-                self.functions[func_name][API_KEYS.PROPS].update(time_elapsed)
+                # TODO: Find a way to salvage this again
+                # self.functions[func_name][API_KEYS.STATS_INPUT] = time_elapsed
+                # # Compute statistics
+                # self.functions[func_name][API_KEYS.PROPS].update(time_elapsed)
                 return output
 
             return wrapper

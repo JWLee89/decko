@@ -11,8 +11,9 @@ if __name__ == "__main__":
         print(f"Run before func: {a}, {b}, {c}, {item}")
 
     @pj.run_before(i_run_before)
+    @pj.run_before(i_run_before)     # This should not be allowed
     @pj.pure(log_impurity)
-    @pj.profile
+    # @pj.profile
     def expensive_func(a,
                        b,
                        c=1000000,
@@ -30,8 +31,8 @@ if __name__ == "__main__":
         def __init__(self, item):
             self.item = item
 
-        @pj.pure(log_impurity)
-        @pj.profile
+        # @pj.pure(log_impurity)
+        # @pj.profile
         def set_item(self, item):
             self.item = item
 
@@ -42,7 +43,5 @@ if __name__ == "__main__":
     test = DummyClass(10)
     test.set_item(20)
 
+    # Error raised
     output = expensive_func(10, 20, 40)
-    pj.print_profile()
-
-
