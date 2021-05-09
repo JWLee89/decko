@@ -200,9 +200,7 @@ class Pojang:
         properties: Dict = util.create_properties(Pojang.FUNCTION_PROPS, **kwargs)
         # Register the function
         func_name: str = get_unique_func_name(func)
-        self._update_decoration_info(func_name, func)
-
-
+        self._update_decoration_info(func_name, func, properties)
         # Add message if set to debug
         self.log_debug(f"Function: {func_name} registered ... ")
 
