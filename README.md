@@ -33,9 +33,9 @@ This helps in debugging and extending features with minimal modifications to the
 codebase.
 
 ```python
-from src.decko import Decok
+from src.decko import Decko
 
-dk = Decok(__name__, debug=True)
+dk = Decko(__name__, debug=True)
 
 
 def log_impurity(argument, before, after):

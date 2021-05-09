@@ -1,7 +1,7 @@
 import pytest
-from src.decko.app import Decok
+from src.decko.app import Decko
 
-dk = Decok(__name__)
+dk = Decko(__name__)
 
 
 def test_registration():

@@ -1,9 +1,9 @@
 import pytest
 
-from src.decko.app import Decok
+from src.decko.app import Decko
 from src.decko.exceptions import MutatedReferenceError
 
-dk = Decok(__name__)
+dk = Decko(__name__)
 
 
 def test_basic_pure():

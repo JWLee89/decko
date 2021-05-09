@@ -65,7 +65,7 @@ def _check_if_class(cls):
                                            f"{cls} is of type: {type(cls)}")
 
 
-class Decok:
+class Decko:
     """
     Yeeeee ....
     Entry point of the application.
@@ -209,7 +209,7 @@ class Decok:
         :param kwargs:
         :return:
         """
-        properties: Dict = util.create_properties(Decok.FUNCTION_PROPS, **kwargs)
+        properties: Dict = util.create_properties(Decko.FUNCTION_PROPS, **kwargs)
         self._update_decoration_info(decorator_func, func, properties)
 
     def add_decorator_rule(self,
@@ -250,7 +250,7 @@ class Decok:
         a Yeezy instance.
         :return: A configuration dictionary
         """
-        new_config: OrderedDict = copy.deepcopy(Decok.DEFAULT_CONFIGS)
+        new_config: OrderedDict = copy.deepcopy(Decko.DEFAULT_CONFIGS)
         # Override with user_inputs
         new_config['debug'] = debug
         new_config['inspect_mode'] = inspect_mode
@@ -624,7 +624,7 @@ class Decok:
 
 
 if __name__ == "__main__":
-    dk = Decok(__name__, debug=True)
+    dk = Decko(__name__, debug=True)
 
 
     @dk.pure(print)

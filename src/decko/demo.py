@@ -1,10 +1,10 @@
-from app import Decok
+from app import Decko
 
 
 def simple_demo():
     import torch
 
-    yee = Decok(__name__, debug=True, log_path=None)
+    yee = Decko(__name__, debug=True, log_path=None)
 
     # This should register all functions inside of class Test()
     # @yee.time
