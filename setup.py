@@ -1,11 +1,11 @@
 import setuptools
-from src.decko import __version__
+from src.decko import __version__, PROJECT_NAME
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="decko-pkg-jaylee.137",  # Replace with your own username
+    name=PROJECT_NAME,  # Replace with your own username
     version=__version__,
     author="Jay Lee",
     author_email="ljay189@gmail.com",
