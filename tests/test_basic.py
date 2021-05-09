@@ -1,14 +1,14 @@
 from src.decko.app import Decok
 from functools import wraps
 
-pj = Decok(__name__)
+dk = Decok(__name__)
 
 
 def test_initialization():
     """
     Test the initialization of the application
     """
-    assert pj is not None
+    assert dk is not None
 
 
 def test_class_side_effect_detection():
@@ -21,7 +21,7 @@ def test_class_side_effect_detection():
         def __init__(self):
             self.yee = [1, 2, 3, 4, 5]
 
-        @pj.trace()
+        @dk.trace()
         def do_side_effect(self, i):
             self.yee.append(i)
 
@@ -29,7 +29,7 @@ def test_class_side_effect_detection():
     for i in range(10):
         test.do_side_effect(i)
 
-    pj.analyze()
+    dk.analyze()
 
 
 def test_extension():

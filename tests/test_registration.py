@@ -1,7 +1,7 @@
 import pytest
 from src.decko.app import Decok
 
-pj = Decok(__name__)
+dk = Decok(__name__)
 
 
 def test_registration():

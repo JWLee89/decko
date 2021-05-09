@@ -1,6 +1,6 @@
 from src.decko import Decok
 
-pj = Decok(__name__, debug=True)
+dk = Decok(__name__, debug=True)
 
 if __name__ == "__main__":
 
@@ -10,10 +10,10 @@ if __name__ == "__main__":
     def i_run_before(a, b, c, item):
         print(f"Run before func: {a}, {b}, {c}, {item}")
 
-    @pj.run_before(i_run_before)
-    @pj.run_before(i_run_before)     # This should not be allowed
-    @pj.pure(log_impurity)
-    # @pj.profile
+    @dk.run_before(i_run_before)
+    @dk.run_before(i_run_before)     # This should not be allowed
+    @dk.pure(log_impurity)
+    # @dk.profile
     def expensive_func(a,
                        b,
                        c=1000000,
@@ -31,8 +31,8 @@ if __name__ == "__main__":
         def __init__(self, item):
             self.item = item
 
-        # @pj.pure(log_impurity)
-        # @pj.profile
+        # @dk.pure(log_impurity)
+        # @dk.profile
         def set_item(self, item):
             self.item = item
 

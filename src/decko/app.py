@@ -624,11 +624,11 @@ class Decok:
 
 
 if __name__ == "__main__":
-    pj = Decok(__name__, debug=True)
+    dk = Decok(__name__, debug=True)
 
 
-    @pj.pure(print)
-    @pj.profile
+    @dk.pure(print)
+    @dk.profile
     def input_output_what_how(a, b, c=[]):
         c.append(10)
         return c
@@ -640,7 +640,7 @@ if __name__ == "__main__":
     print(f"yee: {yee}")
 
 
-    @pj.profile
+    @dk.profile
     def long_list(n=100000):
         return list(range(n))
 
@@ -648,5 +648,5 @@ if __name__ == "__main__":
     for i in range(10):
         long_list()
     #
-    stats = pstats.Stats(pj._profiler).sort_stats('ncalls')
+    stats = pstats.Stats(dk._profiler).sort_stats('ncalls')
     stats.print_stats()
