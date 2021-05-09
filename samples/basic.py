@@ -1,47 +1,41 @@
 from src.decko import Decko
 
-dk = Decko(__name__, debug=True)
 
 if __name__ == "__main__":
 
-    def log_impurity(argument, before, after):
-        print(f"Argument: {argument} modified. Before: {before}, after: {after}")
+    dk = Decko(__name__)
 
-    def i_run_before(a, b, c, item):
-        print(f"Run before func: {a}, {b}, {c}, {item}")
+    def print_list_size(size, **kwargs):
+        print(f"Size of list is: {size}")
 
-    @dk.run_before(i_run_before)
-    @dk.run_before(i_run_before)     # This should not be allowed
-    @dk.pure(log_impurity)
-    # @dk.profile
-    def expensive_func(a,
-                       b,
-                       c=1000000,
-                       item=[]):
-        for i in range(100):
-            temp_list = list(range(c))
-            item.append(temp_list)
+    def print_kwargs(*args, **kwargs):
+        print(f"args: {args}, kwargs: {kwargs}")
 
-        a += 20
-        b += a
-        total = a + b
-        return total
+    @dk.run_before([print_list_size, print_kwargs])
+    @dk.profile
+    def create_list(n):
+        return list(range(n))
 
-    class DummyClass:
-        def __init__(self, item):
-            self.item = item
+    for i in range(20):
+        create_list(100000)
 
-        # @dk.pure(log_impurity)
-        # @dk.profile
-        def set_item(self, item):
-            self.item = item
+    # print profiled result
+    dk.print_profile()
 
-        def __repr__(self):
-            return f'DummyClass: {self.item}'
+    # event triggered when original input is modified
+    def catch_input_modification(arg_name, before, after):
+        print(f"The argument: {arg_name} has been modified.\n"
+              f"Before: {before} \n After: {after}")
+        print("-" * 200)
+
+    @dk.pure(catch_input_modification)
+    def create_list(n,
+                    item=[]):
+        item.append(n)
+        return list(range(n))
 
 
-    test = DummyClass(10)
-    test.set_item(20)
+    # Raise error
+    for i in range(20):
+        create_list(100000)
 
-    # Error raised
-    output = expensive_func(10, 20, 40)
