@@ -15,12 +15,10 @@ def is_iterable(obj) -> bool:
     return iterable
 
 
-def validate_type(obj: Dict, key: str, target_type: Type):
-    prop_val = obj[key]
-    if type(prop_val) != target_type:
-        raise TypeError(f"{key} must be of type boolean. "
-                        f"Passed in value: '{prop_val}' "
-                        f"of type: {type(prop_val)}")
+def validate_type(value, target_type: Type):
+    if type(value) != target_type:
+        raise TypeError(f"{value} must be of type boolean. "
+                        f"{value} is of type: {type(value)}")
 
 
 def get_deepcopy_args_kwargs(fn: Callable, args: Tuple, kwargs: Dict):
@@ -97,7 +95,12 @@ def create_properties(valid_properties: Dict, **kwargs) -> Dict:
     # Validate and add properties
     for key, (data_type, default_value) in valid_properties.items():
         if key in kwargs:
-            validate_type(kwargs, key, data_type)
+            current_property = kwargs[key]
+            if isinstance(current_property, Tuple):
+                for item in current_property:
+                    validate_type(item, data_type)
+            else:
+                validate_type(current_property, data_type)
             properties[key] = kwargs[key]
         else:
             properties[key] = default_value

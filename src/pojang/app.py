@@ -79,8 +79,14 @@ class Pojang:
     })
 
     # Key value pairs of required properties
+    # First element is the type of the keyword parameter
+    # The second is the default value to assign
     FUNCTION_PROPS = OrderedDict({
         'compute_statistics': (bool, True),
+    })
+
+    CLASS_PROPS = OrderedDict({
+        'prefix_filter': (str, ('_', '__'))
     })
 
     def __init__(self,
@@ -496,7 +502,7 @@ class Pojang:
                 API_KEYS.PROPS: props
             }
 
-    def run_before(self, functions: Union[List[Callable], Callable]):
+    def run_before(self, functions: Union[List[Callable], Callable], **kw):
         """
         This allows users to wrap a function without registering
         :param functions: A function or a list of functions that
