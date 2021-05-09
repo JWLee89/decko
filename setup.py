@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="decko-pkg-JWLee89",  # Replace with your own username
+    name="decko-pkg-jaylee.137",  # Replace with your own username
     version=__version__,
     author="Jay Lee",
     author_email="ljay189@gmail.com",
