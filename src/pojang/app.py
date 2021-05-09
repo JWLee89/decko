@@ -134,24 +134,6 @@ class Pojang:
 
         # TODO: Create parallel decorator for parallel processing
 
-    def trace_memory(self, func):
-        tracemalloc.start()
-
-        @wraps(func)
-        def inner(*args, **kwargs):
-            snapshot1 = tracemalloc.take_snapshot()
-            output = func(*args, **kwargs)
-            # ... call the function to profile
-            snapshot2 = tracemalloc.take_snapshot()
-            top_stats = snapshot2.compare_to(snapshot1, 'lineno')
-
-            print("[ Top 10 differences ]")
-            for stat in top_stats[:10]:
-                print(stat)
-            return output
-
-        return inner
-
     def pure(self,
              event_cb: Callable = None,
              **kw) -> Callable:
