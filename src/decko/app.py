@@ -529,55 +529,55 @@ class Decko:
             return inner
         return wrapper
 
-    def stopwatch(self,
-                  passed_func: Callable = None,
-                  register: bool = True,
-                  path: str = None,
-                  log_interval: int = 1,
-                  truncate_from: int = 200):
-
-        def decorator(func):
-            self._decorate(self.stopwatch, func)
-
-            # # Initialize input
-            # self.functions[func_name][API_KEYS.STATS_INPUT] = 0
-
-            @wraps(func)
-            def wrapper(*args, **kwargs):
-                time_start = time.time()
-                output = func(*args, **kwargs)
-                time_elapsed = time.time() - time_start
-                # TODO: Find a way to salvage this again
-                # self.functions[func_name][API_KEYS.STATS_INPUT] = time_elapsed
-                # # Compute statistics
-                # self.functions[func_name][API_KEYS.PROPS].update(time_elapsed)
-                return output
-
-            return wrapper
-            # @wraps(func)
-            # def wrapper(*args, **kwargs):
-            #     time_start = t.time()
-            #     output = func(*args, **kwargs)
-            #     time_elapsed = t.time() - time_start
-            #     print(f"Original func: {original_func}, name: {func.__name__}")
-            #     # Compute statistics
-            #     self.functions[original_func].update(time_elapsed)
-            #     return output
-            #
-            # # Return original class without wrapping
-            # if inspect.isclass(func):
-            #     # Register the decorated function
-            #     self._register_class(func, self.functions, self.time, TimeProperty)
-            #     return func
-            # else:
-            #     # Register the decorated function
-            #     self._register_object(original_func, original_func.__name__, self.functions, self.time, TimeProperty)
-            #     return wrapper
-
-        if callable(passed_func):
-            return decorator(passed_func)
-
-        return decorator
+    # def stopwatch(self,
+    #               passed_func: Callable = None,
+    #               register: bool = True,
+    #               path: str = None,
+    #               log_interval: int = 1,
+    #               truncate_from: int = 200):
+    # 
+    #     def decorator(func):
+    #         self._decorate(self.stopwatch, func)
+    # 
+    #         # # Initialize input
+    #         # self.functions[func_name][API_KEYS.STATS_INPUT] = 0
+    # 
+    #         @wraps(func)
+    #         def wrapper(*args, **kwargs):
+    #             time_start = time.time()
+    #             output = func(*args, **kwargs)
+    #             time_elapsed = time.time() - time_start
+    #             # TODO: Find a way to salvage this again
+    #             # self.functions[func_name][API_KEYS.STATS_INPUT] = time_elapsed
+    #             # # Compute statistics
+    #             # self.functions[func_name][API_KEYS.PROPS].update(time_elapsed)
+    #             return output
+    # 
+    #         return wrapper
+    #         # @wraps(func)
+    #         # def wrapper(*args, **kwargs):
+    #         #     time_start = t.time()
+    #         #     output = func(*args, **kwargs)
+    #         #     time_elapsed = t.time() - time_start
+    #         #     print(f"Original func: {original_func}, name: {func.__name__}")
+    #         #     # Compute statistics
+    #         #     self.functions[original_func].update(time_elapsed)
+    #         #     return output
+    #         #
+    #         # # Return original class without wrapping
+    #         # if inspect.isclass(func):
+    #         #     # Register the decorated function
+    #         #     self._register_class(func, self.functions, self.time, TimeProperty)
+    #         #     return func
+    #         # else:
+    #         #     # Register the decorated function
+    #         #     self._register_object(original_func, original_func.__name__, self.functions, self.time, TimeProperty)
+    #         #     return wrapper
+    # 
+    #     if callable(passed_func):
+    #         return decorator(passed_func)
+    # 
+    #     return decorator
 
     def _register_class(self,
                         class_definition: object,
@@ -605,22 +605,22 @@ class Decko:
     def __repr__(self) -> str:
         return f"decko"
 
-    def analyze(self) -> None:
-        """
-        Profile all the registered stuff
-        :return:
-        :rtype:
-        """
-        self.log(f"Printing time-related functions ... ")
-        self.log("-" * 100)
-        for func, properties in self.time_dict.items():
-            self.log(f"Function: {func.__name__}, properties: {properties}")
-        self.log("-" * 100)
-        self.log("Printing registered functions")
-        self.log("-" * 100)
-        for func_name, properties in self.functions.items():
-            self.log(f"Function: {func_name}, properties: {properties}")
-        self.log("-" * 100)
+    # def analyze(self) -> None:
+    #     """
+    #     Profile all the registered stuff
+    #     :return:
+    #     :rtype:
+    #     """
+    #     self.log(f"Printing time-related functions ... ")
+    #     self.log("-" * 100)
+    #     for func, properties in self.time_dict.items():
+    #         self.log(f"Function: {func.__name__}, properties: {properties}")
+    #     self.log("-" * 100)
+    #     self.log("Printing registered functions")
+    #     self.log("-" * 100)
+    #     for func_name, properties in self.functions.items():
+    #         self.log(f"Function: {func_name}, properties: {properties}")
+    #     self.log("-" * 100)
 
 
 if __name__ == "__main__":
