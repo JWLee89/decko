@@ -407,45 +407,45 @@ class Decko:
 
         return wrapped
 
-    def observe(self,
-                properties: Union[Tuple, List] = None) -> Callable:
-        """
-        Observe properties in a class and log when they are being updated.
-        :param properties: The properties to observe.
-        """
-
-        is_list_or_tuple: bool = isinstance(properties, (list, tuple))
-        is_class: bool = util.is_class_instance(properties)
-
-        def observe_class(cls):
-            _check_if_class(cls)
-            cls_name: str = f'{cls.__module__}.{cls.__name__}'
-            class_props: List = [item for item in inspect.getmembers(cls) if not inspect.ismethod(item)]
-            # Observe passed properties
-            if is_list_or_tuple:
-                # Go through all properties
-                for prop in properties:
-                    if prop not in class_props:
-                        raise ValueError(f"Property '{prop}' not found in class <{cls_name}>.\n"
-                                         f"Available props: {class_props}")
-                    # Must pass in string
-                    elif not isinstance(prop, str):
-                        raise ValueError("Properties passed to .observe() should be a string. "
-                                         f"Passed in value '{prop}' of type: {type(prop)}")
-                    else:
-                        pass
-                        # property_value = cls.__getitem__(prop)
-                        # print(f"Prop value: {property_value}")
-
-            # Observe all properties
-            else:
-                pass
-
-        # Called without calling decorator. e.g.
-        # @yee.observe instead of @yee.observe()
-        if is_class:
-            return observe_class(properties)
-        return observe_class
+    # def observe(self,
+    #             properties: Union[Tuple, List] = None) -> Callable:
+    #     """
+    #     Observe properties in a class and log when they are being updated.
+    #     :param properties: The properties to observe.
+    #     """
+    #
+    #     is_list_or_tuple: bool = isinstance(properties, (list, tuple))
+    #     is_class: bool = util.is_class_instance(properties)
+    #
+    #     def observe_class(cls):
+    #         _check_if_class(cls)
+    #         cls_name: str = f'{cls.__module__}.{cls.__name__}'
+    #         class_props: List = [item for item in inspect.getmembers(cls) if not inspect.ismethod(item)]
+    #         # Observe passed properties
+    #         if is_list_or_tuple:
+    #             # Go through all properties
+    #             for prop in properties:
+    #                 if prop not in class_props:
+    #                     raise ValueError(f"Property '{prop}' not found in class <{cls_name}>.\n"
+    #                                      f"Available props: {class_props}")
+    #                 # Must pass in string
+    #                 elif not isinstance(prop, str):
+    #                     raise ValueError("Properties passed to .observe() should be a string. "
+    #                                      f"Passed in value '{prop}' of type: {type(prop)}")
+    #                 else:
+    #                     pass
+    #                     # property_value = cls.__getitem__(prop)
+    #                     # print(f"Prop value: {property_value}")
+    #
+    #         # Observe all properties
+    #         else:
+    #             pass
+    #
+    #     # Called without calling decorator. e.g.
+    #     # @yee.observe instead of @yee.observe()
+    #     if is_class:
+    #         return observe_class(properties)
+    #     return observe_class
 
     def register(self,
                  func_name: str,
@@ -529,55 +529,55 @@ class Decko:
             return inner
         return wrapper
 
-    def stopwatch(self,
-                  passed_func: Callable = None,
-                  register: bool = True,
-                  path: str = None,
-                  log_interval: int = 1,
-                  truncate_from: int = 200):
-
-        def decorator(func):
-            self._decorate(self.stopwatch, func)
-
-            # # Initialize input
-            # self.functions[func_name][API_KEYS.STATS_INPUT] = 0
-
-            @wraps(func)
-            def wrapper(*args, **kwargs):
-                time_start = time.time()
-                output = func(*args, **kwargs)
-                time_elapsed = time.time() - time_start
-                # TODO: Find a way to salvage this again
-                # self.functions[func_name][API_KEYS.STATS_INPUT] = time_elapsed
-                # # Compute statistics
-                # self.functions[func_name][API_KEYS.PROPS].update(time_elapsed)
-                return output
-
-            return wrapper
-            # @wraps(func)
-            # def wrapper(*args, **kwargs):
-            #     time_start = t.time()
-            #     output = func(*args, **kwargs)
-            #     time_elapsed = t.time() - time_start
-            #     print(f"Original func: {original_func}, name: {func.__name__}")
-            #     # Compute statistics
-            #     self.functions[original_func].update(time_elapsed)
-            #     return output
-            #
-            # # Return original class without wrapping
-            # if inspect.isclass(func):
-            #     # Register the decorated function
-            #     self._register_class(func, self.functions, self.time, TimeProperty)
-            #     return func
-            # else:
-            #     # Register the decorated function
-            #     self._register_object(original_func, original_func.__name__, self.functions, self.time, TimeProperty)
-            #     return wrapper
-
-        if callable(passed_func):
-            return decorator(passed_func)
-
-        return decorator
+    # def stopwatch(self,
+    #               passed_func: Callable = None,
+    #               register: bool = True,
+    #               path: str = None,
+    #               log_interval: int = 1,
+    #               truncate_from: int = 200):
+    # 
+    #     def decorator(func):
+    #         self._decorate(self.stopwatch, func)
+    # 
+    #         # # Initialize input
+    #         # self.functions[func_name][API_KEYS.STATS_INPUT] = 0
+    # 
+    #         @wraps(func)
+    #         def wrapper(*args, **kwargs):
+    #             time_start = time.time()
+    #             output = func(*args, **kwargs)
+    #             time_elapsed = time.time() - time_start
+    #             # TODO: Find a way to salvage this again
+    #             # self.functions[func_name][API_KEYS.STATS_INPUT] = time_elapsed
+    #             # # Compute statistics
+    #             # self.functions[func_name][API_KEYS.PROPS].update(time_elapsed)
+    #             return output
+    # 
+    #         return wrapper
+    #         # @wraps(func)
+    #         # def wrapper(*args, **kwargs):
+    #         #     time_start = t.time()
+    #         #     output = func(*args, **kwargs)
+    #         #     time_elapsed = t.time() - time_start
+    #         #     print(f"Original func: {original_func}, name: {func.__name__}")
+    #         #     # Compute statistics
+    #         #     self.functions[original_func].update(time_elapsed)
+    #         #     return output
+    #         #
+    #         # # Return original class without wrapping
+    #         # if inspect.isclass(func):
+    #         #     # Register the decorated function
+    #         #     self._register_class(func, self.functions, self.time, TimeProperty)
+    #         #     return func
+    #         # else:
+    #         #     # Register the decorated function
+    #         #     self._register_object(original_func, original_func.__name__, self.functions, self.time, TimeProperty)
+    #         #     return wrapper
+    # 
+    #     if callable(passed_func):
+    #         return decorator(passed_func)
+    # 
+    #     return decorator
 
     def _register_class(self,
                         class_definition: object,
@@ -605,22 +605,22 @@ class Decko:
     def __repr__(self) -> str:
         return f"decko"
 
-    def analyze(self) -> None:
-        """
-        Profile all the registered stuff
-        :return:
-        :rtype:
-        """
-        self.log(f"Printing time-related functions ... ")
-        self.log("-" * 100)
-        for func, properties in self.time_dict.items():
-            self.log(f"Function: {func.__name__}, properties: {properties}")
-        self.log("-" * 100)
-        self.log("Printing registered functions")
-        self.log("-" * 100)
-        for func_name, properties in self.functions.items():
-            self.log(f"Function: {func_name}, properties: {properties}")
-        self.log("-" * 100)
+    # def analyze(self) -> None:
+    #     """
+    #     Profile all the registered stuff
+    #     :return:
+    #     :rtype:
+    #     """
+    #     self.log(f"Printing time-related functions ... ")
+    #     self.log("-" * 100)
+    #     for func, properties in self.time_dict.items():
+    #         self.log(f"Function: {func.__name__}, properties: {properties}")
+    #     self.log("-" * 100)
+    #     self.log("Printing registered functions")
+    #     self.log("-" * 100)
+    #     for func_name, properties in self.functions.items():
+    #         self.log(f"Function: {func_name}, properties: {properties}")
+    #     self.log("-" * 100)
 
 
 if __name__ == "__main__":
