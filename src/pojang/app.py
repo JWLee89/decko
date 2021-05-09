@@ -483,11 +483,9 @@ class Pojang:
         # Common function for handling duplicates
         func_name: str = get_unique_func_name(func_to_decorate)
         decorator_func_name: str = get_unique_func_name(decorator_func)
-        print(f"Decorator func name: {decorator_func_name}")
         if func_name in self.functions:
-
             # Check if function is already decorated with same decorator
-            registered_decorators = self.functions[func_name][API_KEYS.DECORATED_WITH]
+            registered_decorators: List = self.functions[func_name][API_KEYS.DECORATED_WITH]
             if decorator_func_name in registered_decorators:
                 self.handle_error(f"Found duplicate decorator with identity: {func_name}",
                                   exceptions.DuplicateDecoratorError)
@@ -539,7 +537,7 @@ class Pojang:
                   truncate_from: int = 200):
 
         def decorator(func):
-            self._decorate(func)
+            self._decorate(self.stopwatch, func)
 
             # # Initialize input
             # self.functions[func_name][API_KEYS.STATS_INPUT] = 0
@@ -549,6 +547,7 @@ class Pojang:
                 time_start = time.time()
                 output = func(*args, **kwargs)
                 time_elapsed = time.time() - time_start
+                # TODO: Find a way to salvage this again
                 # self.functions[func_name][API_KEYS.STATS_INPUT] = time_elapsed
                 # # Compute statistics
                 # self.functions[func_name][API_KEYS.PROPS].update(time_elapsed)
