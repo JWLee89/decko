@@ -9,6 +9,15 @@ class NotClassException(TypeError):
         super().__init__(msg)
 
 
+class DuplicateDecoratorError(ValueError):
+    """
+    Occurs when a duplicate instance of a decorator is
+    added to the function
+    """
+    def __init__(self, msg):
+        super().__init__(msg)
+
+
 class NotClassOrCallableError(TypeError):
     """
     Called when users perform the following action:

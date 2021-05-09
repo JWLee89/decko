@@ -11,8 +11,7 @@ if __name__ == "__main__":
         print(f"Run before func: {a}, {b}, {c}, {item}")
 
     @pj.run_before(i_run_before)
-    @pj.run_before(i_run_before)
-    # @pj.pure(log_impurity)
+    @pj.pure(log_impurity)
     # @pj.profile
     def expensive_func(a,
                        b,
@@ -44,6 +43,7 @@ if __name__ == "__main__":
     test.set_item(20)
 
     output = expensive_func(10, 20, 40)
-    pj.print_profile()
+    # pj.print_profile()
+    print(pj.custom)
 
 
