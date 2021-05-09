@@ -209,10 +209,10 @@ class Pojang:
 
     def _add_function_decorator_rule(self, func: Callable, **kwargs) -> None:
         properties: Dict = util.create_properties(Pojang.FUNCTION_PROPS, **kwargs)
-        print(f"Properties: {properties}")
         # Register the function
         func_name: str = get_unique_func_name(func)
         self._update_decoration_info(func_name, func)
+
 
         # Add message if set to debug
         self.log_debug(f"Function: {func_name} registered ... ")
@@ -298,6 +298,23 @@ class Pojang:
         """
         if self.debug:
             self.log(f'DEBUG: {msg}')
+
+    def _decorate(self, func: Callable) -> Callable:
+        """
+        Common function for decorating functions such as registration
+        :param func:
+        :return:
+        """
+        # Update function statistics
+        func_name: str = get_unique_func_name(func)
+        self.log_debug(f"Decorated function with unique id: {func_name}")
+        # Decorate the function
+        self.add_decorator_rule(func)
+
+        @wraps(func)
+        def wrapped(*args, **kwargs):
+            return func(*args, **kwargs)
+        return wrapped
 
     def fire_if(self,
                 events_to_fire: List[Callable],

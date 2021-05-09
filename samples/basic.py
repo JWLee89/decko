@@ -1,18 +1,17 @@
 from src.pojang import Pojang
-import pstats
 
 pj = Pojang(__name__)
 
 if __name__ == "__main__":
 
-    def detect_error(argument, before, after):
-        print(f"Argument: {argument} modified. Before: {before}")
+    def log_impurity(argument, before, after):
+        print(f"Argument: {argument} modified. Before: {before}, after: {after}")
 
     def i_run_before(a, b, c, item):
         print(f"Run before func: {a}, {b}, {c}, {item}")
 
     @pj.run_before(i_run_before)
-    @pj.pure(detect_error)
+    @pj.pure(log_impurity)
     @pj.profile
     def expensive_func(a,
                        b,
@@ -27,6 +26,23 @@ if __name__ == "__main__":
         total = a + b
         return total
 
-    output = expensive_func(10, 20, 10000)
+    class DummyClass:
+        def __init__(self, item):
+            self.item = item
 
+        @pj.pure(log_impurity)
+        @pj.profile
+        def set_item(self, item):
+            self.item = item
+
+        def __repr__(self):
+            return f'DummyClass: {self.item}'
+
+
+    test = DummyClass(10)
+    test.set_item(20)
+
+    output = expensive_func(10, 20, 999999)
     pj.print_profile()
+
+
