@@ -3,8 +3,6 @@
 A decorator based utility module for Python developers. The module is designed to 
 aid developers in debugging their python applications.
 
-![yee.png](yee.png)
-
 ## Getting Started
 
 Decko is a decorated-based module for debugging. 
@@ -33,7 +31,7 @@ This helps in debugging and extending features with minimal modifications to the
 codebase.
 
 ```python
-from src.decko import Decko
+from decko import Decko
 
 dk = Decko(__name__, debug=True)
 
@@ -46,10 +44,10 @@ def i_run_before(a, b, c, item):
     print(f"Run before func: {a}, {b}, {c}, {item}")
 
 
-@dk.run_before(i_run_before)
-@dk.run_before(i_run_before)  # This should not be allowed
+@dk.run_before(i_run_before)    # This should not be allowed since it is a duplicate
+@dk.run_before(i_run_before)  
 @dk.pure(log_impurity)
-# @dk.profile
+@dk.profile
 def expensive_func(a,
                    b,
                    c=1000000,
@@ -84,6 +82,8 @@ test.set_item(20)
 output = expensive_func(10, 20, 40)
 ```
 
+Decko raises informative error messages to help debug issues.
+In later versions, features to define error callbacks with custom exceptions will be made.
 
 ```shell
 Traceback (most recent call last):
