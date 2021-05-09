@@ -1,6 +1,6 @@
 from src.pojang import Pojang
 
-pj = Pojang(__name__)
+pj = Pojang(__name__, debug=True)
 
 if __name__ == "__main__":
 
@@ -42,7 +42,7 @@ if __name__ == "__main__":
     test = DummyClass(10)
     test.set_item(20)
 
-    output = expensive_func(10, 20, 999)
+    output = expensive_func(10, 20, 40)
     pj.print_profile()
 
 

@@ -457,9 +457,6 @@ class Pojang:
 
         return inner_function
 
-    def _add_debug(self, target) -> None:
-        self._register_object(target, self.functions)
-
     def register(self,
                  func_name: str,
                  func: Callable,
@@ -530,7 +527,6 @@ class Pojang:
             @wraps(func)
             def inner(*args, **kwargs):
                 output = func(*args, **kwargs)
-                print(self.functions[func_name])
                 if API_KEYS.STATS_INPUT in self.functions[func_name]:
                     self.functions[func_name][API_KEYS.PROPS].update(
                         self.functions[func_name][API_KEYS.STATS_INPUT], *args, **kwargs)
@@ -566,17 +562,17 @@ class Pojang:
             def preprocess(func, *args, **kwargs):
                 func(*args, **kwargs)
 
-        def wrapper(fn):
+        def wrapper(fn: Callable) -> Callable:
+
+            # Add basic decoration
+            fn: Callable = self._decorate(fn)
 
             @wraps(fn)
             def inner(*args, **kwargs):
                 util.fill_default_kwargs(fn, args, kwargs)
                 preprocess(functions, *args, **kwargs)
-                output = fn(*args, **kwargs)
-                return output
-
+                return fn(*args, **kwargs)
             return inner
-
         return wrapper
 
     def stopwatch(self,
