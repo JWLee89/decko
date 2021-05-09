@@ -1,5 +1,6 @@
+import copy
 import time
-from typing import List, Callable, Union
+from typing import List, Callable, Union, Dict, Tuple, Type
 from functools import wraps
 import inspect
 import logging
@@ -14,13 +15,93 @@ def is_iterable(obj) -> bool:
     return iterable
 
 
-def validate_type(obj, key, target_type):
-    if key in obj:
-        prop_val = obj[key]
-        if type(prop_val) != target_type:
-            raise TypeError(f"{key} must be of type boolean. "
-                            f"Passed in value: '{prop_val}' "
-                            f"of type: {type(prop_val)}")
+def validate_type(obj: Dict, key: str, target_type: Type):
+    prop_val = obj[key]
+    if type(prop_val) != target_type:
+        raise TypeError(f"{key} must be of type boolean. "
+                        f"Passed in value: '{prop_val}' "
+                        f"of type: {type(prop_val)}")
+
+
+def get_deepcopy_args_kwargs(fn: Callable, args: Tuple, kwargs: Dict):
+    """
+    Return deep copies of arg_kwargs with default values included
+    :param fn: The target function to evaluate
+    :param args:
+    :param kwargs:
+    :return: Dict of key value pairs
+    """
+    # Add defaults
+    parameters = inspect.signature(fn).parameters
+    arg_count: int = len(args)
+    new_args = {}
+    i: int = 0
+    print(parameters.values())
+    for k, v in parameters.items():
+        print(f"key: {k}, {v}")
+        if i >= arg_count:
+            new_args[k] = v.default
+        i += 1
+    return copy.deepcopy(args), copy.deepcopy(kwargs)
+
+
+def fill_default_kwargs(fn: Callable, args: Tuple, kwargs: Dict):
+    """
+    Kwarg is empty if default values are used during runtime.
+    Fill the kwargs with default values
+    """
+    parameters = inspect.signature(fn).parameters
+    arg_count: int = len(args)
+    i: int = 0
+    for k, v in parameters.items():
+        if i >= arg_count:
+            kwargs[k] = v.default
+        i += 1
+
+
+def get_shallow_default_arg_dict(fn: Callable, args: Tuple):
+    """
+    Return key value pair comprised of
+        key: The name of the variable
+        value: The value passed
+    :param fn: The target function to evaluate
+    :param args:
+    :param kwargs:
+    :return: Dict of key value pairs
+    """
+    # Add defaults
+    code = fn.__code__
+    arg_count = len(args)
+    args_names = code.co_varnames[:arg_count]
+    # Add defaults
+    parameters = inspect.signature(fn).parameters
+    new_kwargs = {}
+
+    i: int = 0
+    for k, v in parameters.items():
+        if i >= arg_count:
+            print(v)
+            new_kwargs[k] = v.default
+        i += 1
+
+    return {**dict(zip(args_names, args)), **new_kwargs}
+
+
+def create_properties(valid_properties: Dict, **kwargs) -> Dict:
+    """
+    Add properties from kwargs to valid_properties
+    :param valid_properties: A dictionary containing valid properties
+    :param kwargs:
+    """
+    properties: Dict = {}
+    # Validate and add properties
+    for key, (data_type, default_value) in valid_properties.items():
+        if key in kwargs:
+            validate_type(kwargs, key, data_type)
+            properties[key] = kwargs[key]
+        else:
+            properties[key] = default_value
+    return properties
 
 
 def is_class_instance(item) -> bool:
@@ -33,8 +114,14 @@ def is_class_instance(item) -> bool:
     return hasattr(item, '__dict__')
 
 
-def get_unique_func_name(func: Callable):
+def get_unique_func_name(func: Callable) -> str:
     return f'{func.__module__}.{func.__qualname__}'
+
+
+def dict_is_empty(dictionary: Dict):
+    for _ in dictionary.keys():
+        return True
+    return False
 
 
 def logger_factory(file_name: str,

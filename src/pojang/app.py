@@ -20,19 +20,20 @@ yee.analyze()
 import os
 import sys
 import copy
-from typing import Callable, Dict, List, Tuple, Union
+import itertools
+from typing import Callable, Dict, List, Tuple, Union, Type
 import inspect
 from functools import wraps
 import time
 from collections import OrderedDict
+import tracemalloc
+import cProfile, pstats
 
 # Local imports
 from src.pojang.helper.properties import TimeStatistics, Statistics
 from src.pojang.helper.util import get_unique_func_name
 from src.pojang.helper import util
 import src.pojang.exceptions as exceptions
-from flask import Flask
-app = Flask(__name__)
 
 
 class InspectMode:
@@ -79,7 +80,7 @@ class Pojang:
 
     # Key value pairs of required properties
     FUNCTION_PROPS = OrderedDict({
-        'no_side_effect': bool
+        'compute_statistics': (bool, True),
     })
 
     def __init__(self,
@@ -87,8 +88,7 @@ class Pojang:
                  root_path: str = None,
                  inspect_mode: int = InspectMode.PUBLIC_ONLY,
                  debug: bool = False,
-                 log_path: str = None,
-                 no_side_effects: bool = False):
+                 log_path: str = None):
 
         #: The name of the package or module that this object belongs
         #: to. Do not change this once it is set by the constructor.
@@ -126,14 +126,78 @@ class Pojang:
 
         # Logging function
         # If not specified, the default fallback method will be print()
-        self.log = util.logger_factory(log_path, no_side_effects) if log_path else print
+        self.log = util.logger_factory(log_path, module_name) if log_path else print
 
-        # Will raise an error if the wrapped function raises side_effect
-        # Note: This behavior can be changed at runtime and also overridden
-        # for each function
-        self.no_side_effects = no_side_effects
+        # Initialize cProfiler
+        self._profiler = cProfile.Profile()
 
-    def add_class_decorator_rule(self, cls, **kwargs) -> None:
+        # TODO: Create parallel decorator for parallel processing
+
+    def trace_memory(self, func):
+        tracemalloc.start()
+
+        @wraps(func)
+        def inner(*args, **kwargs):
+            snapshot1 = tracemalloc.take_snapshot()
+            output = func(*args, **kwargs)
+            # ... call the function to profile
+            snapshot2 = tracemalloc.take_snapshot()
+            top_stats = snapshot2.compare_to(snapshot1, 'lineno')
+
+            print("[ Top 10 differences ]")
+            for stat in top_stats[:10]:
+                print(stat)
+            return output
+
+        return inner
+
+    def pure(self,
+             event_cb: Callable = None,
+             **kw) -> Callable:
+        """
+        Check to see whether a given function is pure.
+        Note: Purity is determined purely by examining object interactions.
+        This function will not check for I/O to determine purity.
+        :param event_cb: The callback function raised when impurity is discovered.
+        :param kw:
+        :return:
+        """
+        undefined_event_cb = event_cb is None
+
+        # Raise exception by default if modified.
+        if undefined_event_cb:
+            def event_cb(argument_name, before, after):
+                raise exceptions.MutatedReferenceError(
+                    f"Original input modified: {argument_name}. Before: {before}, "
+                    f"after: {after}"
+                )
+
+        def wrapper(function: Union[Type, Callable]):
+            self.add_decorator_rule(function, **kw)
+
+            @wraps(function)
+            def inner(*args, **kwargs):
+                # Creating deep copies can be very inefficient, especially
+                # in our case where we have extremely large tensors
+                # that take up a lot of space ...
+                # TODO: Come up with a better way of checking
+                input_data = util.get_shallow_default_arg_dict(function, args)
+                original_input = copy.deepcopy(input_data)
+                # Get output of function
+                output = function(*args, **kwargs)
+                # check inputs
+                for key, value in input_data.items():
+                    # If value has been modified, fire event!
+                    if value != original_input[key]:
+                        before = original_input[key]
+                        after = input_data[key]
+                        event_cb(key, before, after)
+
+                return output
+            return inner
+        return wrapper
+
+    def _add_class_decorator_rule(self, cls, **kwargs) -> None:
         """
         If the decorated object is a class, we will add different rules.
         For example, these rules include which types of functions to decorate
@@ -143,21 +207,31 @@ class Pojang:
         """
         pass
 
-    def add_decorator_rule(self, func: Callable, **kwargs) -> None:
+    def _add_function_decorator_rule(self, func: Callable, **kwargs) -> None:
+        properties: Dict = util.create_properties(Pojang.FUNCTION_PROPS, **kwargs)
+        # Register the function
+        func_name: str = get_unique_func_name(func)
+        self._update_decoration_info(func_name, func)
+
+
+        # Add message if set to debug
+        self.log_debug(f"Function: {func_name} registered ... ")
+
+    def add_decorator_rule(self, obj_to_decorate: Union[Callable, Type],
+                           **kwargs) -> None:
         """
         Add common rules to registered decorator which includes
         the following options:
             - kwargs:
-        :param func:
-        :param kwargs:
+        :param obj_to_decorate: the object to decorate. Can either be
+        class instance or a function.
+        :param kwargs: Keyword args added to decorator
         :return:
         """
-        properties = {}
-        # Validate and add properties
-        for key, data_type in Pojang.FUNCTION_PROPS.items():
-            util.validate_type(kwargs, key, data_type)
-            properties[key] = kwargs[key]
-
+        if util.is_class_instance(obj_to_decorate):
+            self._add_class_decorator_rule(obj_to_decorate, **kwargs)
+        else:
+            self._add_function_decorator_rule(obj_to_decorate, **kwargs)
 
     @staticmethod
     def get_new_configs(debug: bool,
@@ -168,7 +242,7 @@ class Pojang:
         a Yeezy instance.
         :return: A configuration dictionary
         """
-        new_config = copy.deepcopy(Pojang.DEFAULT_CONFIGS)
+        new_config: OrderedDict = copy.deepcopy(Pojang.DEFAULT_CONFIGS)
         # Override with user_inputs
         new_config['debug'] = debug
         new_config['inspect_mode'] = inspect_mode
@@ -180,7 +254,7 @@ class Pojang:
         Find the root path of a package, or the path that contains a
         module. If it cannot be found, returns the current working directory.
         """
-        import_name = self.module_name
+        import_name: str = self.module_name
         # Module already imported and has a file attribute. Use that first.
         mod = sys.modules.get(import_name)
 
@@ -200,13 +274,21 @@ class Pojang:
     @debug.setter
     def debug(self, new_mode):
         if type(new_mode) != bool:
-            raise TypeError("Yeezy.debug must be set to either True or False. "
+            raise TypeError("Pojang.debug must be set to either True or False. "
                             f"Set to value: {new_mode} of type {type(new_mode)}")
         self.config['debug'] = new_mode
 
     # --------------------------
     # ----- Public Methods -----
     # --------------------------
+
+    def print_profile(self, sort_by: str = 'ncalls') -> None:
+        stats = pstats.Stats(self._profiler).strip_dirs().sort_stats(sort_by)
+        stats.print_stats()
+
+    def dump_profile(self, file_path: str, sort_by: str = 'ncalls'):
+        stats = pstats.Stats(self._profiler).strip_dirs().sort_stats(sort_by)
+        stats.dump_stats(file_path)
 
     def log_debug(self, msg) -> None:
         """
@@ -217,8 +299,23 @@ class Pojang:
         if self.debug:
             self.log(f'DEBUG: {msg}')
 
-    # Compute stats
-    # @util.compute_stats()
+    def _decorate(self, func: Callable) -> Callable:
+        """
+        Common function for decorating functions such as registration
+        :param func:
+        :return:
+        """
+        # Update function statistics
+        func_name: str = get_unique_func_name(func)
+        self.log_debug(f"Decorated function with unique id: {func_name}")
+        # Decorate the function
+        self.add_decorator_rule(func)
+
+        @wraps(func)
+        def wrapped(*args, **kwargs):
+            return func(*args, **kwargs)
+        return wrapped
+
     def fire_if(self,
                 events_to_fire: List[Callable],
                 predicate: Callable = lambda x: x) -> Callable:
@@ -270,6 +367,24 @@ class Pojang:
 
         return wrap
 
+    def profile(self, func: Callable) -> Callable:
+        """
+        Profile all instances
+        :param func:
+        :type func:
+        :return:
+        :rtype:
+        """
+
+        @wraps(func)
+        def wrapped(*args, **kwargs):
+            self._profiler.enable()
+            output = func(*args, **kwargs)
+            self._profiler.disable()
+            return output
+
+        return wrapped
+
     def observe(self,
                 properties: Union[Tuple, List] = None) -> Callable:
         """
@@ -277,15 +392,13 @@ class Pojang:
         :param properties: The properties to observe.
         """
 
-        is_list_or_tuple = isinstance(properties, (list, tuple))
-        is_class = util.is_class_instance(properties)
+        is_list_or_tuple: bool = isinstance(properties, (list, tuple))
+        is_class: bool = util.is_class_instance(properties)
 
         def observe_class(cls):
             _check_if_class(cls)
-            cls_name = f'{cls.__module__}.{cls.__name__}'
-            class_props = [item for item in inspect.getmembers(cls) if not inspect.ismethod(item)]
-            print(f"Props: {class_props}, {dir(cls)}")
-
+            cls_name: str = f'{cls.__module__}.{cls.__name__}'
+            class_props: List = [item for item in inspect.getmembers(cls) if not inspect.ismethod(item)]
             # Observe passed properties
             if is_list_or_tuple:
                 # Go through all properties
@@ -312,39 +425,6 @@ class Pojang:
             return observe_class(properties)
         return observe_class
 
-    def trace(self,
-              warn_side_effects=True,
-              truncate_from: int = 100):
-        """
-        :param truncate_from: When handling large inputs,
-        truncates the input so that log files
-        do not become too large.
-        """
-
-        def inner_function(func):
-            # Update function statistics
-            func_name = get_unique_func_name(func)
-            self.log_debug(f"Decorated function with unique id: {func_name}")
-            self._update_decoration_info(func_name, func, Statistics(func))
-
-            # Get arguments
-            argspecs = inspect.getfullargspec(func)
-
-            # call context variables
-            caller_frame_record = inspect.stack()[1]
-            caller_code = caller_frame_record.code_context[0].strip()
-
-            @wraps(func)
-            def wrapper(*args, **kwargs):
-                return func(*args, **kwargs)
-
-            return wrapper
-
-        return inner_function
-
-    def _add_debug(self, target) -> None:
-        self._register_object(target, self.functions)
-
     def register(self,
                  func_name: str,
                  func: Callable,
@@ -367,8 +447,8 @@ class Pojang:
         :param func: The function to register
         :return:
         """
-        name = get_unique_func_name(func)
-        function_exists = name in self.custom
+        name: str = get_unique_func_name(func)
+        function_exists: bool = name in self.custom
         if not function_exists:
             self.custom[name] = func
 
@@ -381,7 +461,7 @@ class Pojang:
         :param func:
         :return:
         """
-        func_name = get_unique_func_name(func)
+        func_name: str = get_unique_func_name(func)
         # TODO: register function
         self._update_decoration_info(func_name, func)
         self.log_debug(f"Function: {func_name} registered ... ")
@@ -398,11 +478,8 @@ class Pojang:
         :param stat_updater:
 
         """
-        func_name = get_unique_func_name(func)
-        # register function
-        self._update_decoration_info(func_name, func)
-        self.log_debug(f"Function: {func_name} registered ... ")
-
+        func_name: str = get_unique_func_name(func)
+        self._decorate(func)
         if stat_updater:
             @wraps(func)
             def inner(*args, **kwargs):
@@ -415,7 +492,6 @@ class Pojang:
             @wraps(func)
             def inner(*args, **kwargs):
                 output = func(*args, **kwargs)
-                print(self.functions[func_name])
                 if API_KEYS.STATS_INPUT in self.functions[func_name]:
                     self.functions[func_name][API_KEYS.PROPS].update(
                         self.functions[func_name][API_KEYS.STATS_INPUT], *args, **kwargs)
@@ -437,7 +513,7 @@ class Pojang:
                 API_KEYS.PROPS: props
             }
 
-    def run_before(self, functions: Union[List[Callable], List]):
+    def run_before(self, functions: Union[List[Callable], Callable]):
         """
         This allows users to wrap a function without registering
         :param functions: A function or a list of functions that
@@ -451,13 +527,16 @@ class Pojang:
             def preprocess(func, *args, **kwargs):
                 func(*args, **kwargs)
 
-        def wrapper(fn):
+        def wrapper(fn: Callable) -> Callable:
+
+            # Add basic decoration
+            fn: Callable = self._decorate(fn)
 
             @wraps(fn)
             def inner(*args, **kwargs):
+                util.fill_default_kwargs(fn, args, kwargs)
                 preprocess(functions, *args, **kwargs)
-                output = fn(*args, **kwargs)
-                return output
+                return fn(*args, **kwargs)
             return inner
         return wrapper
 
@@ -537,7 +616,7 @@ class Pojang:
                 setattr(class_definition, item, decorated_func)
 
     def __repr__(self) -> str:
-        return "Yee ... pojang :)"
+        return f"pojang"
 
     def analyze(self) -> None:
         """
@@ -558,32 +637,29 @@ class Pojang:
 
 
 if __name__ == "__main__":
-    pj = Pojang(__name__)
+    pj = Pojang(__name__, debug=True)
 
 
-    def trigger_me(output, *args, **kwargs):
-        print(f"Output: {output}.")
+    @pj.pure(print)
+    @pj.profile
+    def input_output_what_how(a, b, c=[]):
+        c.append(10)
+        return c
 
-    @pj.stopwatch
-    @pj.fire_if([trigger_me], lambda output, self, arr: len(arr) > 4)
-    def do_something(arr):
-        return sum(arr)
 
-    def ding():
-        print("ding")
+    item = []
+    output = input_output_what_how(10, 20, item)
+    yee = input_output_what_how(10, 20, item)
+    print(f"yee: {yee}")
 
-    def dong():
-        print("dong")
 
-    @pj.run_before([ding, dong])
-    def dang():
-        print("dang")
+    @pj.profile
+    def long_list(n=100000):
+        return list(range(n))
 
-    # This should print "ding dong"
-    dang()
 
-    # This should fire an event since we called
-    test = do_something([1, 2, 3, 4, 5, 6])
-    do_something([20, 30])
-
-    pj.analyze()
+    for i in range(10):
+        long_list()
+    #
+    stats = pstats.Stats(pj._profiler).sort_stats('ncalls')
+    stats.print_stats()
