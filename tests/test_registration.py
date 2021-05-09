@@ -1,7 +1,7 @@
 import pytest
-from src.pojang.app import Pojang
+from src.decko.app import Decok
 
-pj = Pojang(__name__)
+dk = Decok(__name__)
 
 
 def test_registration():

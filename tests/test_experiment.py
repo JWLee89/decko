@@ -1,4 +1,4 @@
-from src.pojang.helper.util import TimeComputer
+from src.decko.helper.util import TimeComputer
 
 
 def test_time_computer_outputs_float():

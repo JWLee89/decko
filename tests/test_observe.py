@@ -1,27 +1,27 @@
 import pytest
 
-from src.pojang.app import Pojang
+from src.decko.app import Decok
 
-pj = Pojang(__name__)
+dk = Decok(__name__)
 
 
 def test_invalid_input():
     with pytest.raises(ValueError) as e_info:
-        @pj.observe(['test', 10, 20, 30])
+        @dk.observe(['test', 10, 20, 30])
         class Test:
             def __init__(self, test, cool):
                 self.test = test
                 self.cool = cool
 
         # Must pass in a flat array of strings
-        @pj.observe(['test', ['10', '20', '30']])
+        @dk.observe(['test', ['10', '20', '30']])
         class Test:
             def __init__(self, test, cool):
                 self.test = test
                 self.cool = cool
 
         # Properties ['10', '20', '30'] don't exist in Test()
-        @pj.observe(['test', '10', '20', '30'])
+        @dk.observe(['test', '10', '20', '30'])
         class Test:
             def __init__(self, test, cool):
                 self.test = test
@@ -33,7 +33,7 @@ def test_valid_input():
         array_input = ['test']
 
         # this should be okay
-        @pj.observe(array_input)
+        @dk.observe(array_input)
         class Test:
             def __init__(self, test, cool):
                 self.test = test

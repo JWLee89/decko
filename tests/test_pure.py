@@ -1,9 +1,9 @@
 import pytest
 
-from src.pojang.app import Pojang
-from src.pojang.exceptions import MutatedReferenceError
+from src.decko.app import Decok
+from src.decko.exceptions import MutatedReferenceError
 
-pj = Pojang(__name__)
+dk = Decok(__name__)
 
 
 def test_basic_pure():
@@ -11,7 +11,7 @@ def test_basic_pure():
     This should raise an error, since it is mutating the original input
     """
 
-    @pj.pure()
+    @dk.pure()
     def input_output_what_how(a, b, c=[]):
         c.append(10)
         return c
