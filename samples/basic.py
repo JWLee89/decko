@@ -42,7 +42,7 @@ if __name__ == "__main__":
     test = DummyClass(10)
     test.set_item(20)
 
-    output = expensive_func(10, 20, 999999)
+    output = expensive_func(10, 20, 999)
     pj.print_profile()
 
 
