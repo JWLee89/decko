@@ -1,7 +1,7 @@
 import pytest
 
 from src.decko.app import Decko
-from src.decko.exceptions import MutatedReferenceError
+from src.decko.helper.exceptions import MutatedReferenceError
 
 dk = Decko(__name__)
 
