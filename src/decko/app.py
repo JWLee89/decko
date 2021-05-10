@@ -22,15 +22,15 @@ import logging
 import os
 import sys
 import copy
-from typing import Callable, Dict, List, Tuple, Union, Type
+from typing import Callable, Dict, List, Union, Type
 from functools import wraps
 from collections import OrderedDict
 import cProfile, pstats
 
 # Local imports
-from src.decko.helper.util import get_unique_func_name
-from src.decko.helper import util
-import src.decko.exceptions as exceptions
+from .helper.util import get_unique_func_name
+from .helper import util
+from .helper import exceptions
 
 
 class InspectMode:
