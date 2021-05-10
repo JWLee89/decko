@@ -17,20 +17,21 @@ def buggy_function(input_1, input_2, ...):
 yee.analyze()
 
 """
+import cProfile
+import copy
 import inspect
 import logging
 import os
+import pstats
 import sys
-import copy
-from typing import Callable, Dict, List, Union, Type
-from functools import wraps
 from collections import OrderedDict
-import cProfile, pstats
+from functools import wraps
+from typing import Callable, Dict, List, Union, Type
 
 # Local imports
-from .helper.util import get_unique_func_name
-from .helper import util
 from .helper import exceptions
+from .helper import util
+from .helper.util import get_unique_func_name
 
 
 class InspectMode:
@@ -310,7 +311,8 @@ class Decko:
             stats = pstats.Stats(self._profiler).strip_dirs().sort_stats(sort_by)
             stats.print_stats()
         except TypeError as ex:
-            self.log_debug(f"||||||| You probably did not profile any functions. "
+            self.log_debug(f"||||||| You probably did not profile any functions or "
+                           f"overwrote the function that was intended to be profiled. "
                            f"Check your code |||||||\nStacktrace: {ex}", logging.ERROR)
 
     def dump_profile(self, file_path: str, sort_by: str = 'ncalls'):
