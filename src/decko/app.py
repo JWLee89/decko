@@ -17,21 +17,17 @@ def buggy_function(input_1, input_2, ...):
 yee.analyze()
 
 """
+import inspect
 import logging
 import os
 import sys
 import copy
-import itertools
 from typing import Callable, Dict, List, Tuple, Union, Type
-import inspect
 from functools import wraps
-import time
 from collections import OrderedDict
-import tracemalloc
 import cProfile, pstats
 
 # Local imports
-from src.decko.helper.properties import TimeStatistics, Statistics
 from src.decko.helper.util import get_unique_func_name
 from src.decko.helper import util
 import src.decko.exceptions as exceptions
@@ -164,13 +160,13 @@ class Decko:
                 )
 
         def wrapper(function: Union[Type, Callable]):
-            self._decorate(self.pure, function)
 
             @wraps(function)
             def inner(*args, **kwargs):
                 # Creating deep copies can be very inefficient, especially
                 # in our case where we have extremely large tensors
                 # that take up a lot of space ...
+                print("inner called")
                 # TODO: Come up with a better way of checking
                 input_data = util.get_shallow_default_arg_dict(function, args)
                 original_input = copy.deepcopy(input_data)
@@ -185,6 +181,13 @@ class Decko:
                         event_cb(key, before, after)
 
                 return output
+
+            self._decorate(self.pure, inner)
+
+            # TODO: Abstract this logic
+            if util.is_class_instance(function):
+                return function
+
             return inner
         return wrapper
 
@@ -193,11 +196,23 @@ class Decko:
         """
         If the decorated object is a class, we will add different rules.
         For example, these rules include which types of functions to decorate
+        TODO
         :param cls: The class we are decorating
         :param kwargs:
         :return:
         """
-        pass
+        properties: Dict = util.create_properties(Decko.CLASS_PROPS, **kwargs)
+        # Filter all methods starting with prefix. If Filter is None or '',
+        # will grab all methods
+        filter_prefixes = properties['prefix_filter']
+        for member_key in dir(cls):
+            # We want to filter out certain methods such as dunder methods
+            if callable(getattr(cls, member_key)) and not member_key.startswith(filter_prefixes):
+                print(f"Decorating: {member_key}")
+                # Get the class method and decorate
+                fn: Callable = getattr(cls, member_key)
+                decorated_function = self._decorate(decorator_func, fn)
+                setattr(cls, member_key, decorated_function)
 
     def _add_function_decorator_rule(self,
                                      decorator_func: Callable,
@@ -333,9 +348,10 @@ class Decko:
         # Decorate the function
         self.add_decorator_rule(decorator_func, func)
 
-        @wraps(func)
+        @wraps(decorator_func)
         def wrapped(*args, **kwargs):
-            return func(*args, **kwargs)
+            print(inspect.getsource(func))
+            return decorator_func(*args, **kwargs)
         return wrapped
 
     def fire_if(self,

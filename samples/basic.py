@@ -3,7 +3,7 @@ from src.decko import Decko
 
 if __name__ == "__main__":
 
-    dk = Decko(__name__)
+    dk = Decko(__name__, debug=True)
 
     def print_list_size(size, **kwargs):
         print(f"Size of list is: {size}")
@@ -19,8 +19,8 @@ if __name__ == "__main__":
     for i in range(20):
         create_list(100000)
 
-    # print profiled result
-    dk.print_profile()
+    # # print profiled result
+    # dk.print_profile()
 
     # event triggered when original input is modified
     def catch_input_modification(arg_name, before, after):
@@ -28,14 +28,13 @@ if __name__ == "__main__":
               f"Before: {before} \n After: {after}")
         print("-" * 200)
 
-    @dk.pure(catch_input_modification)
+    # @dk.pure(catch_input_modification)
     def create_list(n,
                     item=[]):
         item.append(n)
         return list(range(n))
 
 
-    # Raise error
-    for i in range(20):
-        create_list(100000)
+    #
 
+    dk.print_profile()
