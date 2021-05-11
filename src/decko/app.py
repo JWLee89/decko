@@ -391,9 +391,7 @@ class Decko:
 
             @wraps(func)
             def wrapped(*args, **kwargs):
-                # Whatever function we are wrapping
                 fire_event = predicate(*args, **kwargs)
-                # Run only if output even is truthy
                 if fire_event:
                     return func(*args, **kwargs)
 
@@ -401,13 +399,67 @@ class Decko:
 
         return wrap
 
+    def observe(self,
+                properties: Union[str, Callable],
+                on_change: Callable) -> Type:
+        """
+        Observe class instance variables and perform actions when
+        :param cls: The class to observe
+        :param properties: The items that we want to filter
+        :param on_change: A function that performs certain actions each time
+        an observed property is updated.
+        :return: The wrapped class with observable properties
+        """
+        def wrapper(cls):
+            if not util.is_class_instance(cls):
+                raise TypeError("Must pass in a class to .observe(). "
+                                f"Passed in type: {type(cls)}")
+
+            # for inspection purposes
+            class NewClass(cls):
+                pass
+
+            arg_count = len(inspect.getfullargspec(NewClass.__init__).args) - 1
+            if arg_count > 0:
+                inst = NewClass(*list(range(arg_count)))
+            else:
+                inst = NewClass()
+
+            class ObservableClass(cls):
+                def __init__(self, *args, **kwargs):
+                    print(f"After parent constructor")
+
+                    self.__a, self.__b = args
+
+            # Create properties dynamically
+            for prop, value in inst.__dict__.items():
+                # handle name mangling
+                accessor = f"_ObservableClass__{prop}"
+                # Create property dynamically
+                def getter(self):
+                    return getattr(self, accessor)
+
+                def setter(self, v):
+                    print("YEEEEEE")
+                    setattr(self, accessor, v)
+
+                test = property(getter)
+                test = test.setter(setter)
+                setattr(ObservableClass, prop, test)
+
+            print("intersection!")
+            print(ObservableClass.__dict__)
+
+            # Now, decorate each method with
+            return ObservableClass
+
+        return wrapper
+
     def profile(self, func: Callable) -> Callable:
         """
-        Profile all instances
-        :param func:
-        :type func:
-        :return:
-        :rtype:
+        Profile target functions
+        :param func: The function to profile
+        :return: wrapped function with profiling logic
         """
 
         @wraps(func)
