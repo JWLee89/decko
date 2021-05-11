@@ -5,23 +5,25 @@ if __name__ == "__main__":
 
     dk = Decko(__name__)
 
-    @dk.observe(properties=None, on_change=None)
+    @dk.observe(properties=None)
     class DummyClass:
         def __init__(self, a, b):
             self.a = a
             self.b = b
-            print(f"self.a: {self.a}, self.b: {self.b}")
+            self.c = []
+            print(f"self.a: {self.a}, self.b: {self.b}, self._c: {self.c}")
 
 
     # Create instance of decorated class
     cls_instance = DummyClass(1, "two")
 
-    print("dict --------")
-    print(cls_instance.__dict__)
-
     # Update members
-    print(cls_instance.b)
     cls_instance.b = "teeemo"
+
+    # Event fires when updated
+    cls_instance.c.append(10)
+    cls_instance.c = 10
+
 
     # class Test:
     #     def __init__(self, a):

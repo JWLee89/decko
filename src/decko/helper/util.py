@@ -358,3 +358,20 @@ def compute_stats(computation_function):
             return output
         return wrapper
     return inner_func
+
+
+def attach_property(cls, prop, getter = None, setter = None):
+    accessor = f"_{cls.__name__}__{prop}"
+    # Create property dynamically
+
+    if getter is None:
+        def getter(self):
+            return getattr(self, accessor)
+    if setter is None:
+        def setter(self, v):
+            print(f"key: {accessor}, newval: {v}")
+            setattr(self, accessor, v)
+
+    test = property(getter)
+    test = test.setter(setter)
+    setattr(cls, prop, test)

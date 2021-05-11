@@ -401,7 +401,8 @@ class Decko:
 
     def observe(self,
                 properties: Union[str, Callable],
-                on_change: Callable) -> Type:
+                getter: Callable = None,
+                setter: Callable = None) -> Type:
         """
         Observe class instance variables and perform actions when
         :param cls: The class to observe
@@ -427,28 +428,20 @@ class Decko:
 
             class ObservableClass(cls):
                 def __init__(self, *args, **kwargs):
-                    print(f"After parent constructor")
+                    super().__init__(*args, **kwargs)
+                    new_attrs = []
+                    for prop, value in inst.__dict__.items():
+                        temp = (f"_{cls.__name__}__{prop}", prop)
+                        new_attrs.append(temp)
 
-                    self.__a, self.__b = args
+                    for new_prop, old_prop in new_attrs:
+                        setattr(self, new_prop, getattr(self, old_prop))
 
             # Create properties dynamically
             for prop, value in inst.__dict__.items():
+
                 # handle name mangling
-                accessor = f"_ObservableClass__{prop}"
-                # Create property dynamically
-                def getter(self):
-                    return getattr(self, accessor)
-
-                def setter(self, v):
-                    print("YEEEEEE")
-                    setattr(self, accessor, v)
-
-                test = property(getter)
-                test = test.setter(setter)
-                setattr(ObservableClass, prop, test)
-
-            print("intersection!")
-            print(ObservableClass.__dict__)
+                util.attach_property(cls, prop, getter, setter)
 
             # Now, decorate each method with
             return ObservableClass
