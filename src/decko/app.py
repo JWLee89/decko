@@ -356,9 +356,8 @@ class Decko:
             return decorator_func(*args, **kwargs)
         return wrapped
 
-    def fire_if(self,
-                events_to_fire: List[Callable],
-                predicate: Callable = lambda x: x) -> Callable:
+    def execute_if(self,
+                   predicate: Callable) -> Callable:
         """
         Given a list of subscribed callables and an predicate function,
         create a wrapper that fires events when predicates are fulfilled
@@ -366,13 +365,14 @@ class Decko:
         >> Code sample
         ----------------------------------
 
-        yee = Yeezy(__name__)
-
         def do_something(output, instance, arr):
             print(f"Output: {output}. Triggered by array: {arr}")
 
 
-        @yee.fire_if([do_something], lambda x, arr: len(arr) > 5)
+        # The decorated function will fire if the predicate function
+        # outputs a truthy value.
+
+        @yee.fire_if(lambda x, arr: len(arr) > 5)
         def do_something(arr):
             return sum(arr)
 
@@ -383,9 +383,6 @@ class Decko:
 
         >> End code sample
         ----------------------------------
-
-        :param events_to_fire: The subscribed events that will be triggered
-        when predicate is true
         :param predicate: The condition for triggering the event
         :return: The wrapped function
         """
@@ -395,13 +392,10 @@ class Decko:
             @wraps(func)
             def wrapped(*args, **kwargs):
                 # Whatever function we are wrapping
-                output = func(*args, **kwargs)
-                fire_event = predicate(output, self, *args, **kwargs)
-                # tell everyone about change based on predicate
+                fire_event = predicate(*args, **kwargs)
+                # Run only if output even is truthy
                 if fire_event:
-                    for event in events_to_fire:
-                        event(output, *args, **kwargs)
-                return output
+                    return func(*args, **kwargs)
 
             return wrapped
 
