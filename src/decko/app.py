@@ -24,6 +24,7 @@ import logging
 import os
 import pstats
 import sys
+import time
 from collections import OrderedDict
 from functools import wraps
 from typing import Callable, Dict, List, Union, Type
@@ -416,6 +417,30 @@ class Decko:
             @wraps(func)
             def inner(*args, **kwargs):
                 return func(*args, **kwargs)
+            return inner
+        return wrapper
+
+    def slower_than(self, time_ms, **kw):
+        """
+        Raise a warning if time taken takes longer than
+        specified time
+        :param time_ms: If the function does not complete in specified time,
+        a warning will be raised.
+        :param kw: Additional
+        :return:
+        :rtype:
+        """
+        def wrapper(func):
+            @wraps(func)
+            def inner(*args, **kwargs):
+                start = time.time()
+                output = func(*args, **kwargs)
+                elapsed = time.time() - start
+                if elapsed > time_ms:
+                    self.log(f"Function: {get_unique_func_name(func)} took longer than"
+                             f"{time_ms} milliseconds. Total time taken: {elapsed}",
+                             logging.WARNING)
+                return output
             return inner
         return wrapper
 
