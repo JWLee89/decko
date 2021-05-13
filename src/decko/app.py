@@ -438,6 +438,9 @@ class Decko:
         """
         def wrapper(func):
             func_name = get_unique_func_name(func)
+            callback = None
+            if "callback" in kw:
+                callback = kw['callback']
 
             @wraps(func)
             def inner(*args, **kwargs):
@@ -447,9 +450,12 @@ class Decko:
                 self.log_debug(f"Function {func_name} called. Time elapsed: "
                                f"{elapsed} milliseconds.")
                 if elapsed > time_ms:
-                    self.log(f"Function: {func_name} took longer than"
-                             f"{time_ms} milliseconds. Total time taken: {elapsed}",
-                             logging.WARNING)
+                    if callback:
+                        callback(time_ms)
+                    else:
+                        self.log(f"Function: {func_name} took longer than"
+                                 f"{time_ms} milliseconds. Total time taken: {elapsed}",
+                                 logging.WARNING)
                 return output
             return inner
         return wrapper
