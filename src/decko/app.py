@@ -16,6 +16,12 @@ def buggy_function(input_1, input_2, ...):
 # Analyze the function
 yee.analyze()
 
+TODO: Add common function for handling callbacks if it exists.
+TODO: Add a utility function for creating
+    1. No arg decorator
+    2. Decorator with arguments
+    3. Decoration with context manager
+
 """
 import cProfile
 import copy
@@ -431,13 +437,17 @@ class Decko:
         :rtype:
         """
         def wrapper(func):
+            func_name = get_unique_func_name(func)
+
             @wraps(func)
             def inner(*args, **kwargs):
                 start = time.time()
                 output = func(*args, **kwargs)
                 elapsed = time.time() - start
+                self.log_debug(f"Function {func_name} called. Time elapsed: "
+                               f"{elapsed} milliseconds.")
                 if elapsed > time_ms:
-                    self.log(f"Function: {get_unique_func_name(func)} took longer than"
+                    self.log(f"Function: {func_name} took longer than"
                              f"{time_ms} milliseconds. Total time taken: {elapsed}",
                              logging.WARNING)
                 return output
