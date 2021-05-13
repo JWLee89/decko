@@ -27,6 +27,7 @@ import sys
 from collections import OrderedDict
 from functools import wraps
 from typing import Callable, Dict, List, Union, Type
+import multiprocessing
 
 # Local imports
 from .helper import exceptions
@@ -399,16 +400,69 @@ class Decko:
 
         return wrap
 
+    def parallel(self, num_of_processes,
+                 **kw):
+        """
+        Run code in parallel to speed up performance.
+        When using this code, please remember the use-cases
+
+        TODO:
+
+        :param num_of_processes:
+        :param kw:
+        :return:
+        """
+        def wrapper(func):
+            @wraps(func)
+            def inner(*args, **kwargs):
+                return func(*args, **kwargs)
+            return inner
+        return wrapper
+
+    def multi_process(self, *args, **kw):
+        """
+        Perform multi-processing on the target function.
+        Note that this is useful when operations are
+        cpu-bound instead of I/O bound.
+
+        Note: This does not work right now due to
+        pickling issues
+
+        @release_date: version 0.0.2.2
+
+
+        @updated_in:
+
+
+        :param kw:
+        :return:
+        """
+
+        def wrapper(func):
+            @wraps(func)
+            def inner(*args, **kwargs):
+                with multiprocessing.Pool() as pool:
+                    output = pool.map(func, *args, **kwargs)
+                return output
+            return inner
+        return wrapper
+
     def observe(self,
                 properties: Union[str, Callable],
                 getter: Callable = None,
                 setter: Callable = None) -> Type:
         """
-        Observe class instance variables and perform actions when
-        :param cls: The class to observe
+        Observe class instance variables and perform various actions when a class
+        member variable is accessed or when a variable is overwritte with
+        the "equals" operator.
+
+        Note: This does not detect when items are being added to a list.
+        If there is such a use case, try extending the list and overriding the
+        core methods.
+
         :param properties: The items that we want to filter
-        :param on_change: A function that performs certain actions each time
-        an observed property is updated.
+        :param getter:
+        :param setter:
         :return: The wrapped class with observable properties
         """
         def wrapper(cls):

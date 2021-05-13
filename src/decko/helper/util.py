@@ -354,7 +354,7 @@ def compute_stats(computation_function):
         @wraps(fn)
         def wrapper(*args, **kwargs):
             output = fn(*args, **kwargs)
-            computation_function(output, *args, **kwargs)
+            computation_function(output)
             return output
         return wrapper
     return inner_func
