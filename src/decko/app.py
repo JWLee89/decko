@@ -30,7 +30,7 @@ import logging
 import os
 import pstats
 import sys
-import time
+from time import process_time
 from collections import OrderedDict
 from functools import wraps
 from typing import Callable, Dict, List, Union, Type
@@ -444,9 +444,9 @@ class Decko:
 
             @wraps(func)
             def inner(*args, **kwargs):
-                start = time.time()
+                start = process_time() * 1000
                 output = func(*args, **kwargs)
-                elapsed = time.time() - start
+                elapsed = (process_time() * 1000) - start
                 self.log_debug(f"Function {func_name} called. Time elapsed: "
                                f"{elapsed} milliseconds.")
                 if elapsed > time_ms:

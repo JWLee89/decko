@@ -7,16 +7,23 @@ dk = Decko(__name__, debug=True)
 @pytest.mark.parametrize("input_size",
     [
         100000,
+        1000000,
         10000000,
-        100000000,
     ]
 )
-def test_slower_than(input_size):
+@pytest.mark.parametrize("milliseconds",
+    [
+        1000,
+        2000,
+        3000,
+    ]
+)
+def test_slower_than(input_size, milliseconds):
 
     def raise_error(time_elapsed):
         raise ValueError(f"Took {time_elapsed} milliseconds")
 
-    @dk.slower_than(1, callback=raise_error)
+    @dk.slower_than(milliseconds, callback=raise_error)
     def long_func(n):
         x = 0
         for i in range(n):
