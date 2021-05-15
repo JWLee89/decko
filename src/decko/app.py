@@ -149,7 +149,6 @@ class Decko:
 
         # Initialize cProfiler
         self._profiler = cProfile.Profile()
-
         # TODO: Create parallel decorator for parallel processing
 
     def pure(self,
@@ -180,7 +179,6 @@ class Decko:
                 # Creating deep copies can be very inefficient, especially
                 # in our case where we have extremely large tensors
                 # that take up a lot of space ...
-                # TODO: Come up with a better way of checking
                 input_data = util.get_shallow_default_arg_dict(function, args)
                 original_input = copy.deepcopy(input_data)
                 # Get output of function
@@ -222,7 +220,7 @@ class Decko:
         for member_key in dir(cls):
             # We want to filter out certain methods such as dunder methods
             if callable(getattr(cls, member_key)) and not member_key.startswith(filter_prefixes):
-                print(f"Decorating: {member_key}")
+                self.log_debug(f"Decorating: {member_key}")
                 # Get the class method and decorate
                 fn: Callable = getattr(cls, member_key)
                 decorated_function = self._decorate(decorator_func, fn)

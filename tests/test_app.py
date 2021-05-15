@@ -30,6 +30,10 @@ def get_test_python_files(root_folder):
     return src_files
 
 
+# -----------------------------------------
+# ------------ Begin Unit Test ------------
+# -----------------------------------------
+
 def test_unit_test_count():
     """
     Test and ensure that unit test exists for each file.
@@ -61,6 +65,7 @@ def test_unit_test_count():
     assert len(missing_unit_tests) == 0, \
         f"Missing {len(missing_unit_tests)}unit test for the " \
         f"following files:\n{format_list_str(missing_unit_tests)}"
+
 
 """
     Unit test:

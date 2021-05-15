@@ -1,11 +1,13 @@
 import copy
-from typing import List, Callable, Union, Dict, Tuple, Type
+from typing import List, Callable, Union, Dict, Tuple, Any
 from functools import wraps
 import inspect
 import logging
 
+from .validation import validate_type, is_iterable
 
-def create_instance(cls, *args):
+
+def create_instance(cls: Any, *args):
     """
     Create an instance of a new class dynamically using random arguments.
     Note: This creation will be difficult for classes
@@ -20,11 +22,12 @@ def create_instance(cls, *args):
     # Get the number of arguments to create a dummy instance of a class
     # Used for decorating a class
     arg_count = len(inspect.getfullargspec(NewClass.__init__).args) - 1
-    if arg_count > 0:
-        arguments = args if len(args) > 0 else list(range(arg_count))
-        instance = NewClass(*arguments)
+    # Use placeholder values to initialize
+    if arg_count > len(args):
+        new_args = tuple(args) + tuple(range(arg_count - len(args)))
+        instance = NewClass(*new_args)
     else:
-        instance = NewClass()
+        instance = NewClass(*args)
     return instance
 
 
