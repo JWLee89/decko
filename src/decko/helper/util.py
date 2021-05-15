@@ -5,15 +5,6 @@ import inspect
 import logging
 
 
-def is_iterable(obj) -> bool:
-    iterable = True
-    try:
-        iter(obj)
-    except TypeError:
-        iterable = False
-    return iterable
-
-
 def create_instance(cls, *args):
     """
     Create an instance of a new class dynamically using random arguments.
@@ -35,12 +26,6 @@ def create_instance(cls, *args):
     else:
         instance = NewClass()
     return instance
-
-
-def validate_type(value, target_type: Type):
-    if type(value) != target_type:
-        raise TypeError(f"{value} must be of type boolean. "
-                        f"{value} is of type: {type(value)}")
 
 
 def get_deepcopy_args_kwargs(fn: Callable, args: Tuple, kwargs: Dict):
@@ -127,15 +112,6 @@ def create_properties(valid_properties: Dict, **kwargs) -> Dict:
         else:
             properties[key] = default_value
     return properties
-
-
-def is_class_instance(item) -> bool:
-    """
-    Check if item is a class instance.
-    :param item: The item to evaluate
-    """
-    # return hasattr(item, '__dict__')
-    return inspect.isclass(item)
 
 
 def get_unique_func_name(func: Callable) -> str:

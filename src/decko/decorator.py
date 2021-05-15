@@ -1,21 +1,11 @@
 from functools import wraps
-from typing import Any, Callable
+from typing import Callable
 
-from helper import util
+from .helper.validation import (
+    raise_error_if_not_callable,
+    raise_error_if_not_class_instance
+)
 
-
-def raise_error_if_not_callable(should_be_callable: Callable):
-    if util.is_class_instance(should_be_callable) \
-            or not isinstance(should_be_callable, Callable):
-        raise TypeError(f"Invalid type: {type(should_be_callable)}. "
-                        "Please pass in a function. ")
-
-
-def raise_error_if_not_class_instance(obj: Any):
-    if not util.is_class_instance(obj):
-        raise TypeError("Target function decorates classes only. "
-                        "Please pass in a class. "
-                        f"Passed in type: {type(obj)}")
 
 
 def decorate_func_without_args(func: Callable):

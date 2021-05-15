@@ -40,6 +40,10 @@ from .helper import exceptions
 from .helper import util
 from .helper.util import get_unique_func_name
 from .immutable import ImmutableError
+from .decorator import (
+    raise_error_if_not_callable,
+    raise_error_if_not_class_instance,
+)
 
 
 class InspectMode:
@@ -522,10 +526,8 @@ class Decko:
             filter_predicate = lambda x, y: True
 
         def wrapper(cls, *arguments):
-            if not util.is_class_instance(cls):
-                raise TypeError("Must pass in a class to .observe(). "
-                                f"Passed in type: {type(cls)} with value: {cls}")
 
+            raise_error_if_not_class_instance(cls)
             inst = util.create_instance(cls, *arguments)
 
             class ObservableClass(cls):
