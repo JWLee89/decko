@@ -1,5 +1,4 @@
 import copy
-import time
 from typing import List, Callable, Union, Dict, Tuple, Type
 from functools import wraps
 import inspect
@@ -13,6 +12,29 @@ def is_iterable(obj) -> bool:
     except TypeError:
         iterable = False
     return iterable
+
+
+def create_instance(cls, *args):
+    """
+    Create an instance of a new class dynamically using random arguments.
+    Note: This creation will be difficult for classes
+    that perform validation in the instantiation phase.
+    :param cls: The class to instantiate
+    :return: An instance of Class <cls>
+    """
+    # for inspection purposes
+    class NewClass(cls):
+        pass
+
+    # Get the number of arguments to create a dummy instance of a class
+    # Used for decorating a class
+    arg_count = len(inspect.getfullargspec(NewClass.__init__).args) - 1
+    if arg_count > 0:
+        arguments = args if len(args) > 0 else list(range(arg_count))
+        instance = NewClass(*arguments)
+    else:
+        instance = NewClass()
+    return instance
 
 
 def validate_type(value, target_type: Type):
@@ -237,80 +259,6 @@ def truncate(max_length: int) -> Callable:
         truncated_sentence = (sentence[:max_length], ' ...') if len(sentence) > max_length else sentence
         return truncated_sentence
     return do_truncate
-
-
-class TimeComputer(ContextDecorator):
-    """
-    Class for running experiments for computing the average time taken
-    to perform computation over a series of N runs. Example:
-
-    time_elapsed_ms = []
-    for i in range(100):
-        with TimeComputer(time_elapsed_ms) as tc:
-            # Run experiment here
-            items = list(range(100000))
-     print(f"Avg time elapsed: {TimeComputer.compute_avg_time(time_elapsed_ms, unit=TimeComputer.Units.MS)}")
-    """
-
-    class Units:
-        MS = 'milliseconds'
-        NS = 'nanoseconds'
-
-    def __init__(self,
-                 accumulated_time: Union[None, List] = None,
-                 log_interval: int = 1,
-                 log_callback: Callable = print) -> None:
-        self._accumulated_time = accumulated_time
-        self.log_interval = log_interval
-        self.log_callback = log_callback
-
-        # Determines how to handle computation
-        # based on accumulated_time input
-        # since list and floats are computed differently
-        self._handle_computation = None
-
-        self.run_count = 0
-        self._init()
-
-    def __enter__(self) -> None:
-        self.run_count += 1
-        self.start_time = time.time()
-
-    def _init(self) -> None:
-        self._validate()
-        if isinstance(self._accumulated_time, list):
-            self._handle_computation = self._append_to_list
-        else:
-            self._accumulated_time = 0
-            self._handle_computation = self._compute_int
-
-    def _compute_int(self, time_elapsed: float) -> None:
-        self._accumulated_time += time_elapsed
-
-    def _append_to_list(self, time_elapsed: float) -> None:
-        self._accumulated_time.append(time_elapsed)
-
-    def _validate(self):
-        if not isinstance(self._accumulated_time, list) and self._accumulated_time is not None:
-            # Case: passed in decorator as follows: @TimeComputer
-            if isinstance(self._accumulated_time, Callable):
-                self._accumulated_time = 0
-            else:
-                raise TypeError(f"Accumulated_time must be a list or None. "
-                                f"Passed in type: {type(self._accumulated_time)}")
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        time_elapsed = time.time() - self.start_time
-        self._handle_computation(time_elapsed)
-        if self.run_count % self.log_interval == 0:
-            self.log_callback(self._accumulated_time, self.run_count)
-
-    @staticmethod
-    def compute_avg_time(time_list: List, unit: str = None) -> float:
-        avg_time = sum(time_list) / len(time_list)
-        if unit == TimeComputer.Units.MS:
-            avg_time *= 1000
-        return avg_time
 
 
 class TraceDecorator:

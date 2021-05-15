@@ -25,7 +25,6 @@ TODO: Add a utility function for creating
 """
 import cProfile
 import copy
-import inspect
 import logging
 import os
 import pstats
@@ -33,7 +32,7 @@ import sys
 from time import process_time
 from collections import OrderedDict
 from functools import wraps
-from typing import Callable, Dict, List, Union, Type
+from typing import Callable, Dict, List, Union, Type, Any
 import multiprocessing
 
 # Local imports
@@ -271,7 +270,7 @@ class Decko:
                         log_path: str) -> Dict:
         """
         Creates set of new configurations, which determine the behavior of
-        a Yeezy instance.
+        the current instance.
         :return: A configuration dictionary
         """
         new_config: OrderedDict = copy.deepcopy(Decko.DEFAULT_CONFIGS)
@@ -357,10 +356,8 @@ class Decko:
         """
         # Decorate the function
         self.add_decorator_rule(decorator_func, func)
-
         @wraps(decorator_func)
         def wrapped(*args, **kwargs):
-            print(inspect.getsource(func))
             return decorator_func(*args, **kwargs)
         return wrapped
 
@@ -426,6 +423,9 @@ class Decko:
             return inner
         return wrapper
 
+    def decorate_func(self):
+        pass
+
     def slower_than(self, time_ms, **kw):
         """
         Raise a warning if time taken takes longer than
@@ -478,7 +478,6 @@ class Decko:
         :param kw:
         :return:
         """
-
         def wrapper(func):
             @wraps(func)
             def inner(*args, **kwargs):
@@ -491,7 +490,7 @@ class Decko:
     def observe(self,
                 properties: Union[str, Callable],
                 getter: Callable = None,
-                setter: Callable = None) -> Type:
+                setter: Callable = None) -> Any:
         """
         Observe class instance variables and perform various actions when a class
         member variable is accessed or when a variable is overwritte with
@@ -506,20 +505,12 @@ class Decko:
         :param setter:
         :return: The wrapped class with observable properties
         """
-        def wrapper(cls):
+        def wrapper(cls, *arguments):
             if not util.is_class_instance(cls):
                 raise TypeError("Must pass in a class to .observe(). "
                                 f"Passed in type: {type(cls)}")
 
-            # for inspection purposes
-            class NewClass(cls):
-                pass
-
-            arg_count = len(inspect.getfullargspec(NewClass.__init__).args) - 1
-            if arg_count > 0:
-                inst = NewClass(*list(range(arg_count)))
-            else:
-                inst = NewClass()
+            inst = util.create_instance(cls, *arguments)
 
             class ObservableClass(cls):
                 def __init__(self, *args, **kwargs):
