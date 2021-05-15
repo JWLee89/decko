@@ -1,5 +1,6 @@
 import os
 import pytest
+from typing import Iterable, List
 
 from src.decko.helper.util import format_list_str
 from src.decko.app import Decko
@@ -7,24 +8,25 @@ from src.decko.app import Decko
 dk = Decko(__name__)
 
 
-def get_src_python_files(root_folder):
+def get_src_python_files(root_folder: str, exclude: Iterable):
     src_files = []
     for subdir, dirs, files in os.walk(root_folder):
         for file in files:
             filepath = subdir + os.sep + file
             filepath = filepath.replace(root_folder, "")
-            if filepath.endswith(".py") and file != "__init__.py":
+            if filepath.endswith(".py") and \
+                    file != "__init__.py" and file not in exclude:
                 src_files.append(filepath)
     return src_files
 
 
-def get_test_python_files(root_folder):
-    src_files = []
+def get_test_python_files(root_folder: str):
+    src_files: List = []
     for subdir, dirs, files in os.walk(root_folder):
         for file in files:
+            file = file.replace("test_", "")
             filepath = subdir + os.sep + file
             filepath = filepath.replace(root_folder, "")
-            filepath = filepath.replace("test_", "")
             if filepath.endswith(".py") and file != "__init__.py":
                 src_files.append(filepath)
     return src_files
@@ -43,10 +45,11 @@ def test_unit_test_count():
     src_path = '../src/decko'
     src_exists = os.path.exists(src_path)
     assert src_exists, "source folder does not exist"
+    files_to_exclude = ['exceptions.py']
 
     # Grab all the file names from src and test directory
     test_path = os.getcwd()
-    src_files = sorted(get_src_python_files(src_path))
+    src_files = sorted(get_src_python_files(src_path, exclude=files_to_exclude))
     test_files = sorted(get_test_python_files(test_path))
     missing_unit_tests = []
 
@@ -63,7 +66,7 @@ def test_unit_test_count():
 
     # There should be a corresponding unit test for each python file
     assert len(missing_unit_tests) == 0, \
-        f"Missing {len(missing_unit_tests)}unit test for the " \
+        f"Missing {len(missing_unit_tests)} unit test for the " \
         f"following files:\n{format_list_str(missing_unit_tests)}"
 
 

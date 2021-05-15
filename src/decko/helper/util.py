@@ -4,7 +4,7 @@ from functools import wraps
 import inspect
 import logging
 
-from .validation import validate_type, is_iterable
+from .validation import validate_type
 
 
 def create_instance(cls: Any, *args):
