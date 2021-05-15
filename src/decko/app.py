@@ -38,12 +38,13 @@ import multiprocessing
 # Local imports
 from .helper import exceptions
 from .helper import util
-from .helper.util import get_unique_func_name
-from .immutable import ImmutableError
-from .decorator import (
+from .helper.validation import (
     raise_error_if_not_callable,
     raise_error_if_not_class_instance,
 )
+from .helper.validation import is_class_instance
+from .helper.util import get_unique_func_name
+from .immutable import ImmutableError
 
 
 class InspectMode:
@@ -197,7 +198,7 @@ class Decko:
             self._decorate(self.pure, inner)
 
             # TODO: Abstract this logic
-            if util.is_class_instance(function):
+            if is_class_instance(function):
                 return function
 
             return inner
@@ -262,7 +263,7 @@ class Decko:
         :param kwargs: Keyword args added to decorator
         :return:
         """
-        if util.is_class_instance(obj_to_decorate):
+        if is_class_instance(obj_to_decorate):
             self._add_class_decorator_rule(decorator_func,
                                            obj_to_decorate, **kwargs)
         else:

@@ -1,16 +1,14 @@
 from functools import wraps
 from typing import Callable
 
-from .helper.validation import (
-    raise_error_if_not_callable,
-    raise_error_if_not_class_instance
-)
-
+# from .helper.validation import (
+#     raise_error_if_not_callable,
+# )
 
 
 def decorate_func_without_args(func: Callable):
 
-    raise_error_if_not_callable(func)
+    # raise_error_if_not_callable(func)
 
     @wraps(func)
     def inner(*args, **kwargs):
