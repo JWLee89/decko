@@ -60,6 +60,7 @@ def test_unit_test_count():
     i, j = 0, 0
     while i < len(src_files) and j < len(test_files):
         src_file, test_file = src_files[i], test_files[j]
+        print(f"Src file: {src_file}, test file: {test_file}")
         if src_file == test_file:
             i += 1
             j += 1
