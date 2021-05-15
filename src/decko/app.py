@@ -39,6 +39,7 @@ import multiprocessing
 from .helper import exceptions
 from .helper import util
 from .helper.util import get_unique_func_name
+from .immutable import ImmutableError
 
 
 class InspectMode:
@@ -197,6 +198,7 @@ class Decko:
                 return function
 
             return inner
+
         return wrapper
 
     def _add_class_decorator_rule(self, decorator_func: Callable,
@@ -258,7 +260,7 @@ class Decko:
         :return:
         """
         if util.is_class_instance(obj_to_decorate):
-            self._add_class_decorator_rule(decorator_func ,
+            self._add_class_decorator_rule(decorator_func,
                                            obj_to_decorate, **kwargs)
         else:
             self._add_function_decorator_rule(decorator_func,
@@ -356,9 +358,11 @@ class Decko:
         """
         # Decorate the function
         self.add_decorator_rule(decorator_func, func)
+
         @wraps(decorator_func)
         def wrapped(*args, **kwargs):
             return decorator_func(*args, **kwargs)
+
         return wrapped
 
     def execute_if(self,
@@ -393,7 +397,6 @@ class Decko:
         """
 
         def wrap(func: Callable) -> Callable:
-
             @wraps(func)
             def wrapped(*args, **kwargs):
                 fire_event = predicate(*args, **kwargs)
@@ -416,11 +419,14 @@ class Decko:
         :param kw:
         :return:
         """
+
         def wrapper(func):
             @wraps(func)
             def inner(*args, **kwargs):
                 return func(*args, **kwargs)
+
             return inner
+
         return wrapper
 
     def decorate_func(self):
@@ -436,6 +442,7 @@ class Decko:
         :return:
         :rtype:
         """
+
         def wrapper(func):
             func_name = get_unique_func_name(func)
             callback = None
@@ -457,7 +464,9 @@ class Decko:
                                  f"{time_ms} milliseconds. Total time taken: {elapsed}",
                                  logging.WARNING)
                 return output
+
             return inner
+
         return wrapper
 
     def multi_process(self, *args, **kw):
@@ -478,13 +487,16 @@ class Decko:
         :param kw:
         :return:
         """
+
         def wrapper(func):
             @wraps(func)
             def inner(*args, **kwargs):
                 with multiprocessing.Pool() as pool:
                     output = pool.map(func, *args, **kwargs)
                 return output
+
             return inner
+
         return wrapper
 
     def observe(self,
@@ -535,7 +547,6 @@ class Decko:
 
                     # Create properties dynamically
                     for prop, value in inst.__dict__.items():
-
                         # handle name mangling
                         util.attach_property(cls, prop, getter, setter)
 
@@ -544,7 +555,31 @@ class Decko:
 
         return wrapper
 
-    def immutable(self, cls, filter_predicate = None):
+    def freeze(self, cls):
+        """
+        Completely freeze a class.
+        A frozen class will raise an error if any of its properties a
+        :param cls:
+        :return:
+        :rtype:
+        """
+
+        def freeze(self, name, value):
+            msg = f"Class {type(self)} is frozen. " \
+                  f"Attempted to set attribute '{name}' to value: '{value}'"
+            raise ImmutableError(msg)
+
+        class Immutable(cls):
+            """
+            A basic immutable class
+            """
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                setattr(Immutable, '__setattr__', freeze)
+
+        return Immutable
+
+    def immutable(self, cls, filter_predicate=None):
         """
         Create immutable classes with properties.
         :param filter_predicate:
@@ -552,9 +587,11 @@ class Decko:
         :return:
         :rtype:
         """
+
         def raise_value_error(cls_instance, new_val):
             raise ValueError(f"Cannot set immutable property of type {type(cls_instance)} "
                              f"with value: {new_val}")
+
         return self.observe(filter_predicate, setter=raise_value_error)(cls)
 
     def profile(self, func: Callable) -> Callable:
@@ -694,7 +731,9 @@ class Decko:
                 util.fill_default_kwargs(fn, args, kwargs)
                 preprocess(functions, *args, **kwargs)
                 return fn(*args, **kwargs)
+
             return inner
+
         return wrapper
 
     # def stopwatch(self,

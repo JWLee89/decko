@@ -58,6 +58,19 @@ if __name__ == "__main__":
     cls_instance = PropertyClass(1, "two")
     print(cls_instance.__dict__)
 
+    @dk.freeze
+    class Frozen:
+        def __init__(self, a, b):
+            self.a = a
+            self.b = b
+
+        def __repr__(self):
+            return f"a:{self.a}, b: {self.b}"
+
+    let_it_go = Frozen(1, 2)
+
+    let_it_go.b = 20
+    print(let_it_go)
     # @dk.immutable
     # class Test:
     #     def __init__(self, test, cool):
