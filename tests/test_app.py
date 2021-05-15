@@ -4,7 +4,7 @@ from typing import Iterable, List
 
 from src.decko.helper.util import format_list_str
 from src.decko.app import Decko
-from definitions import ROOT_DIR
+from definitions import ROOT_DIR, TESTS_TO_EXCLUDE
 
 dk = Decko(__name__)
 
@@ -51,10 +51,8 @@ def test_unit_test_count():
     assert src_exists, f"source folder does not exist in path: {src_path}"
     assert test_path, f"test folder does not exist in path: {test_path}"
 
-    files_to_exclude = ['exceptions.py']
-
     # Grab all the file names from src and test directory
-    src_files = sorted(get_src_python_files(src_path, exclude=files_to_exclude))
+    src_files = sorted(get_src_python_files(src_path, exclude=TESTS_TO_EXCLUDE))
     test_files = sorted(get_test_python_files(test_path))
     missing_unit_tests = []
     # Now, log each missing test file
