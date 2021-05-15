@@ -554,12 +554,13 @@ class Decko:
         def raise_value_error(cls_instance, new_val):
             raise ValueError(f"Cannot set immutable property of type {type(cls_instance)} "
                              f"with value: {new_val}")
-
         return self.observe(filter_predicate, setter=raise_value_error)(cls)
 
     def profile(self, func: Callable) -> Callable:
         """
-        Profile target functions
+        Profile target functions with default cProfiler.
+        For multi-threaded programs, it is recommended to use
+        yappy.
         :param func: The function to profile
         :return: wrapped function with profiling logic
         """
