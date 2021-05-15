@@ -175,7 +175,6 @@ class Decko:
                 # Creating deep copies can be very inefficient, especially
                 # in our case where we have extremely large tensors
                 # that take up a lot of space ...
-                print("inner called")
                 # TODO: Come up with a better way of checking
                 input_data = util.get_shallow_default_arg_dict(function, args)
                 original_input = copy.deepcopy(input_data)
@@ -542,7 +541,7 @@ class Decko:
 
                     # Update old attribute key with new prop key values
                     for new_prop, old_prop in new_attrs:
-                        setattr(self, old_prop, getattr(self, old_prop))
+                        setattr(self, new_prop, getattr(self, old_prop))
                         delattr(self, old_prop)
 
                     # Create properties dynamically

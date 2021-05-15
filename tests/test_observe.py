@@ -48,3 +48,12 @@ def test_immutable_with_observe():
     instance = Test(2, 3)
     with pytest.raises(ValueError) as error:
         instance.test = 1
+
+
+def test_immutable_classes():
+    """
+    Technically, we should not be able to set anything inside of a
+    frozen class. 
+    :return:
+    :rtype:
+    """

@@ -311,7 +311,7 @@ def compute_stats(computation_function):
 def attach_property(cls, prop, getter = None, setter = None):
     accessor = f"_{cls.__name__}__{prop}"
     # Create property dynamically
-
+    print(f"accessor: {accessor}")
     if getter is None:
         def getter(self):
             return getattr(self, accessor)
