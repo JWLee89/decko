@@ -299,3 +299,7 @@ def attach_property(cls, prop, getter = None, setter = None):
     test = property(getter)
     test = test.setter(setter)
     setattr(cls, prop, test)
+
+
+def format_list_str(list_of_stuff: Union[List, Tuple]):
+    return ',\n'.join(list_of_stuff)

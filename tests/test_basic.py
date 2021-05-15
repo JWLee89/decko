@@ -1,100 +1,45 @@
+import os
+import pprint
+from src.decko.helper.util import format_list_str
+
 from src.decko.app import Decko
-from functools import wraps
 
 dk = Decko(__name__)
 
 
+def get_python_files(root_folder):
+    src_files = []
+    for subdir, dirs, files in os.walk(root_folder):
+        for file in files:
+            # print os.path.join(subdir, file)
+            filepath = subdir + os.sep + file
+
+            if filepath.endswith(".py") and file != "__init__.py":
+                src_files.append(filepath)
+    return src_files
+
+
 def test_initialization():
     """
-    Test the initialization of the application
+    Test and ensure that unit test exists for each file.
     """
-    assert dk is not None
 
+    # src folder must obviously exist
+    src_path = '../src/decko'
+    src_exists = os.path.exists(src_path)
+    assert src_exists, "source folder does not exist"
 
-# def test_class_side_effect_detection():
-#     """
-#     Unit test should detect side effect
-#     inside of method do_side_effect()
-#     :return:
-#     """
-#     class Test:
-#         def __init__(self):
-#             self.yee = [1, 2, 3, 4, 5]
-#
-#         @dk.trace()
-#         def do_side_effect(self, i):
-#             self.yee.append(i)
-#
-#     test = Test()
-#     for i in range(10):
-#         test.do_side_effect(i)
-#
-#     dk.analyze()
+    test_path = os.getcwd()
+    src_files = get_python_files(src_path)
+    test_files = get_python_files(test_path)
 
-#
-# def test_extension():
-#     """
-#     Unit test extension case.
-#     Add a new decorator and test its performance
-#     :return:
-#     """
-#     class Yee(Decko):
-#         def __init__(self, name):
-#             super().__init__(name)
-#
-#         def yee(self,
-#                 passed_func: None):
-#             """
-#             Custom function should work properly
-#             """
-#
-#             def inner_function(func):
-#                 self._register_object(func, self.custom)
-#
-#                 @wraps(func)
-#                 def wrapper(*args, **kwargs):
-#                     output = func(*args, **kwargs)
-#                     return output
-#
-#                 return wrapper
-#
-#             # Make func callable
-#             if callable(passed_func):
-#                 return inner_function(passed_func)
-#
-#             return inner_function
-#
-#     yeezy = Yee(__name__)
-#
-#     @yeezy.yee
-#     def teemo(msg):
-#         print(msg)
-#
-#     for i in range(10):
-#         teemo('yee')
+    # TODO: Create test script to ensure that number of unit tests
+    # is equivalent to the number of script files.
 
+    assert len(src_files) == len(test_files), \
+        f"Missing unit tests.\n src:\n{format_list_str(src_files)}\n" \
+        '-----------------------------------------------------\n' \
+        f"Tests:\n{format_list_str(test_files)}"
 
-# def test_imported_func():
-#     """
-#     Test to see whether profiling imported function works well.
-#     """
-#     from dummy_package.util import long_func
-#     yee = Decko(__file__)
-#
-#     # Wrap the imported function
-#     wrapped_long_func = yee.stopwatch(long_func)
-#     iteration_count = 10
-#
-#     for i in range(iteration_count):
-#         wrapped_long_func()
-#     # run profile ... this should work
-#     yee.analyze()
-#
-#     assert long_func in yee.time_dict, f"Cannot find function ... {long_func.__name__}"
-#     item = yee.time_dict[long_func]
-#
-#     # If iteration count increased, this means
-#     # wrapped function is timing the function
-#     assert item['count'] == iteration_count
 
 
