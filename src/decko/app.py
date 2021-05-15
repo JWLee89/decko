@@ -38,7 +38,13 @@ import multiprocessing
 # Local imports
 from .helper import exceptions
 from .helper import util
+from .helper.validation import (
+    raise_error_if_not_callable,
+    raise_error_if_not_class_instance,
+)
+from .helper.validation import is_class_instance
 from .helper.util import get_unique_func_name
+from .immutable import ImmutableError
 
 
 class InspectMode:
@@ -143,7 +149,6 @@ class Decko:
 
         # Initialize cProfiler
         self._profiler = cProfile.Profile()
-
         # TODO: Create parallel decorator for parallel processing
 
     def pure(self,
@@ -174,8 +179,6 @@ class Decko:
                 # Creating deep copies can be very inefficient, especially
                 # in our case where we have extremely large tensors
                 # that take up a lot of space ...
-                print("inner called")
-                # TODO: Come up with a better way of checking
                 input_data = util.get_shallow_default_arg_dict(function, args)
                 original_input = copy.deepcopy(input_data)
                 # Get output of function
@@ -193,10 +196,11 @@ class Decko:
             self._decorate(self.pure, inner)
 
             # TODO: Abstract this logic
-            if util.is_class_instance(function):
+            if is_class_instance(function):
                 return function
 
             return inner
+
         return wrapper
 
     def _add_class_decorator_rule(self, decorator_func: Callable,
@@ -216,7 +220,7 @@ class Decko:
         for member_key in dir(cls):
             # We want to filter out certain methods such as dunder methods
             if callable(getattr(cls, member_key)) and not member_key.startswith(filter_prefixes):
-                print(f"Decorating: {member_key}")
+                self.log_debug(f"Decorating: {member_key}")
                 # Get the class method and decorate
                 fn: Callable = getattr(cls, member_key)
                 decorated_function = self._decorate(decorator_func, fn)
@@ -257,8 +261,8 @@ class Decko:
         :param kwargs: Keyword args added to decorator
         :return:
         """
-        if util.is_class_instance(obj_to_decorate):
-            self._add_class_decorator_rule(decorator_func ,
+        if is_class_instance(obj_to_decorate):
+            self._add_class_decorator_rule(decorator_func,
                                            obj_to_decorate, **kwargs)
         else:
             self._add_function_decorator_rule(decorator_func,
@@ -356,9 +360,11 @@ class Decko:
         """
         # Decorate the function
         self.add_decorator_rule(decorator_func, func)
+
         @wraps(decorator_func)
         def wrapped(*args, **kwargs):
             return decorator_func(*args, **kwargs)
+
         return wrapped
 
     def execute_if(self,
@@ -393,7 +399,6 @@ class Decko:
         """
 
         def wrap(func: Callable) -> Callable:
-
             @wraps(func)
             def wrapped(*args, **kwargs):
                 fire_event = predicate(*args, **kwargs)
@@ -416,11 +421,14 @@ class Decko:
         :param kw:
         :return:
         """
+
         def wrapper(func):
             @wraps(func)
             def inner(*args, **kwargs):
                 return func(*args, **kwargs)
+
             return inner
+
         return wrapper
 
     def decorate_func(self):
@@ -436,6 +444,7 @@ class Decko:
         :return:
         :rtype:
         """
+
         def wrapper(func):
             func_name = get_unique_func_name(func)
             callback = None
@@ -457,7 +466,9 @@ class Decko:
                                  f"{time_ms} milliseconds. Total time taken: {elapsed}",
                                  logging.WARNING)
                 return output
+
             return inner
+
         return wrapper
 
     def multi_process(self, *args, **kw):
@@ -478,13 +489,16 @@ class Decko:
         :param kw:
         :return:
         """
+
         def wrapper(func):
             @wraps(func)
             def inner(*args, **kwargs):
                 with multiprocessing.Pool() as pool:
                     output = pool.map(func, *args, **kwargs)
                 return output
+
             return inner
+
         return wrapper
 
     def observe(self,
@@ -511,10 +525,8 @@ class Decko:
             filter_predicate = lambda x, y: True
 
         def wrapper(cls, *arguments):
-            if not util.is_class_instance(cls):
-                raise TypeError("Must pass in a class to .observe(). "
-                                f"Passed in type: {type(cls)} with value: {cls}")
 
+            raise_error_if_not_class_instance(cls)
             inst = util.create_instance(cls, *arguments)
 
             class ObservableClass(cls):
@@ -530,12 +542,11 @@ class Decko:
 
                     # Update old attribute key with new prop key values
                     for new_prop, old_prop in new_attrs:
-                        setattr(self, old_prop, getattr(self, old_prop))
+                        setattr(self, new_prop, getattr(self, old_prop))
                         delattr(self, old_prop)
 
                     # Create properties dynamically
                     for prop, value in inst.__dict__.items():
-
                         # handle name mangling
                         util.attach_property(cls, prop, getter, setter)
 
@@ -544,7 +555,31 @@ class Decko:
 
         return wrapper
 
-    def immutable(self, cls, filter_predicate = None):
+    def freeze(self, cls):
+        """
+        Completely freeze a class.
+        A frozen class will raise an error if any of its properties a
+        :param cls:
+        :return:
+        :rtype:
+        """
+
+        def freeze(self, name, value):
+            msg = f"Class {type(self)} is frozen. " \
+                  f"Attempted to set attribute '{name}' to value: '{value}'"
+            raise ImmutableError(msg)
+
+        class Immutable(cls):
+            """
+            A basic immutable class
+            """
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                setattr(Immutable, '__setattr__', freeze)
+
+        return Immutable
+
+    def immutable(self, cls, filter_predicate=None):
         """
         Create immutable classes with properties.
         :param filter_predicate:
@@ -552,9 +587,11 @@ class Decko:
         :return:
         :rtype:
         """
+
         def raise_value_error(cls_instance, new_val):
             raise ValueError(f"Cannot set immutable property of type {type(cls_instance)} "
                              f"with value: {new_val}")
+
         return self.observe(filter_predicate, setter=raise_value_error)(cls)
 
     def profile(self, func: Callable) -> Callable:
@@ -694,7 +731,9 @@ class Decko:
                 util.fill_default_kwargs(fn, args, kwargs)
                 preprocess(functions, *args, **kwargs)
                 return fn(*args, **kwargs)
+
             return inner
+
         return wrapper
 
     # def stopwatch(self,

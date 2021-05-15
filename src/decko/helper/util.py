@@ -1,20 +1,13 @@
 import copy
-from typing import List, Callable, Union, Dict, Tuple, Type
+from typing import List, Callable, Union, Dict, Tuple, Any
 from functools import wraps
 import inspect
 import logging
 
-
-def is_iterable(obj) -> bool:
-    iterable = True
-    try:
-        iter(obj)
-    except TypeError:
-        iterable = False
-    return iterable
+from .validation import validate_type
 
 
-def create_instance(cls, *args):
+def create_instance(cls: Any, *args):
     """
     Create an instance of a new class dynamically using random arguments.
     Note: This creation will be difficult for classes
@@ -29,18 +22,13 @@ def create_instance(cls, *args):
     # Get the number of arguments to create a dummy instance of a class
     # Used for decorating a class
     arg_count = len(inspect.getfullargspec(NewClass.__init__).args) - 1
-    if arg_count > 0:
-        arguments = args if len(args) > 0 else list(range(arg_count))
-        instance = NewClass(*arguments)
+    # Use placeholder values to initialize
+    if arg_count > len(args):
+        new_args = tuple(args) + tuple(range(arg_count - len(args)))
+        instance = NewClass(*new_args)
     else:
-        instance = NewClass()
+        instance = NewClass(*args)
     return instance
-
-
-def validate_type(value, target_type: Type):
-    if type(value) != target_type:
-        raise TypeError(f"{value} must be of type boolean. "
-                        f"{value} is of type: {type(value)}")
 
 
 def get_deepcopy_args_kwargs(fn: Callable, args: Tuple, kwargs: Dict):
@@ -127,15 +115,6 @@ def create_properties(valid_properties: Dict, **kwargs) -> Dict:
         else:
             properties[key] = default_value
     return properties
-
-
-def is_class_instance(item) -> bool:
-    """
-    Check if item is a class instance.
-    :param item: The item to evaluate
-    """
-    # return hasattr(item, '__dict__')
-    return inspect.isclass(item)
 
 
 def get_unique_func_name(func: Callable) -> str:
@@ -311,7 +290,7 @@ def compute_stats(computation_function):
 def attach_property(cls, prop, getter = None, setter = None):
     accessor = f"_{cls.__name__}__{prop}"
     # Create property dynamically
-
+    print(f"accessor: {accessor}")
     if getter is None:
         def getter(self):
             return getattr(self, accessor)
@@ -323,3 +302,7 @@ def attach_property(cls, prop, getter = None, setter = None):
     test = property(getter)
     test = test.setter(setter)
     setattr(cls, prop, test)
+
+
+def format_list_str(list_of_stuff: Union[List, Tuple]):
+    return ',\n'.join(list_of_stuff)
