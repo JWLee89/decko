@@ -49,6 +49,8 @@ def test_unit_test_count():
     # src folder must obviously exist
     src_exists = os.path.exists(src_path)
     assert src_exists, f"source folder does not exist in path: {src_path}"
+    assert test_path, f"test folder does not exist in path: {test_path}"
+
     files_to_exclude = ['exceptions.py']
 
     # Grab all the file names from src and test directory
