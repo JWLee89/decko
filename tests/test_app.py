@@ -1,4 +1,5 @@
 import os
+from os.path import dirname, abspath
 import pytest
 from typing import Iterable, List
 
@@ -41,14 +42,16 @@ def test_unit_test_count():
     Test and ensure that unit test exists for each file.
     """
 
+    # Paths
+    test_path = os.getcwd()
+    src_path = dirname(dirname(abspath(__file__))) + "/src/decko"
+
     # src folder must obviously exist
-    src_path = '../src/decko'
     src_exists = os.path.exists(src_path)
-    assert src_exists, "source folder does not exist"
+    assert src_exists, f"source folder does not exist in path: {src_path}"
     files_to_exclude = ['exceptions.py']
 
     # Grab all the file names from src and test directory
-    test_path = os.getcwd()
     src_files = sorted(get_src_python_files(src_path, exclude=files_to_exclude))
     test_files = sorted(get_test_python_files(test_path))
     missing_unit_tests = []
