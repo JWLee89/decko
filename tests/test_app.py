@@ -57,7 +57,7 @@ def test_unit_test_count():
     src_files = sorted(get_src_python_files(src_path, exclude=files_to_exclude))
     test_files = sorted(get_test_python_files(test_path))
     missing_unit_tests = []
-
+    print(f"test path: {test_path}")
     # Now, log each missing test file
     i, j = 0, 0
     while i < len(src_files) and j < len(test_files):
