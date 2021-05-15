@@ -628,35 +628,6 @@ class Decko:
     #         return observe_class(properties)
     #     return observe_class
 
-    def register(self,
-                 func_name: str,
-                 func: Callable,
-                 function_map: Dict):
-        """
-        Register function
-        :param func_name: The name of the function to register
-        :param func: The function to register
-        :param function_map: The dictionary to register the function to.
-        Performs lookup based on function type
-        :return:
-        """
-        if func_name not in function_map:
-            function_map[func_name] = func
-
-    def register_decorator(self,
-                           func: Callable) -> bool:
-        """
-        Public API - Register the decorator as a decko custom method
-        :param func: The function to register
-        :return:
-        """
-        name: str = get_unique_func_name(func)
-        function_exists: bool = name in self.custom
-        if not function_exists:
-            self.custom[name] = func
-
-        return function_exists
-
     def _update_decoration_info(self,
                                 decorator_func,
                                 func_to_decorate: Callable,
