@@ -44,9 +44,7 @@ def get_deepcopy_args_kwargs(fn: Callable, args: Tuple, kwargs: Dict):
     arg_count: int = len(args)
     new_args = {}
     i: int = 0
-    print(parameters.values())
     for k, v in parameters.items():
-        print(f"key: {k}, {v}")
         if i >= arg_count:
             new_args[k] = v.default
         i += 1
@@ -121,10 +119,13 @@ def get_unique_func_name(func: Callable) -> str:
     return f'{func.__module__}.{func.__qualname__}'
 
 
-def dict_is_empty(dictionary: Dict):
-    for _ in dictionary.keys():
-        return True
-    return False
+def dict_is_empty(obj: Dict):
+    if not isinstance(obj, Dict):
+        raise TypeError("Object is not a dictionary. "
+                        f"Passed in type: {type(obj)}")
+    for _ in obj.keys():
+        return False
+    return True
 
 
 class LoggingLevelError(ValueError):
