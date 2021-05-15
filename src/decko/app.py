@@ -488,7 +488,7 @@ class Decko:
         return wrapper
 
     def observe(self,
-                properties: Union[str, Callable],
+                filter_predicate: Callable = None,
                 getter: Callable = None,
                 setter: Callable = None) -> Any:
         """
@@ -500,15 +500,20 @@ class Decko:
         If there is such a use case, try extending the list and overriding the
         core methods.
 
-        :param properties: The items that we want to filter
+        :param filter_predicate: The items that we want to filter
         :param getter:
         :param setter:
         :return: The wrapped class with observable properties
         """
+
+        # By default, apply observe() to all variables
+        if filter_predicate is None:
+            filter_predicate = lambda x, y: True
+
         def wrapper(cls, *arguments):
             if not util.is_class_instance(cls):
                 raise TypeError("Must pass in a class to .observe(). "
-                                f"Passed in type: {type(cls)}")
+                                f"Passed in type: {type(cls)} with value: {cls}")
 
             inst = util.create_instance(cls, *arguments)
 
@@ -516,10 +521,14 @@ class Decko:
                 def __init__(self, *args, **kwargs):
                     super().__init__(*args, **kwargs)
                     new_attrs = []
-                    for prop, value in inst.__dict__.items():
-                        temp = (f"_{cls.__name__}__{prop}", prop)
-                        new_attrs.append(temp)
 
+                    # Create new attributes
+                    for prop, value in inst.__dict__.items():
+                        if filter_predicate(prop, value):
+                            temp = (f"_{cls.__name__}__{prop}", prop)
+                            new_attrs.append(temp)
+
+                    # Update old attribute key with new prop key values
                     for new_prop, old_prop in new_attrs:
                         setattr(self, new_prop, getattr(self, old_prop))
 
@@ -533,6 +542,20 @@ class Decko:
             return ObservableClass
 
         return wrapper
+
+    def immutable(self, cls, filter_predicate = None):
+        """
+        Create immutable classes with properties.
+        :param filter_predicate:
+        :param cls:
+        :return:
+        :rtype:
+        """
+        def raise_value_error(cls_instance, new_val):
+            raise ValueError(f"Cannot set immutable property of type {type(cls_instance)} "
+                             f"with value: {new_val}")
+
+        return self.observe(filter_predicate, setter=raise_value_error)(cls)
 
     def profile(self, func: Callable) -> Callable:
         """
@@ -747,23 +770,6 @@ class Decko:
 
     def __repr__(self) -> str:
         return f"decko"
-
-    # def analyze(self) -> None:
-    #     """
-    #     Profile all the registered stuff
-    #     :return:
-    #     :rtype:
-    #     """
-    #     self.log(f"Printing time-related functions ... ")
-    #     self.log("-" * 100)
-    #     for func, properties in self.time_dict.items():
-    #         self.log(f"Function: {func.__name__}, properties: {properties}")
-    #     self.log("-" * 100)
-    #     self.log("Printing registered functions")
-    #     self.log("-" * 100)
-    #     for func_name, properties in self.functions.items():
-    #         self.log(f"Function: {func_name}, properties: {properties}")
-    #     self.log("-" * 100)
 
 
 if __name__ == "__main__":

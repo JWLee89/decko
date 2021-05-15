@@ -5,7 +5,7 @@ if __name__ == "__main__":
 
     dk = Decko(__name__)
 
-    @dk.observe(properties=None)
+    @dk.observe(filter_predicate=None)
     class DummyClass:
         def __init__(self, a, b):
             self.a = a
