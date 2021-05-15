@@ -32,10 +32,10 @@ def test_create_instance():
         def __init__(self, *args):
             super().__init__(*args)
 
-    instances = []
-    instances.append((create_instance(EmptyClass), EmptyClass))
-    instances.append((create_instance(DummyClass), DummyClass))
-    instances.append((create_instance(ComplexTuple), ComplexTuple))
+    instances = [(create_instance(EmptyClass), EmptyClass),
+                 (create_instance(DummyClass), DummyClass),
+                 (create_instance(ComplexTuple), ComplexTuple),
+                 ]
 
     for instance, Type in instances:
         assert isinstance(instance, Type), f"Instance of {Type.__name__} is not of type: {Type}"

@@ -138,3 +138,32 @@ def test_slower_than(input_size, milliseconds):
     # Ideally these functions should take longer than 300 milliseconds to execute
     with pytest.raises(ValueError) as err:
         long_func(input_size)
+
+
+@pytest.mark.parametrize('threshold',
+                         [
+                             100,
+                             200,
+                             300,
+                         ]
+                         )
+def test_execute_if(threshold):
+
+    decko = Decko(__name__)
+
+    def greater_than(output):
+        return output > threshold
+
+    @decko.execute_if(greater_than)
+    def run(output):
+        return output
+
+    answer_arr = []
+
+    for i in range(int(threshold * 2)):
+        output = run(i)
+        if output:
+            answer_arr.append(output)
+
+    assert len(answer_arr) == (threshold - 1), \
+        f"Array should be size: {len(answer_arr)}"

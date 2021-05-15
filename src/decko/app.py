@@ -39,10 +39,9 @@ import multiprocessing
 from .helper import exceptions
 from .helper import util
 from .helper.validation import (
-    raise_error_if_not_callable,
     raise_error_if_not_class_instance,
 )
-from .helper.validation import is_class_instance
+from .helper.validation import is_class_instance, is_iterable
 from .helper.util import get_unique_func_name
 from .immutable import ImmutableError
 
@@ -70,7 +69,7 @@ class CustomFunction(dict):
 
 
 def _check_if_class(cls):
-    if not util.is_class_instance(cls):
+    if not is_class_instance(cls):
         raise exceptions.NotClassException("Yeezy.observe() observes only classes. "
                                            f"{cls} is of type: {type(cls)}")
 
@@ -399,6 +398,8 @@ class Decko:
         """
 
         def wrap(func: Callable) -> Callable:
+            self.add_decorator_rule(self.execute_if, func)
+
             @wraps(func)
             def wrapped(*args, **kwargs):
                 fire_event = predicate(*args, **kwargs)
@@ -408,31 +409,6 @@ class Decko:
             return wrapped
 
         return wrap
-
-    def parallel(self, num_of_processes,
-                 **kw):
-        """
-        Run code in parallel to speed up performance.
-        When using this code, please remember the use-cases
-
-        TODO:
-
-        :param num_of_processes:
-        :param kw:
-        :return:
-        """
-
-        def wrapper(func):
-            @wraps(func)
-            def inner(*args, **kwargs):
-                return func(*args, **kwargs)
-
-            return inner
-
-        return wrapper
-
-    def decorate_func(self):
-        pass
 
     def slower_than(self, time_ms, **kw):
         """
@@ -582,12 +558,10 @@ class Decko:
     def immutable(self, cls, filter_predicate=None):
         """
         Create immutable classes with properties.
-        :param filter_predicate:
-        :param cls:
-        :return:
-        :rtype:
+        :param filter_predicate: The predicate condition for creating immutable properties
+        :param cls: The class we are decorating. Ultimately, the properties of the target
+        class is decorated.
         """
-
         def raise_value_error(cls_instance, new_val):
             raise ValueError(f"Cannot set immutable property of type {type(cls_instance)} "
                              f"with value: {new_val}")
@@ -713,7 +687,7 @@ class Decko:
         :param functions: A function or a list of functions that
         will be executed prior
         """
-        if util.is_iterable(functions):
+        if is_iterable(functions):
             def preprocess(funcs, *args, **kwargs):
                 for f in funcs:
                     f(*args, **kwargs)
