@@ -422,6 +422,7 @@ class Decko:
         """
 
         def wrapper(func):
+            self.add_decorator_rule(self.slower_than, func)
             func_name = get_unique_func_name(func)
             callback = None
             if "callback" in kw:
@@ -500,7 +501,7 @@ class Decko:
         if filter_predicate is None:
             filter_predicate = lambda x, y: True
 
-        def wrapper(cls, *arguments):
+        def wrapper(cls: Any, *arguments):
 
             raise_error_if_not_class_instance(cls)
             inst = util.create_instance(cls, *arguments)
@@ -576,6 +577,7 @@ class Decko:
         :param func: The function to profile
         :return: wrapped function with profiling logic
         """
+        self.add_decorator_rule(func, self.profile)
 
         @wraps(func)
         def wrapped(*args, **kwargs):
