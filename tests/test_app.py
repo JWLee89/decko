@@ -1,10 +1,10 @@
 import os
-from os.path import dirname, abspath
 import pytest
 from typing import Iterable, List
 
 from src.decko.helper.util import format_list_str
 from src.decko.app import Decko
+from definitions import ROOT_DIR
 
 dk = Decko(__name__)
 
@@ -43,8 +43,8 @@ def test_unit_test_count():
     """
 
     # Paths
-    test_path = os.getcwd()
-    src_path = dirname(dirname(abspath(__file__))) + "/src/decko"
+    test_path = f"{ROOT_DIR}/tests"
+    src_path = f"{ROOT_DIR}/src/decko"
 
     # src folder must obviously exist
     src_exists = os.path.exists(src_path)
@@ -57,7 +57,7 @@ def test_unit_test_count():
     src_files = sorted(get_src_python_files(src_path, exclude=files_to_exclude))
     test_files = sorted(get_test_python_files(test_path))
     missing_unit_tests = []
-    print(f"test path: {test_path}")
+    print(f"test path: {test_path}, files: {test_files}")
     # Now, log each missing test file
     i, j = 0, 0
     while i < len(src_files) and j < len(test_files):
