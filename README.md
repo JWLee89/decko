@@ -3,6 +3,15 @@
 A decorator based utility module for Python developers. The module is designed to 
 aid developers in debugging their python applications.
 
+Decko is not dependent on any external libraries outside of the standard Python libraries.
+However, one may choose to extend with external libraries such as numba to improve its performance. 
+
+Decko is meant to a utility to help people debug and extend code. Its original use case is not in
+mission-critical fields where performance is key. 
+If there is enough demand, I will create a separate branch which optimizes the runtime performance
+of all decko functions.
+
+
 ## Getting Started
 
 Decko is a decorated-based module for debugging. 

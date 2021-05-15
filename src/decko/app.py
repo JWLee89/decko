@@ -16,17 +16,24 @@ def buggy_function(input_1, input_2, ...):
 # Analyze the function
 yee.analyze()
 
+TODO: Add common function for handling callbacks if it exists.
+TODO: Add a utility function for creating
+    1. No arg decorator
+    2. Decorator with arguments
+    3. Decoration with context manager
+
 """
 import cProfile
 import copy
-import inspect
 import logging
 import os
 import pstats
 import sys
+from time import process_time
 from collections import OrderedDict
 from functools import wraps
-from typing import Callable, Dict, List, Union, Type
+from typing import Callable, Dict, List, Union, Type, Any
+import multiprocessing
 
 # Local imports
 from .helper import exceptions
@@ -263,7 +270,7 @@ class Decko:
                         log_path: str) -> Dict:
         """
         Creates set of new configurations, which determine the behavior of
-        a Yeezy instance.
+        the current instance.
         :return: A configuration dictionary
         """
         new_config: OrderedDict = copy.deepcopy(Decko.DEFAULT_CONFIGS)
@@ -349,16 +356,13 @@ class Decko:
         """
         # Decorate the function
         self.add_decorator_rule(decorator_func, func)
-
         @wraps(decorator_func)
         def wrapped(*args, **kwargs):
-            print(inspect.getsource(func))
             return decorator_func(*args, **kwargs)
         return wrapped
 
-    def fire_if(self,
-                events_to_fire: List[Callable],
-                predicate: Callable = lambda x: x) -> Callable:
+    def execute_if(self,
+                   predicate: Callable) -> Callable:
         """
         Given a list of subscribed callables and an predicate function,
         create a wrapper that fires events when predicates are fulfilled
@@ -366,13 +370,14 @@ class Decko:
         >> Code sample
         ----------------------------------
 
-        yee = Yeezy(__name__)
-
         def do_something(output, instance, arr):
             print(f"Output: {output}. Triggered by array: {arr}")
 
 
-        @yee.fire_if([do_something], lambda x, arr: len(arr) > 5)
+        # The decorated function will fire if the predicate function
+        # outputs a truthy value.
+
+        @yee.fire_if(lambda x, arr: len(arr) > 5)
         def do_something(arr):
             return sum(arr)
 
@@ -383,9 +388,6 @@ class Decko:
 
         >> End code sample
         ----------------------------------
-
-        :param events_to_fire: The subscribed events that will be triggered
-        when predicate is true
         :param predicate: The condition for triggering the event
         :return: The wrapped function
         """
@@ -394,26 +396,174 @@ class Decko:
 
             @wraps(func)
             def wrapped(*args, **kwargs):
-                # Whatever function we are wrapping
-                output = func(*args, **kwargs)
-                fire_event = predicate(output, self, *args, **kwargs)
-                # tell everyone about change based on predicate
+                fire_event = predicate(*args, **kwargs)
                 if fire_event:
-                    for event in events_to_fire:
-                        event(output, *args, **kwargs)
-                return output
+                    return func(*args, **kwargs)
 
             return wrapped
 
         return wrap
 
-    def profile(self, func: Callable) -> Callable:
+    def parallel(self, num_of_processes,
+                 **kw):
         """
-        Profile all instances
-        :param func:
-        :type func:
+        Run code in parallel to speed up performance.
+        When using this code, please remember the use-cases
+
+        TODO:
+
+        :param num_of_processes:
+        :param kw:
+        :return:
+        """
+        def wrapper(func):
+            @wraps(func)
+            def inner(*args, **kwargs):
+                return func(*args, **kwargs)
+            return inner
+        return wrapper
+
+    def decorate_func(self):
+        pass
+
+    def slower_than(self, time_ms, **kw):
+        """
+        Raise a warning if time taken takes longer than
+        specified time
+        :param time_ms: If the function does not complete in specified time,
+        a warning will be raised.
+        :param kw: Additional
         :return:
         :rtype:
+        """
+        def wrapper(func):
+            func_name = get_unique_func_name(func)
+            callback = None
+            if "callback" in kw:
+                callback = kw['callback']
+
+            @wraps(func)
+            def inner(*args, **kwargs):
+                start = process_time() * 1000
+                output = func(*args, **kwargs)
+                elapsed = (process_time() * 1000) - start
+                self.log_debug(f"Function {func_name} called. Time elapsed: "
+                               f"{elapsed} milliseconds.")
+                if elapsed > time_ms:
+                    if callback:
+                        callback(time_ms)
+                    else:
+                        self.log(f"Function: {func_name} took longer than"
+                                 f"{time_ms} milliseconds. Total time taken: {elapsed}",
+                                 logging.WARNING)
+                return output
+            return inner
+        return wrapper
+
+    def multi_process(self, *args, **kw):
+        """
+        Perform multi-processing on the target function.
+        Note that this is useful when operations are
+        cpu-bound instead of I/O bound.
+
+        Note: This does not work right now due to
+        pickling issues
+
+        @release_date: version 0.0.2.2
+
+
+        @updated_in:
+
+
+        :param kw:
+        :return:
+        """
+        def wrapper(func):
+            @wraps(func)
+            def inner(*args, **kwargs):
+                with multiprocessing.Pool() as pool:
+                    output = pool.map(func, *args, **kwargs)
+                return output
+            return inner
+        return wrapper
+
+    def observe(self,
+                filter_predicate: Callable = None,
+                getter: Callable = None,
+                setter: Callable = None) -> Any:
+        """
+        Observe class instance variables and perform various actions when a class
+        member variable is accessed or when a variable is overwritte with
+        the "equals" operator.
+
+        Note: This does not detect when items are being added to a list.
+        If there is such a use case, try extending the list and overriding the
+        core methods.
+
+        :param filter_predicate: The items that we want to filter
+        :param getter:
+        :param setter:
+        :return: The wrapped class with observable properties
+        """
+
+        # By default, apply observe() to all variables
+        if filter_predicate is None:
+            filter_predicate = lambda x, y: True
+
+        def wrapper(cls, *arguments):
+            if not util.is_class_instance(cls):
+                raise TypeError("Must pass in a class to .observe(). "
+                                f"Passed in type: {type(cls)} with value: {cls}")
+
+            inst = util.create_instance(cls, *arguments)
+
+            class ObservableClass(cls):
+                def __init__(self, *args, **kwargs):
+                    super().__init__(*args, **kwargs)
+                    new_attrs = []
+
+                    # Create new attributes
+                    for prop, value in inst.__dict__.items():
+                        if filter_predicate(prop, value):
+                            temp = (f"_{cls.__name__}__{prop}", prop)
+                            new_attrs.append(temp)
+
+                    # Update old attribute key with new prop key values
+                    for new_prop, old_prop in new_attrs:
+                        setattr(self, old_prop, getattr(self, old_prop))
+                        delattr(self, old_prop)
+
+                    # Create properties dynamically
+                    for prop, value in inst.__dict__.items():
+
+                        # handle name mangling
+                        util.attach_property(cls, prop, getter, setter)
+
+            # Now, decorate each method with
+            return ObservableClass
+
+        return wrapper
+
+    def immutable(self, cls, filter_predicate = None):
+        """
+        Create immutable classes with properties.
+        :param filter_predicate:
+        :param cls:
+        :return:
+        :rtype:
+        """
+        def raise_value_error(cls_instance, new_val):
+            raise ValueError(f"Cannot set immutable property of type {type(cls_instance)} "
+                             f"with value: {new_val}")
+        return self.observe(filter_predicate, setter=raise_value_error)(cls)
+
+    def profile(self, func: Callable) -> Callable:
+        """
+        Profile target functions with default cProfiler.
+        For multi-threaded programs, it is recommended to use
+        yappy.
+        :param func: The function to profile
+        :return: wrapped function with profiling logic
         """
 
         @wraps(func)
@@ -622,23 +772,6 @@ class Decko:
 
     def __repr__(self) -> str:
         return f"decko"
-
-    # def analyze(self) -> None:
-    #     """
-    #     Profile all the registered stuff
-    #     :return:
-    #     :rtype:
-    #     """
-    #     self.log(f"Printing time-related functions ... ")
-    #     self.log("-" * 100)
-    #     for func, properties in self.time_dict.items():
-    #         self.log(f"Function: {func.__name__}, properties: {properties}")
-    #     self.log("-" * 100)
-    #     self.log("Printing registered functions")
-    #     self.log("-" * 100)
-    #     for func_name, properties in self.functions.items():
-    #         self.log(f"Function: {func_name}, properties: {properties}")
-    #     self.log("-" * 100)
 
 
 if __name__ == "__main__":
