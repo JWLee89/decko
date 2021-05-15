@@ -8,38 +8,63 @@ if __name__ == "__main__":
     @dk.observe(filter_predicate=None)
     class DummyClass:
         def __init__(self, a, b):
+            # Properties are already initialized at this point
             self.a = a
             self.b = b
             self.c = []
-            print(f"self.a: {self.a}, self.b: {self.b}, self._c: {self.c}")
+            print(f"I am called twice: self.a: {self.a}, self.b: {self.b}, self._c: {self.c}")
 
+    class PropertyClass:
+        def __init__(self, a, b):
+            self._a = a
+            self._b = b
+            self._c = []
+            print(f"I am called twice: self.a: {self.a}, self.b: {self.b}, self._c: {self.c}")
+
+        @property
+        def a(self):
+            return self._a
+
+        @a.setter
+        def a(self, new_val):
+            print(f"key: , val: {new_val}")
+            self._a = new_val
+
+        @property
+        def b(self):
+            return self._b
+
+        @b.setter
+        def b(self, b):
+            print(f"key: , val: {b}")
+            self._b = b
+
+        @property
+        def c(self):
+            return self._c
+
+        @c.setter
+        def c(self, c):
+            print(f"key: , val: {c}")
+            self._c = c
 
     # Create instance of decorated class
     cls_instance = DummyClass(1, "two")
+    cls_instance.a = 10
+    cls_instance.b = "C"
+    print(cls_instance.__dict__)
+    print("-" * 100)
 
-    # Update members
-    cls_instance.b = "teeemo"
+    cls_instance = PropertyClass(1, "two")
+    print(cls_instance.__dict__)
 
-    # Event fires when updated
-    cls_instance.c.append(10)
-    cls_instance.c = 10
-
-
+    # @dk.immutable
     # class Test:
-    #     def __init__(self, a):
-    #         self.__a = a
+    #     def __init__(self, test, cool):
+    #         self.test = test
+    #         self.cool = cool
     #
-    #     @property
-    #     def a(self):
-    #         print("a")
-    #         return self.__a
+    #     def do_test(self):
+    #         print("Hello, test")
     #
-    #     @a.setter
-    #     def a(self, v):
-    #         print("yee")
-    #         self.__a = v
-    #
-    # troll = Test(1)
-    # troll.a = 100
-    #
-    # print(Test.__dict__)
+    # instance = Test(2, 3)

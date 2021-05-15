@@ -530,13 +530,14 @@ class Decko:
 
                     # Update old attribute key with new prop key values
                     for new_prop, old_prop in new_attrs:
-                        setattr(self, new_prop, getattr(self, old_prop))
+                        setattr(self, old_prop, getattr(self, old_prop))
+                        delattr(self, old_prop)
 
-            # Create properties dynamically
-            for prop, value in inst.__dict__.items():
+                    # Create properties dynamically
+                    for prop, value in inst.__dict__.items():
 
-                # handle name mangling
-                util.attach_property(cls, prop, getter, setter)
+                        # handle name mangling
+                        util.attach_property(cls, prop, getter, setter)
 
             # Now, decorate each method with
             return ObservableClass

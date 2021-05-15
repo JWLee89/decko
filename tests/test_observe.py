@@ -12,18 +12,21 @@ def test_immutable():
     :return:
     """
 
+    @dk.immutable
+    class Test:
+        def __init__(self, test, cool):
+            self.test = test
+            self.cool = cool
+
+        def do_test(self):
+            print("Hello, test")
+
+    instance = Test(2, 3)
+
     with pytest.raises(ValueError) as error:
-
-        @dk.immutable
-        class Test:
-            def __init__(self, test, cool):
-                self.test = test
-                self.cool = cool
-
-        instance = Test(2, 3)
         # Should raise value error since class properties
         # here are immutable
-        instance.test = 1
+        instance.cool = 200
 
 
 def test_immutable_with_observe():
@@ -33,15 +36,15 @@ def test_immutable_with_observe():
     :return:
     :rtype:
     """
+    def immutable(self, new_val):
+        raise ValueError(f"Cannot set value: {new_val}")
+
+    @dk.observe(setter=immutable)
+    class Test:
+        def __init__(self, test, cool):
+            self.test = test
+            self.cool = cool
+
+    instance = Test(2, 3)
     with pytest.raises(ValueError) as error:
-        def immutable(self, new_val):
-            raise ValueError(f"Cannot set value: {new_val}")
-
-        @dk.observe(setter=immutable)
-        class Test:
-            def __init__(self, test, cool):
-                self.test = test
-                self.cool = cool
-
-        instance = Test(2, 3)
         instance.test = 1
