@@ -36,6 +36,8 @@ def test_immutable_with_observe():
     :return:
     :rtype:
     """
+    dk = Decko(__name__)
+
     def immutable(self, new_val):
         raise ValueError(f"Cannot set value: {new_val}")
 

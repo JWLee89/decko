@@ -11,8 +11,23 @@ mission-critical fields where performance is key.
 If there is enough demand, I will create a separate branch which optimizes the runtime performance
 of all decko functions.
 
+## Install
 
-## Getting Started
+Install and update using [pip](https://pypi.org/project/pip/):
+
+```shell
+pip install -U decko
+```
+
+## Uninstall 
+
+Uninstall using pip:
+
+```shell
+pip uninstall decko
+```
+
+## Example
 
 Decko is a decorated-based module for debugging. 
 It also provides useful decorators to speed up programming and provides utility 
@@ -140,4 +155,9 @@ Traceback (most recent call last):
 src.decko.exceptions.DuplicateDecoratorError: Found duplicate decorator with identity: __main__.expensive_func
 ```
 
+## Links
+
+Documentation (work in progress): [https://github.com/JWLee89/decko/wiki]()
+PyPI Releases: [https://github.com/JWLee89/decko]()
+Source Code: [https://github.com/pallets/flask/]()
 

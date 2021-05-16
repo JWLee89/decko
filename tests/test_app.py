@@ -4,7 +4,7 @@ from typing import Iterable, List
 
 from src.decko.helper.util import format_list_str
 from src.decko.app import Decko
-from definitions import ROOT_DIR
+from definitions import ROOT_DIR, TESTS_TO_EXCLUDE
 
 dk = Decko(__name__)
 
@@ -51,18 +51,14 @@ def test_unit_test_count():
     assert src_exists, f"source folder does not exist in path: {src_path}"
     assert test_path, f"test folder does not exist in path: {test_path}"
 
-    files_to_exclude = ['exceptions.py']
-
     # Grab all the file names from src and test directory
-    src_files = sorted(get_src_python_files(src_path, exclude=files_to_exclude))
+    src_files = sorted(get_src_python_files(src_path, exclude=TESTS_TO_EXCLUDE))
     test_files = sorted(get_test_python_files(test_path))
     missing_unit_tests = []
-    print(f"test path: {test_path}, files: {test_files}")
     # Now, log each missing test file
     i, j = 0, 0
     while i < len(src_files) and j < len(test_files):
         src_file, test_file = src_files[i], test_files[j]
-        print(f"Src file: {src_file}, test file: {test_file}")
         if src_file == test_file:
             i += 1
             j += 1
@@ -129,6 +125,7 @@ def test_invalid_set_debug() -> None:
                          ]
                          )
 def test_slower_than(input_size, milliseconds):
+    dk = Decko(__name__)
     def raise_error(time_elapsed):
         raise ValueError(f"Took {time_elapsed} milliseconds")
 
@@ -142,3 +139,57 @@ def test_slower_than(input_size, milliseconds):
     # Ideally these functions should take longer than 300 milliseconds to execute
     with pytest.raises(ValueError) as err:
         long_func(input_size)
+
+
+@pytest.mark.parametrize('threshold',
+                         [
+                             100,
+                             200,
+                             300,
+                         ]
+                         )
+def test_execute_if(threshold):
+
+    decko = Decko(__name__)
+
+    def greater_than(output):
+        return output > threshold
+
+    @decko.execute_if(greater_than)
+    def run(output):
+        return output
+
+    answer_arr = []
+
+    for i in range(int(threshold * 2)):
+        output = run(i)
+        if output:
+            answer_arr.append(output)
+
+    assert len(answer_arr) == (threshold - 1), \
+        f"Array should be size: {len(answer_arr)}"
+
+
+def test_pure():
+    """
+    The function below modifies the input array c:
+    This should throw a value error.
+    :return:
+    """
+    dk = Decko(__name__, debug=True)
+
+    def raise_error(*args, **kwargs):
+        raise ValueError(f"Modified inputs: {args}, {kwargs}")
+
+    @dk.pure(raise_error)
+    def input_output_what_how(a, b, c=[]):
+        c.append(10)
+        return c
+
+    item = []
+    with pytest.raises(ValueError) as error:
+        yee = input_output_what_how(10, 20, item)
+
+    # this should also raise error
+    with pytest.raises(ValueError) as error:
+        yee = input_output_what_how(10, 20)

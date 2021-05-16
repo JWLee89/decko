@@ -7,21 +7,38 @@ which helps performance.
 
 Basic use case:
 
-yee = Decko()
+dk = Decko()
 
-@yee.trace
+@dk.trace
 def buggy_function(input_1, input_2, ...):
     ...
 
 # Analyze the function
-yee.analyze()
+dk.analyze()
+
+TODO: Write out specifications for each of the functions
+1. Function-based decorator specifications
+
+`1.1. Register Decorators
+`1.2. Accepts two inputs
+    - decorator_func: The property / feature to add to the function to decorate
+    - func_to_decorate: The target function that will be decorated
+    - kw: dictionary containing user inputs and options.
+
+2. Class-based decorator specifications
+
+ 2.1. Register Decorators
+ 2.2. Accepts two inputs
+    - class_to_decorate: The class to decorate
+        - Inspect properties:
+    -
+
 
 TODO: Add common function for handling callbacks if it exists.
 TODO: Add a utility function for creating
     1. No arg decorator
     2. Decorator with arguments
     3. Decoration with context manager
-
 """
 import cProfile
 import copy
@@ -39,10 +56,9 @@ import multiprocessing
 from .helper import exceptions
 from .helper import util
 from .helper.validation import (
-    raise_error_if_not_callable,
     raise_error_if_not_class_instance,
 )
-from .helper.validation import is_class_instance
+from .helper.validation import is_class_instance, is_iterable
 from .helper.util import get_unique_func_name
 from .immutable import ImmutableError
 
@@ -61,6 +77,9 @@ class API_KEYS:
     FUNCTION = 'func'
     DECORATED_WITH = 'decorated_with'
 
+    # Used with callback
+    CALLBACK = 'callback'
+
 
 class CustomFunction(dict):
     """dot.notation access to dictionary attributes"""
@@ -70,7 +89,7 @@ class CustomFunction(dict):
 
 
 def _check_if_class(cls):
-    if not util.is_class_instance(cls):
+    if not is_class_instance(cls):
         raise exceptions.NotClassException("Yeezy.observe() observes only classes. "
                                            f"{cls} is of type: {type(cls)}")
 
@@ -94,9 +113,16 @@ class Decko:
     # First element is the type of the keyword parameter
     # The second is the default value to assign
     FUNCTION_PROPS = OrderedDict({
-        'compute_statistics': (bool, True),
+        # Users can choose to not compute statistics
+        # Or define their own statistics by calling a custom function
+        # By definition, all statistics are dictionary values, which can be accessed or
+        # printed during runtime.
+        'compute_statistics': ([bool, Callable], True),
+        # Callbacks can be specified to perform an event
+        'callback': (Callable, None),
     })
 
+    # These are the required types and default properties of class-based decorators
     CLASS_PROPS = OrderedDict({
         'prefix_filter': (str, ('_', '__'))
     })
@@ -151,38 +177,39 @@ class Decko:
         self._profiler = cProfile.Profile()
         # TODO: Create parallel decorator for parallel processing
 
-    def pure(self,
-             event_cb: Callable = None,
-             **kw) -> Callable:
+    def pure(self, **kw) -> Callable:
         """
         Check to see whether a given function is pure.
         Note: Purity is determined purely by examining object interactions.
         This function will not check for I/O to determine purity.
-        :param event_cb: The callback function raised when impurity is discovered.
-        :param kw:
-        :return:
+        :return: A wrapped function that checks whether the function mutates its input variables.
+        Will handle callback if mutation is detected.
         """
-        undefined_event_cb = event_cb is None
+        def wrapper(func: Union[Type, Callable]):
+            # Decorate with common properties
+            func = self._decorate(self.pure, func, **kw)
 
-        # Raise exception by default if modified.
-        if undefined_event_cb:
-            def event_cb(argument_name, before, after):
-                raise exceptions.MutatedReferenceError(
-                    f"Original input modified: {argument_name}. Before: {before}, "
-                    f"after: {after}"
-                )
+            func_name: str = util.get_unique_func_name(func)
+            properties: Dict = self.functions[func_name][API_KEYS.PROPS]
+            event_cb = properties[API_KEYS.CALLBACK]
 
-        def wrapper(function: Union[Type, Callable]):
+            # Raise exception by default if modified.
+            if event_cb is None:
+                def event_cb(argument_name, before, after):
+                    raise exceptions.MutatedReferenceError(
+                        f"Original input modified: {argument_name}. Before: {before}, "
+                        f"after: {after}"
+                    )
 
-            @wraps(function)
+            @wraps(func)
             def inner(*args, **kwargs):
                 # Creating deep copies can be very inefficient, especially
                 # in our case where we have extremely large tensors
                 # that take up a lot of space ...
-                input_data = util.get_shallow_default_arg_dict(function, args)
+                input_data = util.get_shallow_default_arg_dict(func, args)
                 original_input = copy.deepcopy(input_data)
                 # Get output of function
-                output = function(*args, **kwargs)
+                output = func(*args, **kwargs)
                 # check inputs
                 for key, value in input_data.items():
                     # If value has been modified, fire event!
@@ -193,11 +220,9 @@ class Decko:
 
                 return output
 
-            self._decorate(self.pure, inner)
-
             # TODO: Abstract this logic
-            if is_class_instance(function):
-                return function
+            if is_class_instance(func):
+                return func
 
             return inner
 
@@ -214,16 +239,17 @@ class Decko:
         :return:
         """
         properties: Dict = util.create_properties(Decko.CLASS_PROPS, **kwargs)
+        print(properties)
         # Filter all methods starting with prefix. If Filter is None or '',
         # will grab all methods
         filter_prefixes = properties['prefix_filter']
         for member_key in dir(cls):
+            member_variable = getattr(cls, member_key)
             # We want to filter out certain methods such as dunder methods
-            if callable(getattr(cls, member_key)) and not member_key.startswith(filter_prefixes):
+            if callable(member_variable) and not member_key.startswith(filter_prefixes):
                 self.log_debug(f"Decorating: {member_key}")
                 # Get the class method and decorate
-                fn: Callable = getattr(cls, member_key)
-                decorated_function = self._decorate(decorator_func, fn)
+                decorated_function = self._decorate(decorator_func, member_variable)
                 setattr(cls, member_key, decorated_function)
 
     def _add_function_decorator_rule(self,
@@ -352,18 +378,25 @@ class Decko:
         self.log(msg, logging.ERROR)
         raise error_type(msg)
 
-    def _decorate(self, decorator_func: Callable, func: Callable) -> Callable:
+    def _decorate(self, decorator_func: Callable, func: Callable, **kw) -> Callable:
         """
         Common function for decorating functions such as registration
         :param func:
         :return:
         """
         # Decorate the function
-        self.add_decorator_rule(decorator_func, func)
+        self.add_decorator_rule(decorator_func, func, **kw)
+        if self.debug:
+            func_name = util.get_unique_func_name(func)
 
-        @wraps(decorator_func)
-        def wrapped(*args, **kwargs):
-            return decorator_func(*args, **kwargs)
+            @wraps(func)
+            def wrapped(*args, **kwargs):
+                self.log_debug(f"Function {func_name} called with args: {args}, {kwargs}.")
+                return func(*args, **kwargs)
+        else:
+            @wraps(func)
+            def wrapped(*args, **kwargs):
+                return func(*args, **kwargs)
 
         return wrapped
 
@@ -399,6 +432,8 @@ class Decko:
         """
 
         def wrap(func: Callable) -> Callable:
+            self.add_decorator_rule(self.execute_if, func)
+
             @wraps(func)
             def wrapped(*args, **kwargs):
                 fire_event = predicate(*args, **kwargs)
@@ -408,31 +443,6 @@ class Decko:
             return wrapped
 
         return wrap
-
-    def parallel(self, num_of_processes,
-                 **kw):
-        """
-        Run code in parallel to speed up performance.
-        When using this code, please remember the use-cases
-
-        TODO:
-
-        :param num_of_processes:
-        :param kw:
-        :return:
-        """
-
-        def wrapper(func):
-            @wraps(func)
-            def inner(*args, **kwargs):
-                return func(*args, **kwargs)
-
-            return inner
-
-        return wrapper
-
-    def decorate_func(self):
-        pass
 
     def slower_than(self, time_ms, **kw):
         """
@@ -446,6 +456,7 @@ class Decko:
         """
 
         def wrapper(func):
+            self.add_decorator_rule(self.slower_than, func)
             func_name = get_unique_func_name(func)
             callback = None
             if "callback" in kw:
@@ -524,7 +535,7 @@ class Decko:
         if filter_predicate is None:
             filter_predicate = lambda x, y: True
 
-        def wrapper(cls, *arguments):
+        def wrapper(cls: Any, *arguments):
 
             raise_error_if_not_class_instance(cls)
             inst = util.create_instance(cls, *arguments)
@@ -582,12 +593,10 @@ class Decko:
     def immutable(self, cls, filter_predicate=None):
         """
         Create immutable classes with properties.
-        :param filter_predicate:
-        :param cls:
-        :return:
-        :rtype:
+        :param filter_predicate: The predicate condition for creating immutable properties
+        :param cls: The class we are decorating. Ultimately, the properties of the target
+        class is decorated.
         """
-
         def raise_value_error(cls_instance, new_val):
             raise ValueError(f"Cannot set immutable property of type {type(cls_instance)} "
                              f"with value: {new_val}")
@@ -602,6 +611,7 @@ class Decko:
         :param func: The function to profile
         :return: wrapped function with profiling logic
         """
+        self.add_decorator_rule(func, self.profile)
 
         @wraps(func)
         def wrapped(*args, **kwargs):
@@ -652,35 +662,6 @@ class Decko:
     #         return observe_class(properties)
     #     return observe_class
 
-    def register(self,
-                 func_name: str,
-                 func: Callable,
-                 function_map: Dict):
-        """
-        Register function
-        :param func_name: The name of the function to register
-        :param func: The function to register
-        :param function_map: The dictionary to register the function to.
-        Performs lookup based on function type
-        :return:
-        """
-        if func_name not in function_map:
-            function_map[func_name] = func
-
-    def register_decorator(self,
-                           func: Callable) -> bool:
-        """
-        Public API - Register the decorator as a decko custom method
-        :param func: The function to register
-        :return:
-        """
-        name: str = get_unique_func_name(func)
-        function_exists: bool = name in self.custom
-        if not function_exists:
-            self.custom[name] = func
-
-        return function_exists
-
     def _update_decoration_info(self,
                                 decorator_func,
                                 func_to_decorate: Callable,
@@ -713,7 +694,7 @@ class Decko:
         :param functions: A function or a list of functions that
         will be executed prior
         """
-        if util.is_iterable(functions):
+        if is_iterable(functions):
             def preprocess(funcs, *args, **kwargs):
                 for f in funcs:
                     f(*args, **kwargs)
@@ -811,32 +792,3 @@ class Decko:
 
     def __repr__(self) -> str:
         return f"decko"
-
-
-if __name__ == "__main__":
-    dk = Decko(__name__, debug=True)
-
-
-    @dk.pure(print)
-    @dk.profile
-    def input_output_what_how(a, b, c=[]):
-        c.append(10)
-        return c
-
-
-    item = []
-    output = input_output_what_how(10, 20, item)
-    yee = input_output_what_how(10, 20, item)
-    print(f"yee: {yee}")
-
-
-    @dk.profile
-    def long_list(n=100000):
-        return list(range(n))
-
-
-    for i in range(10):
-        long_list()
-    #
-    stats = pstats.Stats(dk._profiler).sort_stats('ncalls')
-    stats.print_stats()
