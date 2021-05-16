@@ -186,8 +186,9 @@ class Decko:
         Will handle callback if mutation is detected.
         """
         def wrapper(func: Union[Type, Callable]):
+            # Decorate with common properties
+            func = self._decorate(self.pure, func, **kw)
 
-            self._decorate(self.pure, func, **kw)
             func_name: str = util.get_unique_func_name(func)
             properties: Dict = self.functions[func_name][API_KEYS.PROPS]
             event_cb = properties[API_KEYS.CALLBACK]
@@ -388,14 +389,14 @@ class Decko:
         if self.debug:
             func_name = util.get_unique_func_name(func)
 
-            @wraps(decorator_func)
+            @wraps(func)
             def wrapped(*args, **kwargs):
                 self.log_debug(f"Function {func_name} called with args: {args}, {kwargs}.")
-                return decorator_func(*args, **kwargs)
+                return func(*args, **kwargs)
         else:
-            @wraps(decorator_func)
+            @wraps(func)
             def wrapped(*args, **kwargs):
-                return decorator_func(*args, **kwargs)
+                return func(*args, **kwargs)
 
         return wrapped
 
