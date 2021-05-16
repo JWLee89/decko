@@ -7,21 +7,38 @@ which helps performance.
 
 Basic use case:
 
-yee = Decko()
+dk = Decko()
 
-@yee.trace
+@dk.trace
 def buggy_function(input_1, input_2, ...):
     ...
 
 # Analyze the function
-yee.analyze()
+dk.analyze()
+
+TODO: Write out specifications for each of the functions
+1. Function-based decorator specifications
+
+`1.1. Register Decorators
+`1.2. Accepts two inputs
+    - decorator_func: The property / feature to add to the function to decorate
+    - func_to_decorate: The target function that will be decorated
+    - kw: dictionary containing user inputs and options.
+
+2. Class-based decorator specifications
+
+ 2.1. Register Decorators
+ 2.2. Accepts two inputs
+    - class_to_decorate: The class to decorate
+        - Inspect properties:
+    -
+
 
 TODO: Add common function for handling callbacks if it exists.
 TODO: Add a utility function for creating
     1. No arg decorator
     2. Decorator with arguments
     3. Decoration with context manager
-
 """
 import cProfile
 import copy
@@ -93,9 +110,16 @@ class Decko:
     # First element is the type of the keyword parameter
     # The second is the default value to assign
     FUNCTION_PROPS = OrderedDict({
-        'compute_statistics': (bool, True),
+        # Users can choose to not compute statistics
+        # Or define their own statistics by calling a custom function
+        # By definition, all statistics are dictionary values, which can be accessed or
+        # printed during runtime.
+        'compute_statistics': ([bool, Callable], True),
+        # Callbacks can be specified to perform an event
+        'callback': (Callable, None),
     })
 
+    # These are the required types and default properties of class-based decorators
     CLASS_PROPS = OrderedDict({
         'prefix_filter': (str, ('_', '__'))
     })
@@ -217,12 +241,12 @@ class Decko:
         # will grab all methods
         filter_prefixes = properties['prefix_filter']
         for member_key in dir(cls):
+            member_variable = getattr(cls, member_key)
             # We want to filter out certain methods such as dunder methods
-            if callable(getattr(cls, member_key)) and not member_key.startswith(filter_prefixes):
+            if callable(member_variable) and not member_key.startswith(filter_prefixes):
                 self.log_debug(f"Decorating: {member_key}")
                 # Get the class method and decorate
-                fn: Callable = getattr(cls, member_key)
-                decorated_function = self._decorate(decorator_func, fn)
+                decorated_function = self._decorate(decorator_func, member_variable)
                 setattr(cls, member_key, decorated_function)
 
     def _add_function_decorator_rule(self,
@@ -359,10 +383,17 @@ class Decko:
         """
         # Decorate the function
         self.add_decorator_rule(decorator_func, func)
+        if self.debug:
+            func_name = util.get_unique_func_name(func)
 
-        @wraps(decorator_func)
-        def wrapped(*args, **kwargs):
-            return decorator_func(*args, **kwargs)
+            @wraps(decorator_func)
+            def wrapped(*args, **kwargs):
+                self.log_debug(f"Function {func_name} called with args: {args}, {kwargs}.")
+                return decorator_func(*args, **kwargs)
+        else:
+            @wraps(decorator_func)
+            def wrapped(*args, **kwargs):
+                return decorator_func(*args, **kwargs)
 
         return wrapped
 
@@ -758,32 +789,3 @@ class Decko:
 
     def __repr__(self) -> str:
         return f"decko"
-
-
-if __name__ == "__main__":
-    dk = Decko(__name__, debug=True)
-
-
-    @dk.pure(print)
-    @dk.profile
-    def input_output_what_how(a, b, c=[]):
-        c.append(10)
-        return c
-
-
-    item = []
-    output = input_output_what_how(10, 20, item)
-    yee = input_output_what_how(10, 20, item)
-    print(f"yee: {yee}")
-
-
-    @dk.profile
-    def long_list(n=100000):
-        return list(range(n))
-
-
-    for i in range(10):
-        long_list()
-    #
-    stats = pstats.Stats(dk._profiler).sort_stats('ncalls')
-    stats.print_stats()

@@ -168,3 +168,28 @@ def test_execute_if(threshold):
 
     assert len(answer_arr) == (threshold - 1), \
         f"Array should be size: {len(answer_arr)}"
+
+
+def test_pure():
+    """
+    The function below modifies the input array c:
+    This should throw a value error.
+    :return:
+    """
+    dk = Decko(__name__, debug=True)
+
+    def raise_error(*args, **kwargs):
+        raise ValueError(f"Modified inputs: {args}, {kwargs}")
+
+    @dk.pure(raise_error)
+    def input_output_what_how(a, b, c=[]):
+        c.append(10)
+        return c
+
+    item = []
+    with pytest.raises(ValueError) as error:
+        yee = input_output_what_how(10, 20, item)
+
+    # this should also raise error
+    with pytest.raises(ValueError) as error:
+        yee = input_output_what_how(10, 20)
