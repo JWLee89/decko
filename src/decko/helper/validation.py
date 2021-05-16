@@ -33,8 +33,8 @@ def is_iterable(obj) -> bool:
     return iterable
 
 
-def validate_type(value: Any, target_type: Type):
-    if type(value) != target_type:
-        raise TypeError(f"{value} must be of type boolean. "
+def check_instance_of(value: Any, target_type: Type):
+    if not isinstance(value, target_type):
+        raise TypeError(f"{value} must be of instance type {target_type}. "
                         f"{value} is of type: {type(value)}")
 

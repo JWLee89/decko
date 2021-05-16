@@ -4,7 +4,7 @@ from functools import wraps
 import inspect
 import logging
 
-from .validation import validate_type
+from .validation import check_instance_of
 
 
 def create_instance(cls: Any, *args):
@@ -76,20 +76,18 @@ def get_shallow_default_arg_dict(fn: Callable, args: Tuple):
     :return: Dict of key value pairs
     """
     # Add defaults
-    code = fn.__code__
     arg_count = len(args)
-    args_names = code.co_varnames[:arg_count]
+    args_names = []
     # Add defaults
     parameters = inspect.signature(fn).parameters
     new_kwargs = {}
-
-    i: int = 0
+    i: int = 1
     for k, v in parameters.items():
-        if i >= arg_count:
-            print(v)
+        if i > arg_count:
             new_kwargs[k] = v.default
+        else:
+            args_names.append(k)
         i += 1
-
     return {**dict(zip(args_names, args)), **new_kwargs}
 
 
@@ -106,9 +104,9 @@ def create_properties(valid_properties: Dict, **kwargs) -> Dict:
             current_property = kwargs[key]
             if isinstance(current_property, Tuple):
                 for item in current_property:
-                    validate_type(item, data_type)
+                    check_instance_of(item, data_type)
             else:
-                validate_type(current_property, data_type)
+                check_instance_of(current_property, data_type)
             properties[key] = kwargs[key]
         else:
             properties[key] = default_value

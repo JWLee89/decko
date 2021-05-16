@@ -4,11 +4,18 @@ from src.decko import Decko
 if __name__ == "__main__":
     dk = Decko(__name__, debug=True)
 
-    item = []
+    def raise_error(*args, **kwargs):
+        print("yee")
+        raise ValueError(f"Modified inputs: {args}, {kwargs}")
+
 
     @dk.pure()
-    def add(array, value):
-        array.append(value)
+    def input_output_what_how(a, b, c=[]):
+        c.append(10)
+        return c
 
-    for i in range(10):
-        add(item, i)
+
+    item = []
+    yee = input_output_what_how(10, 20, item)
+    print(item)
+
