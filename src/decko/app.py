@@ -182,9 +182,8 @@ class Decko:
         Check to see whether a given function is pure.
         Note: Purity is determined purely by examining object interactions.
         This function will not check for I/O to determine purity.
-        :param event_cb: The callback function raised when impurity is discovered.
-        :param kw:
-        :return:
+        :return: A wrapped function that checks whether the function mutates its input variables.
+        Will handle callback if mutation is detected.
         """
         def wrapper(func: Union[Type, Callable]):
 
