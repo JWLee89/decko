@@ -1,5 +1,5 @@
 import copy
-from typing import List, Callable, Union, Dict, Tuple, Any
+import typing as t
 from functools import wraps
 import inspect
 import logging
@@ -7,7 +7,7 @@ import logging
 from .validation import check_instance_of
 
 
-def create_instance(cls: Any, *args):
+def create_instance(cls: t.Any, *args):
     """
     Create an instance of a new class dynamically using random arguments.
     Note: This creation will be difficult for classes
@@ -31,7 +31,7 @@ def create_instance(cls: Any, *args):
     return instance
 
 
-def get_deepcopy_args_kwargs(fn: Callable, args: Tuple, kwargs: Dict):
+def get_deepcopy_args_kwargs(fn: t.Callable, args: t.Tuple, kwargs: t.Dict):
     """
     Return deep copies of arg_kwargs with default values included
     :param fn: The target function to evaluate
@@ -51,7 +51,7 @@ def get_deepcopy_args_kwargs(fn: Callable, args: Tuple, kwargs: Dict):
     return copy.deepcopy(args), copy.deepcopy(kwargs)
 
 
-def fill_default_kwargs(fn: Callable, args: Tuple, kwargs: Dict):
+def fill_default_kwargs(fn: t.Callable, args: t.Tuple, kwargs: t.Dict):
     """
     Kwarg is empty if default values are used during runtime.
     Fill the kwargs with default values
@@ -65,7 +65,7 @@ def fill_default_kwargs(fn: Callable, args: Tuple, kwargs: Dict):
         i += 1
 
 
-def get_shallow_default_arg_dict(fn: Callable, args: Tuple):
+def get_shallow_default_arg_dict(fn: t.Callable, args: t.Tuple):
     """
     Return key value pair comprised of
         key: The name of the variable
@@ -91,18 +91,18 @@ def get_shallow_default_arg_dict(fn: Callable, args: Tuple):
     return {**dict(zip(args_names, args)), **new_kwargs}
 
 
-def create_properties(valid_properties: Dict, **kwargs) -> Dict:
+def create_properties(valid_properties: t.Dict, **kwargs) -> t.Dict:
     """
     Add properties from kwargs to valid_properties
     :param valid_properties: A dictionary containing valid properties
     :param kwargs:
     """
-    properties: Dict = {}
+    properties: t.Dict = {}
     # Validate and add properties
     for key, (data_type, default_value) in valid_properties.items():
         if key in kwargs:
             current_property = kwargs[key]
-            if isinstance(current_property, Tuple):
+            if isinstance(current_property, t.Tuple):
                 for item in current_property:
                     check_instance_of(item, data_type)
             else:
@@ -113,12 +113,12 @@ def create_properties(valid_properties: Dict, **kwargs) -> Dict:
     return properties
 
 
-def get_unique_func_name(func: Callable) -> str:
+def get_unique_func_name(func: t.Callable) -> str:
     return f'{func.__module__}.{func.__qualname__}'
 
 
-def dict_is_empty(obj: Dict):
-    if not isinstance(obj, Dict):
+def dict_is_empty(obj: t.Dict):
+    if not isinstance(obj, t.Dict):
         raise TypeError("Object is not a dictionary. "
                         f"Passed in type: {type(obj)}")
     for _ in obj.keys():
@@ -138,7 +138,7 @@ class LoggingLevelError(ValueError):
 def logger_factory(logger_name: str,
                    level: int = logging.DEBUG,
                    file_name: str = None,
-                   log_also_to_console: bool = True) -> Callable:
+                   log_also_to_console: bool = True) -> t.Callable:
     """
     Function for writing information to a file during program execution
     :param file_name: The name of the file to store log
@@ -174,7 +174,7 @@ def logger_factory(logger_name: str,
         console_handler.setLevel(level)
         logger.addHandler(console_handler)
 
-    def log_msg(contents_to_log: Union[str, List],
+    def log_msg(contents_to_log: t.Union[str, t.List],
                 log_level: int = logging.DEBUG) -> None:
         """
         When utilizing this function, please note that file I/O is relatively costly,
@@ -216,7 +216,7 @@ class ContextDecorator:
     Used for creating decorators that behave both
     as decorators and context managers
     """
-    def __call__(self, func: Callable) -> Callable:
+    def __call__(self, func: t.Callable) -> t.Callable:
         self.wrapped_func = func
 
         @wraps(func)
@@ -227,7 +227,7 @@ class ContextDecorator:
         return inner
 
 
-def truncate(max_length: int) -> Callable:
+def truncate(max_length: int) -> t.Callable:
     """
     Responsible for truncating a sentence based on its length
     :param max_length:
@@ -240,7 +240,7 @@ def truncate(max_length: int) -> Callable:
 
 
 class TraceDecorator:
-    def __init__(self, func: Callable, verbose: bool = False):
+    def __init__(self, func: t.Callable, verbose: bool = False):
         self.func = func
         self.verbose = verbose
         self.default_index = 0
@@ -303,5 +303,5 @@ def attach_property(cls, prop, getter = None, setter = None):
     setattr(cls, prop, test)
 
 
-def format_list_str(list_of_stuff: Union[List, Tuple]):
+def format_list_str(list_of_stuff: t.Union[t.List, t.Tuple]):
     return ',\n'.join(list_of_stuff)

@@ -141,7 +141,7 @@ Traceback (most recent call last):
   File "path", line 17, in <module>
     def expensive_func(a,
   File "path", line 522, in wrapper
-    fn: Callable = self._decorate(self.run_before, fn)
+    fn: t.Callable = self._decorate(self.run_before, fn)
   File "path", line 334, in _decorate
     self.add_decorator_rule(decorator_func, func)
   File "path", line 241, in add_decorator_rule
