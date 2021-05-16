@@ -49,7 +49,6 @@ from time import process_time
 from collections import OrderedDict
 from functools import wraps
 import typing as t
-import multiprocessing
 
 # Local imports
 from .helper import exceptions
@@ -184,6 +183,7 @@ class Decko:
         :return: A wrapped function that checks whether the function mutates its input variables.
         Will handle callback if mutation is detected.
         """
+
         def wrapper(func: t.Union[t.Type, t.Callable]):
             # Decorate with common properties such as debug log messages
             # And registration
@@ -410,20 +410,11 @@ class Decko:
             @wraps(func)
             def wrapped(*args, **kwargs):
                 self.log_debug(f"Function {func_name} called with args: {args}, kwargs: {kwargs}.")
-                output = func(*args, **kwargs)
-                return output
-        else:
-            @wraps(func)
-            def wrapped(*args, **kwargs):
-                output = func(*args, **kwargs)
-                return output
+                return func(*args, **kwargs)
 
-        return wrapped
+            return wrapped
 
-    def _define_default(self, func):
-        func_name: str = util.get_unique_func_name(func)
-        properties: t.Dict = self.functions[func_name][API_KEYS.PROPS]
-        event_cb = properties[API_KEYS.CALLBACK]
+        return func
 
     def execute_if(self,
                    predicate: t.Callable) -> t.Callable:
@@ -469,7 +460,7 @@ class Decko:
 
         return wrap
 
-    def slower_than(self, time_ms, **kw):
+    def slower_than(self, time_ms: float, **kw):
         """
         Raise a warning if time taken takes longer than
         specified time
@@ -501,36 +492,6 @@ class Decko:
                         self.log(f"Function: {func_name} took longer than"
                                  f"{time_ms} milliseconds. Total time taken: {elapsed}",
                                  logging.WARNING)
-                return output
-
-            return inner
-
-        return wrapper
-
-    def multi_process(self, *args, **kw):
-        """
-        Perform multi-processing on the target function.
-        Note that this is useful when operations are
-        cpu-bound instead of I/O bound.
-
-        Note: This does not work right now due to
-        pickling issues
-
-        @release_date: version 0.0.2.2
-
-
-        @updated_in:
-
-
-        :param kw:
-        :return:
-        """
-
-        def wrapper(func):
-            @wraps(func)
-            def inner(*args, **kwargs):
-                with multiprocessing.Pool() as pool:
-                    output = pool.map(func, *args, **kwargs)
                 return output
 
             return inner
@@ -609,6 +570,7 @@ class Decko:
             """
             A basic immutable class
             """
+
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
                 setattr(Immutable, '__setattr__', freeze)
@@ -622,6 +584,7 @@ class Decko:
         :param cls: The class we are decorating. Ultimately, the properties of the target
         class is decorated.
         """
+
         def raise_value_error(cls_instance, new_val):
             raise ValueError(f"Cannot set immutable property of type {type(cls_instance)} "
                              f"with value: {new_val}")
@@ -646,46 +609,6 @@ class Decko:
             return output
 
         return wrapped
-
-    # def observe(self,
-    #             properties: t.Union[Tuple, t.List] = None) -> t.Callable:
-    #     """
-    #     Observe properties in a class and log when they are being updated.
-    #     :param properties: The properties to observe.
-    #     """
-    #
-    #     is_list_or_tuple: bool = isinstance(properties, (t.List, tuple))
-    #     is_class: bool = util.is_class_instance(properties)
-    #
-    #     def observe_class(cls):
-    #         _check_if_class(cls)
-    #         cls_name: str = f'{cls.__module__}.{cls.__name__}'
-    #         class_props: t.List = [item for item in inspect.getmembers(cls) if not inspect.ismethod(item)]
-    #         # Observe passed properties
-    #         if is_list_or_tuple:
-    #             # Go through all properties
-    #             for prop in properties:
-    #                 if prop not in class_props:
-    #                     raise ValueError(f"Property '{prop}' not found in class <{cls_name}>.\n"
-    #                                      f"Available props: {class_props}")
-    #                 # Must pass in string
-    #                 elif not isinstance(prop, str):
-    #                     raise ValueError("Properties passed to .observe() should be a string. "
-    #                                      f"Passed in value '{prop}' of type: {type(prop)}")
-    #                 else:
-    #                     pass
-    #                     # property_value = cls.__getitem__(prop)
-    #                     # print(f"Prop value: {property_value}")
-    #
-    #         # Observe all properties
-    #         else:
-    #             pass
-    #
-    #     # Called without calling decorator. e.g.
-    #     # @yee.observe instead of @yee.observe()
-    #     if is_class:
-    #         return observe_class(properties)
-    #     return observe_class
 
     def _update_decoration_info(self,
                                 decorator_func,
@@ -713,7 +636,9 @@ class Decko:
             # Add message if set to debug
         self.log_debug(f"Decorated function with unique id: {func_name}")
 
-    def run_before(self, functions: t.Union[t.List[t.Callable], t.Callable], **kw):
+    def run_before(self,
+                   functions: t.Union[t.List[t.Callable], t.Callable],
+                   **kw):
         """
         This allows users to wrap a function without registering
         :param functions: A function or a t.List of functions that
@@ -816,4 +741,4 @@ class Decko:
                 setattr(class_definition, item, decorated_func)
 
     def __repr__(self) -> str:
-        return f"decko"
+        return f"decko: {self.functions}"
