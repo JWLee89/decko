@@ -77,6 +77,9 @@ class API_KEYS:
     FUNCTION = 'func'
     DECORATED_WITH = 'decorated_with'
 
+    # Used with callback
+    CALLBACK = 'callback'
+
 
 class CustomFunction(dict):
     """dot.notation access to dictionary attributes"""
@@ -174,9 +177,7 @@ class Decko:
         self._profiler = cProfile.Profile()
         # TODO: Create parallel decorator for parallel processing
 
-    def pure(self,
-             event_cb: Callable = None,
-             **kw) -> Callable:
+    def pure(self, **kw) -> Callable:
         """
         Check to see whether a given function is pure.
         Note: Purity is determined purely by examining object interactions.
@@ -185,19 +186,20 @@ class Decko:
         :param kw:
         :return:
         """
-        undefined_event_cb = event_cb is None
-
-        # Raise exception by default if modified.
-        if undefined_event_cb:
-            def event_cb(argument_name, before, after):
-                raise exceptions.MutatedReferenceError(
-                    f"Original input modified: {argument_name}. Before: {before}, "
-                    f"after: {after}"
-                )
-
         def wrapper(func: Union[Type, Callable]):
 
-            self._decorate(self.pure, func)
+            self._decorate(self.pure, func, **kw)
+            func_name: str = util.get_unique_func_name(func)
+            properties: Dict = self.functions[func_name][API_KEYS.PROPS]
+            event_cb = properties[API_KEYS.CALLBACK]
+
+            # Raise exception by default if modified.
+            if event_cb is None:
+                def event_cb(argument_name, before, after):
+                    raise exceptions.MutatedReferenceError(
+                        f"Original input modified: {argument_name}. Before: {before}, "
+                        f"after: {after}"
+                    )
 
             @wraps(func)
             def inner(*args, **kwargs):
@@ -376,14 +378,14 @@ class Decko:
         self.log(msg, logging.ERROR)
         raise error_type(msg)
 
-    def _decorate(self, decorator_func: Callable, func: Callable) -> Callable:
+    def _decorate(self, decorator_func: Callable, func: Callable, **kw) -> Callable:
         """
         Common function for decorating functions such as registration
         :param func:
         :return:
         """
         # Decorate the function
-        self.add_decorator_rule(decorator_func, func)
+        self.add_decorator_rule(decorator_func, func, **kw)
         if self.debug:
             func_name = util.get_unique_func_name(func)
 
