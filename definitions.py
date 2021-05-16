@@ -6,3 +6,4 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 # are excluded from unit test requirements
 # If not specified, a unit test file is required
 TESTS_TO_EXCLUDE = ['exceptions.py']
+ITEMS_TO_EXCLUDE_IN_TEST = ['common']

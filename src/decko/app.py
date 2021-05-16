@@ -33,7 +33,6 @@ TODO: Write out specifications for each of the functions
         - Inspect properties:
     -
 
-
 TODO: Add common function for handling callbacks if it exists.
 TODO: Add a utility function for creating
     1. No arg decorator
@@ -42,6 +41,7 @@ TODO: Add a utility function for creating
 """
 import cProfile
 import copy
+import inspect
 import logging
 import os
 import pstats
@@ -49,8 +49,7 @@ import sys
 from time import process_time
 from collections import OrderedDict
 from functools import wraps
-from typing import Callable, Dict, List, Union, Type, Any
-import multiprocessing
+import typing as t
 
 # Local imports
 from .helper import exceptions
@@ -117,9 +116,9 @@ class Decko:
         # Or define their own statistics by calling a custom function
         # By definition, all statistics are dictionary values, which can be accessed or
         # printed during runtime.
-        'compute_statistics': ([bool, Callable], True),
+        'compute_statistics': ([bool, t.Callable], True),
         # Callbacks can be specified to perform an event
-        'callback': (Callable, None),
+        'callback': (t.Callable, None),
     })
 
     # These are the required types and default properties of class-based decorators
@@ -140,7 +139,7 @@ class Decko:
 
         #: Absolute path to the package on the filesystem. Used to look
         #: up resources contained in the package.
-        self.root_path = self.get_root_path() if root_path is None else root_path
+        self.root_path = self._get_root_path() if root_path is None else root_path
 
         # Inspection Mode:
         # Note that this only inspection targets that are classes and not functions
@@ -154,7 +153,7 @@ class Decko:
         self.root_path = root_path
 
         # Dictionary mapping function names to debug functions
-        # E.g. "do_work" -- <Callable>
+        # E.g. "do_work" -- <t.Callable>
         self.functions = OrderedDict()
 
         # Dictionary of custom decorators added by users
@@ -170,14 +169,14 @@ class Decko:
 
         # Logging function
         # If not specified, the default fallback method will be print()
-        self.log = util.logger_factory(module_name, log_also_to_console=True) if log_path else \
-            util.logger_factory(module_name, file_name=log_path, log_also_to_console=True)
+        self.log = util.logger_factory(module_name, file_name=log_path) if log_path else \
+            util.logger_factory(module_name)
 
         # Initialize cProfiler
         self._profiler = cProfile.Profile()
         # TODO: Create parallel decorator for parallel processing
 
-    def pure(self, **kw) -> Callable:
+    def pure(self, **kw) -> t.Callable:
         """
         Check to see whether a given function is pure.
         Note: Purity is determined purely by examining object interactions.
@@ -185,12 +184,13 @@ class Decko:
         :return: A wrapped function that checks whether the function mutates its input variables.
         Will handle callback if mutation is detected.
         """
-        def wrapper(func: Union[Type, Callable]):
-            # Decorate with common properties
-            func = self._decorate(self.pure, func, **kw)
 
+        def wrapper(func: t.Union[t.Type, t.Callable]):
+            # Decorate with common properties such as debug log messages
+            # And registration
+            func: t.Callable = self._decorate_func(self.pure, func, **kw)
             func_name: str = util.get_unique_func_name(func)
-            properties: Dict = self.functions[func_name][API_KEYS.PROPS]
+            properties: t.Dict = self.functions[func_name][API_KEYS.PROPS]
             event_cb = properties[API_KEYS.CALLBACK]
 
             # Raise exception by default if modified.
@@ -212,8 +212,16 @@ class Decko:
                 output = func(*args, **kwargs)
                 # check inputs
                 for key, value in input_data.items():
+                    # If we are comparing objects
+                    # Assumes that people name the first object self
+                    if key == 'self':
+                        for k in value.__dict__.keys():
+                            value = getattr(value, k)
+                            original_value = getattr(original_input['self'], k)
+                            if value != original_value:
+                                event_cb(k, original_value, value)
                     # If value has been modified, fire event!
-                    if value != original_input[key]:
+                    elif value != original_input[key]:
                         before = original_input[key]
                         after = input_data[key]
                         event_cb(key, before, after)
@@ -228,33 +236,42 @@ class Decko:
 
         return wrapper
 
-    def _add_class_decorator_rule(self, decorator_func: Callable,
+    def _add_class_decorator_rule(self, decorator_func: t.Callable,
                                   cls, **kwargs) -> None:
         """
         If the decorated object is a class, we will add different rules.
         For example, these rules include which types of functions to decorate
-        TODO
+        TODO: Find better way of creating debug messages
         :param cls: The class we are decorating
         :param kwargs:
         :return:
         """
-        properties: Dict = util.create_properties(Decko.CLASS_PROPS, **kwargs)
-        print(properties)
+        properties: t.Dict = util.create_properties(Decko.CLASS_PROPS, **kwargs)
         # Filter all methods starting with prefix. If Filter is None or '',
         # will grab all methods
+        dashes = '-' * 100
+        msg = []
+        if self.debug:
+            msg.append(f"\n{dashes}\nDecorating class <{cls.__name__}> ...")
         filter_prefixes = properties['prefix_filter']
         for member_key in dir(cls):
             member_variable = getattr(cls, member_key)
             # We want to filter out certain methods such as dunder methods
             if callable(member_variable) and not member_key.startswith(filter_prefixes):
-                self.log_debug(f"Decorating: {member_key}")
+                if self.debug:
+                    msg.append(f"Decorating: {get_unique_func_name(member_variable)}() "
+                               f"with function: {get_unique_func_name(decorator_func)}")
                 # Get the class method and decorate
-                decorated_function = self._decorate(decorator_func, member_variable)
+                decorated_function = self._decorate_func(decorator_func, member_variable)
                 setattr(cls, member_key, decorated_function)
 
+        if self.debug:
+            msg.append(dashes)
+        self.log_debug('\n'.join(msg))
+
     def _add_function_decorator_rule(self,
-                                     decorator_func: Callable,
-                                     func: Callable, **kwargs) -> None:
+                                     decorator_func: t.Callable,
+                                     func: t.Callable, **kwargs) -> None:
         """
         Add common metadata regarding the decorated function.
         :param decorator_func:
@@ -262,12 +279,12 @@ class Decko:
         :param kwargs:
         :return:
         """
-        properties: Dict = util.create_properties(Decko.FUNCTION_PROPS, **kwargs)
+        properties: t.Dict = util.create_properties(Decko.FUNCTION_PROPS, **kwargs)
         self._update_decoration_info(decorator_func, func, properties)
 
     def add_decorator_rule(self,
-                           decorator_func: Callable,
-                           obj_to_decorate: Union[Callable, Type],
+                           decorator_func: t.Callable,
+                           obj_to_decorate: t.Union[t.Callable, t.Type],
                            **kwargs) -> None:
         """
         Add common rules to registered decorator which includes
@@ -297,7 +314,7 @@ class Decko:
     @staticmethod
     def get_new_configs(debug: bool,
                         inspect_mode: int,
-                        log_path: str) -> Dict:
+                        log_path: str) -> t.Dict:
         """
         Creates set of new configurations, which determine the behavior of
         the current instance.
@@ -310,7 +327,7 @@ class Decko:
         new_config['log_path'] = log_path
         return new_config
 
-    def get_root_path(self) -> str:
+    def _get_root_path(self) -> str:
         """
         Find the root path of a package, or the path that contains a
         module. If it cannot be found, returns the current working directory.
@@ -348,7 +365,7 @@ class Decko:
             stats = pstats.Stats(self._profiler).strip_dirs().sort_stats(sort_by)
             stats.print_stats()
         except TypeError as ex:
-            self.log_debug(f"||||||| You probably did not profile any functions or "
+            self.log_debug(f"||||||| You probably did not profile t.Any functions or "
                            f"overwrote the function that was intended to be profiled. "
                            f"Check your code |||||||\nStacktrace: {ex}", logging.ERROR)
 
@@ -365,7 +382,7 @@ class Decko:
         in the logging module
         """
         if self.debug:
-            self.log(msg, logging_type)
+            self.log(' ' + msg, logging_type)
 
     def handle_error(self,
                      msg: str,
@@ -378,32 +395,50 @@ class Decko:
         self.log(msg, logging.ERROR)
         raise error_type(msg)
 
-    def _decorate(self, decorator_func: Callable, func: Callable, **kw) -> Callable:
+    def _decorate_func(self,
+                       decorator_func: t.Callable,
+                       func: t.Callable, **kw) -> t.Callable:
         """
         Common function for decorating functions such as registration
-        :param func:
+        And adding debug messages if decko is being run on debug mode.
+        Note: For performance, in order to run debug, the function must be
+        decorated with debug set to true. Otherwise, the function will not log
+        t.Any messages.
+
+        Decoration is as follows:
+
+        --------------------------
+        @dk.pure()
+        def i_am_decorated(a, b):
+            ...
+
+        decorator_func: dk.pure
+        func = i_am_decorated
+        --------------------------
+
+        :param decorator_func: The decorator function that will be applied
+        :param func: The function to decorate.
         :return:
         """
-        # Decorate the function
-        self.add_decorator_rule(decorator_func, func, **kw)
+        # Register the function and add appropriate metadata
+        self._add_function_decorator_rule(decorator_func, func, **kw)
+
         if self.debug:
             func_name = util.get_unique_func_name(func)
 
             @wraps(func)
             def wrapped(*args, **kwargs):
-                self.log_debug(f"Function {func_name} called with args: {args}, {kwargs}.")
-                return func(*args, **kwargs)
-        else:
-            @wraps(func)
-            def wrapped(*args, **kwargs):
+                self.log_debug(f"Function {func_name} called with args: {args}, kwargs: {kwargs}.")
                 return func(*args, **kwargs)
 
-        return wrapped
+            return wrapped
+
+        return func
 
     def execute_if(self,
-                   predicate: Callable) -> Callable:
+                   predicate: t.Callable) -> t.Callable:
         """
-        Given a list of subscribed callables and an predicate function,
+        Given a t.List of subscribed callables and an predicate function,
         create a wrapper that fires events when predicates are fulfilled
 
         >> Code sample
@@ -431,7 +466,7 @@ class Decko:
         :return: The wrapped function
         """
 
-        def wrap(func: Callable) -> Callable:
+        def wrap(func: t.Callable) -> t.Callable:
             self.add_decorator_rule(self.execute_if, func)
 
             @wraps(func)
@@ -444,7 +479,7 @@ class Decko:
 
         return wrap
 
-    def slower_than(self, time_ms, **kw):
+    def slower_than(self, time_ms: float, **kw):
         """
         Raise a warning if time taken takes longer than
         specified time
@@ -482,47 +517,17 @@ class Decko:
 
         return wrapper
 
-    def multi_process(self, *args, **kw):
-        """
-        Perform multi-processing on the target function.
-        Note that this is useful when operations are
-        cpu-bound instead of I/O bound.
-
-        Note: This does not work right now due to
-        pickling issues
-
-        @release_date: version 0.0.2.2
-
-
-        @updated_in:
-
-
-        :param kw:
-        :return:
-        """
-
-        def wrapper(func):
-            @wraps(func)
-            def inner(*args, **kwargs):
-                with multiprocessing.Pool() as pool:
-                    output = pool.map(func, *args, **kwargs)
-                return output
-
-            return inner
-
-        return wrapper
-
     def observe(self,
-                filter_predicate: Callable = None,
-                getter: Callable = None,
-                setter: Callable = None) -> Any:
+                filter_predicate: t.Callable = None,
+                getter: t.Callable = None,
+                setter: t.Callable = None) -> t.Any:
         """
         Observe class instance variables and perform various actions when a class
-        member variable is accessed or when a variable is overwritte with
+        member variable is accessed or when a variable is overwritten with
         the "equals" operator.
 
-        Note: This does not detect when items are being added to a list.
-        If there is such a use case, try extending the list and overriding the
+        Note: This does not detect when items are being added to a t.List.
+        If there is such a use case, try extending the t.List and overriding the
         core methods.
 
         :param filter_predicate: The items that we want to filter
@@ -535,7 +540,7 @@ class Decko:
         if filter_predicate is None:
             filter_predicate = lambda x, y: True
 
-        def wrapper(cls: Any, *arguments):
+        def wrapper(cls: t.Any, *arguments):
 
             raise_error_if_not_class_instance(cls)
             inst = util.create_instance(cls, *arguments)
@@ -566,17 +571,17 @@ class Decko:
 
         return wrapper
 
-    def freeze(self, cls):
+    def freeze(self, cls: t.Type[t.Any]) -> t.Type[t.Any]:
         """
         Completely freeze a class.
-        A frozen class will raise an error if any of its properties a
+        A frozen class will raise an error if t.Any of its properties a
         :param cls:
         :return:
         :rtype:
         """
 
-        def freeze(self, name, value):
-            msg = f"Class {type(self)} is frozen. " \
+        def freeze(slf, name, value):
+            msg = f"Class {type(slf)} is frozen. " \
                   f"Attempted to set attribute '{name}' to value: '{value}'"
             raise ImmutableError(msg)
 
@@ -584,6 +589,7 @@ class Decko:
             """
             A basic immutable class
             """
+
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
                 setattr(Immutable, '__setattr__', freeze)
@@ -597,13 +603,14 @@ class Decko:
         :param cls: The class we are decorating. Ultimately, the properties of the target
         class is decorated.
         """
+
         def raise_value_error(cls_instance, new_val):
             raise ValueError(f"Cannot set immutable property of type {type(cls_instance)} "
                              f"with value: {new_val}")
 
         return self.observe(filter_predicate, setter=raise_value_error)(cls)
 
-    def profile(self, func: Callable) -> Callable:
+    def profile(self, func: t.Callable) -> t.Callable:
         """
         Profile target functions with default cProfiler.
         For multi-threaded programs, it is recommended to use
@@ -622,56 +629,16 @@ class Decko:
 
         return wrapped
 
-    # def observe(self,
-    #             properties: Union[Tuple, List] = None) -> Callable:
-    #     """
-    #     Observe properties in a class and log when they are being updated.
-    #     :param properties: The properties to observe.
-    #     """
-    #
-    #     is_list_or_tuple: bool = isinstance(properties, (list, tuple))
-    #     is_class: bool = util.is_class_instance(properties)
-    #
-    #     def observe_class(cls):
-    #         _check_if_class(cls)
-    #         cls_name: str = f'{cls.__module__}.{cls.__name__}'
-    #         class_props: List = [item for item in inspect.getmembers(cls) if not inspect.ismethod(item)]
-    #         # Observe passed properties
-    #         if is_list_or_tuple:
-    #             # Go through all properties
-    #             for prop in properties:
-    #                 if prop not in class_props:
-    #                     raise ValueError(f"Property '{prop}' not found in class <{cls_name}>.\n"
-    #                                      f"Available props: {class_props}")
-    #                 # Must pass in string
-    #                 elif not isinstance(prop, str):
-    #                     raise ValueError("Properties passed to .observe() should be a string. "
-    #                                      f"Passed in value '{prop}' of type: {type(prop)}")
-    #                 else:
-    #                     pass
-    #                     # property_value = cls.__getitem__(prop)
-    #                     # print(f"Prop value: {property_value}")
-    #
-    #         # Observe all properties
-    #         else:
-    #             pass
-    #
-    #     # Called without calling decorator. e.g.
-    #     # @yee.observe instead of @yee.observe()
-    #     if is_class:
-    #         return observe_class(properties)
-    #     return observe_class
-
     def _update_decoration_info(self,
                                 decorator_func,
-                                func_to_decorate: Callable,
-                                props: Dict) -> None:
+                                func_to_decorate: t.Callable,
+                                props: t.Dict) -> None:
         # Common function for handling duplicates
         func_name: str = get_unique_func_name(func_to_decorate)
         decorator_func_name: str = get_unique_func_name(decorator_func)
         if func_name in self.functions:
             # Check if function is already decorated with same decorator
-            registered_decorators: List = self.functions[func_name][API_KEYS.DECORATED_WITH]
+            registered_decorators: t.List = self.functions[func_name][API_KEYS.DECORATED_WITH]
             if decorator_func_name in registered_decorators:
                 self.handle_error(f"Found duplicate decorator with identity: {func_name}",
                                   exceptions.DuplicateDecoratorError)
@@ -688,10 +655,12 @@ class Decko:
             # Add message if set to debug
         self.log_debug(f"Decorated function with unique id: {func_name}")
 
-    def run_before(self, functions: Union[List[Callable], Callable], **kw):
+    def run_before(self,
+                   functions: t.Union[t.List[t.Callable], t.Callable],
+                   **kw):
         """
         This allows users to wrap a function without registering
-        :param functions: A function or a list of functions that
+        :param functions: A function or a t.List of functions that
         will be executed prior
         """
         if is_iterable(functions):
@@ -702,10 +671,10 @@ class Decko:
             def preprocess(func, *args, **kwargs):
                 func(*args, **kwargs)
 
-        def wrapper(fn: Callable) -> Callable:
+        def wrapper(fn: t.Callable) -> t.Callable:
 
             # Add basic decoration
-            fn: Callable = self._decorate(self.run_before, fn)
+            fn: t.Callable = self._decorate_func(self.run_before, fn)
 
             @wraps(fn)
             def inner(*args, **kwargs):
@@ -717,8 +686,25 @@ class Decko:
 
         return wrapper
 
+    def trace(self,
+              cls,
+              **kw):
+        print("decorated")
+
+        def wrapper(func):
+
+            print("wrapper called")
+
+            @wraps(func)
+            def race(*args, **kwargs):
+                print("yee")
+                return func(*args, **kwargs)
+            return race
+        self.add_decorator_rule(wrapper, cls, **kw)
+        return cls
+
     # def stopwatch(self,
-    #               passed_func: Callable = None,
+    #               passed_func: t.Callable = None,
     #               register: bool = True,
     #               path: str = None,
     #               log_interval: int = 1,
@@ -770,7 +756,7 @@ class Decko:
     def _register_class(self,
                         class_definition: object,
                         target_dict,
-                        decorator_fn: Callable,
+                        decorator_fn: t.Callable,
                         property_obj) -> None:
         """
         Scan through class and add all related classes
@@ -791,4 +777,4 @@ class Decko:
                 setattr(class_definition, item, decorated_func)
 
     def __repr__(self) -> str:
-        return f"decko"
+        return f"decko: {self.functions}"

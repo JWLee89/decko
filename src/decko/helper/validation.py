@@ -1,15 +1,15 @@
-from typing import Callable, Any, Type
+import typing as t
 import inspect
 
 
-def raise_error_if_not_callable(should_be_callable: Callable):
+def raise_error_if_not_callable(should_be_callable: t.Callable):
     if inspect.isclass(should_be_callable) \
-            or not isinstance(should_be_callable, Callable):
+            or not isinstance(should_be_callable, t.Callable):
         raise TypeError(f"Invalid type: {type(should_be_callable)}. "
                         "Please pass in a function. ")
 
 
-def raise_error_if_not_class_instance(obj: Any):
+def raise_error_if_not_class_instance(obj: t.Any):
     if not inspect.isclass(obj):
         raise TypeError("Target function decorates classes only. "
                         "Please pass in a class. "
@@ -33,8 +33,8 @@ def is_iterable(obj) -> bool:
     return iterable
 
 
-def validate_type(value: Any, target_type: Type):
-    if type(value) != target_type:
-        raise TypeError(f"{value} must be of type boolean. "
+def check_instance_of(value: t.Any, target_type: t.Type):
+    if not isinstance(value, target_type):
+        raise TypeError(f"{value} must be of instance type {target_type}. "
                         f"{value} is of type: {type(value)}")
 
