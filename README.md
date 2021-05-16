@@ -157,7 +157,7 @@ src.decko.exceptions.DuplicateDecoratorError: Found duplicate decorator with ide
 
 ## Links
 
-Documentation (work in progress): [https://github.com/JWLee89/decko/wiki]()
-PyPI Releases: [https://github.com/JWLee89/decko]()
-Source Code: [https://github.com/pallets/flask/]()
+- Documentation (work in progress): [https://github.com/JWLee89/decko/wiki]()
+- PyPI Releases: [https://github.com/JWLee89/decko]()
+- Source Code: [https://github.com/pallets/flask/]()
 
