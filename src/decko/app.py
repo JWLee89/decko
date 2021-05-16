@@ -169,8 +169,8 @@ class Decko:
 
         # Logging function
         # If not specified, the default fallback method will be print()
-        self.log = util.logger_factory(module_name, log_also_to_console=True) if log_path else \
-            util.logger_factory(module_name, file_name=log_path, log_also_to_console=True)
+        self.log = util.logger_factory(module_name, file_name=log_path) if log_path else \
+            util.logger_factory(module_name)
 
         # Initialize cProfiler
         self._profiler = cProfile.Profile()
@@ -254,7 +254,8 @@ class Decko:
             member_variable = getattr(cls, member_key)
             # We want to filter out certain methods such as dunder methods
             if callable(member_variable) and not member_key.startswith(filter_prefixes):
-                self.log_debug(f"Decorating: {member_key}")
+                self.log_debug(f"Decorating: {get_unique_func_name(member_variable)}() "
+                               f"with function: {get_unique_func_name(decorator_func)}")
                 # Get the class method and decorate
                 decorated_function = self._decorate_func(decorator_func, member_variable)
                 setattr(cls, member_key, decorated_function)
@@ -441,11 +442,6 @@ class Decko:
         self.add_decorator_rule(decorator_func, cls, **kw)
 
         if self.debug:
-            # method_name_list: t.List[t.AnyStr] = [method for method in dir(cls)
-            #                                       if callable(getattr(cls, method))
-            #                                       and not method.startswith("__")]
-            # for method_name in method_name_list:
-            #     setattr(cls, method_name, decorator_func(getattr(cls, method_name)))
             self.log_debug(f"Class: {cls.__name__} has been decorated.")
 
     def execute_if(self,
@@ -702,12 +698,10 @@ class Decko:
     def trace(self,
               cls,
               **kw):
-        def inner(func):
-            @wraps(func)
-            def trace(*args, **kwargs):
-                return func(*args, **kwargs)
-            return trace
-        self._decorate_class_methods(inner, cls, **kw)
+        print("decorated")
+        def race(*args, **kwargs):
+            print("yee")
+        self._decorate_class_methods(race, cls, **kw)
         return cls
 
     # def stopwatch(self,

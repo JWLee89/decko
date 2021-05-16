@@ -137,14 +137,12 @@ class LoggingLevelError(ValueError):
 
 def logger_factory(logger_name: str,
                    level: int = logging.DEBUG,
-                   file_name: str = None,
-                   log_also_to_console: bool = True) -> t.Callable:
+                   file_name: str = None) -> t.Callable:
     """
     Function for writing information to a file during program execution
     :param file_name: The name of the file to store log
     :param logger_name: The name of the function being called
     :param level: The debug level
-    :param log_also_to_console: If set to true, logging will be
     performed both to the file and the console
     """
     # This is required for logging rules to apply
@@ -166,13 +164,6 @@ def logger_factory(logger_name: str,
         file_handler.setLevel(level)
         # set the new handler
         logger.addHandler(file_handler)
-
-    # Add console handler with same formatter
-    if log_also_to_console:
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        console_handler.setLevel(level)
-        logger.addHandler(console_handler)
 
     def log_msg(contents_to_log: t.Union[str, t.List],
                 log_level: int = logging.DEBUG) -> None:

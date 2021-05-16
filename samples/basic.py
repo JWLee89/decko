@@ -3,7 +3,7 @@ from src.decko import Decko
 
 if __name__ == "__main__":
 
-    dk = Decko(__name__, debug=True)
+    dk = Decko(__name__, debug=True, log_path="test.log")
 
     # def print_list_size(size, **kwargs):
     #     print(f"Size of list is: {size}")
@@ -35,12 +35,15 @@ if __name__ == "__main__":
     #     return list(range(n))
     #
     # dk.print_profile()
+
+    def callback(*args):
+        print(f"called: {args}")
+
     @dk.trace
     class Test:
         def __init__(self, a):
             self.a = a
 
-        @dk.pure()
         def method(self):
             # self.a = 2
             return self.a
