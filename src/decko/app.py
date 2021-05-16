@@ -421,7 +421,7 @@ class Decko:
         :return:
         """
         # Register the function and add appropriate metadata
-        self.add_decorator_rule(decorator_func, func, **kw)
+        self._add_function_decorator_rule(decorator_func, func, **kw)
 
         if self.debug:
             func_name = util.get_unique_func_name(func)
@@ -434,21 +434,6 @@ class Decko:
             return wrapped
 
         return func
-
-    def _decorate_class_methods(self,
-                                decorator_func: t.Callable,
-                                cls: t.Type[t.Any],
-                                **kw):
-        """
-        Function for decorating class methods. For some cases
-        such as
-        :param decorator_func: The function to apply to each method
-        :param cls: The class where decorator was applied
-        :param kw: Any additional keyword arguments passed to decorator
-        :return:
-        """
-        # Register the class
-        self.add_decorator_rule(decorator_func, cls, **kw)
 
     def execute_if(self,
                    predicate: t.Callable) -> t.Callable:
@@ -538,7 +523,7 @@ class Decko:
                 setter: t.Callable = None) -> t.Any:
         """
         Observe class instance variables and perform various actions when a class
-        member variable is accessed or when a variable is overwritte with
+        member variable is accessed or when a variable is overwritten with
         the "equals" operator.
 
         Note: This does not detect when items are being added to a t.List.
@@ -705,9 +690,17 @@ class Decko:
               cls,
               **kw):
         print("decorated")
-        def race(*args, **kwargs):
-            print("yee")
-        self._decorate_class_methods(race, cls, **kw)
+
+        def wrapper(func):
+
+            print("wrapper called")
+
+            @wraps(func)
+            def race(*args, **kwargs):
+                print("yee")
+                return func(*args, **kwargs)
+            return race
+        self.add_decorator_rule(wrapper, cls, **kw)
         return cls
 
     # def stopwatch(self,
