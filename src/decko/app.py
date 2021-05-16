@@ -41,6 +41,7 @@ TODO: Add a utility function for creating
 """
 import cProfile
 import copy
+import inspect
 import logging
 import os
 import pstats
@@ -187,7 +188,7 @@ class Decko:
         def wrapper(func: t.Union[t.Type, t.Callable]):
             # Decorate with common properties such as debug log messages
             # And registration
-            func: t.Callable = self._decorate(self.pure, func, **kw)
+            func: t.Callable = self._decorate_func(self.pure, func, **kw)
             func_name: str = util.get_unique_func_name(func)
             properties: t.Dict = self.functions[func_name][API_KEYS.PROPS]
             event_cb = properties[API_KEYS.CALLBACK]
@@ -211,8 +212,16 @@ class Decko:
                 output = func(*args, **kwargs)
                 # check inputs
                 for key, value in input_data.items():
+                    # If we are comparing objects
+                    # Assumes that people name the first object self
+                    if key == 'self':
+                        for k in value.__dict__.keys():
+                            value = getattr(value, k)
+                            original_value = getattr(original_input['self'], k)
+                            if value != original_value:
+                                event_cb(k, original_value, value)
                     # If value has been modified, fire event!
-                    if value != original_input[key]:
+                    elif value != original_input[key]:
                         before = original_input[key]
                         after = input_data[key]
                         event_cb(key, before, after)
@@ -247,7 +256,7 @@ class Decko:
             if callable(member_variable) and not member_key.startswith(filter_prefixes):
                 self.log_debug(f"Decorating: {member_key}")
                 # Get the class method and decorate
-                decorated_function = self._decorate(decorator_func, member_variable)
+                decorated_function = self._decorate_func(decorator_func, member_variable)
                 setattr(cls, member_key, decorated_function)
 
     def _add_function_decorator_rule(self,
@@ -376,9 +385,9 @@ class Decko:
         self.log(msg, logging.ERROR)
         raise error_type(msg)
 
-    def _decorate(self,
-                  decorator_func: t.Callable,
-                  func: t.Callable, **kw) -> t.Callable:
+    def _decorate_func(self,
+                       decorator_func: t.Callable,
+                       func: t.Callable, **kw) -> t.Callable:
         """
         Common function for decorating functions such as registration
         And adding debug messages if decko is being run on debug mode.
@@ -415,6 +424,29 @@ class Decko:
             return wrapped
 
         return func
+
+    def _decorate_class_methods(self,
+                                decorator_func: t.Callable,
+                                cls: t.Type[t.Any],
+                                **kw):
+        """
+        Function for decorating class methods. For some cases
+        such as
+        :param decorator_func: The function to apply to each method
+        :param cls: The class where decorator was applied
+        :param kw: Any additional keyword arguments passed to decorator
+        :return:
+        """
+        # Register the class
+        self.add_decorator_rule(decorator_func, cls, **kw)
+
+        if self.debug:
+            # method_name_list: t.List[t.AnyStr] = [method for method in dir(cls)
+            #                                       if callable(getattr(cls, method))
+            #                                       and not method.startswith("__")]
+            # for method_name in method_name_list:
+            #     setattr(cls, method_name, decorator_func(getattr(cls, method_name)))
+            self.log_debug(f"Class: {cls.__name__} has been decorated.")
 
     def execute_if(self,
                    predicate: t.Callable) -> t.Callable:
@@ -552,7 +584,7 @@ class Decko:
 
         return wrapper
 
-    def freeze(self, cls):
+    def freeze(self, cls: t.Type[t.Any]) -> t.Type[t.Any]:
         """
         Completely freeze a class.
         A frozen class will raise an error if t.Any of its properties a
@@ -655,7 +687,7 @@ class Decko:
         def wrapper(fn: t.Callable) -> t.Callable:
 
             # Add basic decoration
-            fn: t.Callable = self._decorate(self.run_before, fn)
+            fn: t.Callable = self._decorate_func(self.run_before, fn)
 
             @wraps(fn)
             def inner(*args, **kwargs):
@@ -666,6 +698,17 @@ class Decko:
             return inner
 
         return wrapper
+
+    def trace(self,
+              cls,
+              **kw):
+        def inner(func):
+            @wraps(func)
+            def trace(*args, **kwargs):
+                return func(*args, **kwargs)
+            return trace
+        self._decorate_class_methods(inner, cls, **kw)
+        return cls
 
     # def stopwatch(self,
     #               passed_func: t.Callable = None,
