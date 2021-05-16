@@ -2,9 +2,7 @@ import os
 import pytest
 from typing import Iterable, List
 
-from src.decko.helper.util import format_list_str
 from src.decko.app import Decko
-from definitions import ROOT_DIR, TESTS_TO_EXCLUDE
 
 dk = Decko(__name__)
 

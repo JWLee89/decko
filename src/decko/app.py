@@ -188,7 +188,7 @@ class Decko:
         def wrapper(func: Union[Type, Callable]):
             # Decorate with common properties such as debug log messages
             # And registration
-            func = self._decorate(self.pure, func, **kw)
+            func: Callable = self._decorate(self.pure, func, **kw)
 
             func_name: str = util.get_unique_func_name(func)
             properties: Dict = self.functions[func_name][API_KEYS.PROPS]
@@ -379,25 +379,47 @@ class Decko:
         self.log(msg, logging.ERROR)
         raise error_type(msg)
 
-    def _decorate(self, decorator_func: Callable, func: Callable, **kw) -> Callable:
+    def _decorate(self,
+                  decorator_func: Callable,
+                  func: Callable, **kw) -> Callable:
         """
         Common function for decorating functions such as registration
-        :param func:
+        And adding debug messages if decko is being run on debug mode.
+        Note: For performance, in order to run debug, the function must be
+        decorated with debug set to true. Otherwise, the function will not log
+        any messages.
+
+        Decoration is as follows:
+
+        --------------------------
+        @dk.pure()
+        def i_am_decorated(a, b):
+            ...
+
+        decorator_func: dk.pure
+        func = i_am_decorated
+        --------------------------
+
+        :param decorator_func: The decorator function that will be applied
+        :param func: The function to decorate.
         :return:
         """
-        # Decorate the function
+        # Register the function and add appropriate metadata
         self.add_decorator_rule(decorator_func, func, **kw)
+
         if self.debug:
             func_name = util.get_unique_func_name(func)
 
             @wraps(func)
             def wrapped(*args, **kwargs):
-                self.log_debug(f"Function {func_name} called with args: {args}, {kwargs}.")
-                return func(*args, **kwargs)
+                self.log_debug(f"Function {func_name} called with args: {args}, kwargs: {kwargs}.")
+                output = func(*args, **kwargs)
+                return output
         else:
             @wraps(func)
             def wrapped(*args, **kwargs):
-                return func(*args, **kwargs)
+                output = func(*args, **kwargs)
+                return output
 
         return wrapped
 
