@@ -63,7 +63,7 @@ if __name__ == "__main__":
               f"Before: {before} \n After: {after}")
         print("-" * 200)
 
-    @dk.pure(catch_input_modification)
+    @dk.pure(callback=catch_input_modification)
     def create_list(n,
                     item=[]):
         item.append(n)
@@ -97,7 +97,7 @@ def i_run_before(a, b, c, item):
 
 @dk.run_before(i_run_before)    # This should not be allowed since it is a duplicate
 @dk.run_before(i_run_before)  
-@dk.pure(log_impurity)
+@dk.pure(callback=log_impurity)
 @dk.profile
 def expensive_func(a,
                    b,
