@@ -195,17 +195,19 @@ class Decko:
                     f"after: {after}"
                 )
 
-        def wrapper(function: Union[Type, Callable]):
+        def wrapper(func: Union[Type, Callable]):
 
-            @wraps(function)
+            self._decorate(self.pure, func)
+
+            @wraps(func)
             def inner(*args, **kwargs):
                 # Creating deep copies can be very inefficient, especially
                 # in our case where we have extremely large tensors
                 # that take up a lot of space ...
-                input_data = util.get_shallow_default_arg_dict(function, args)
+                input_data = util.get_shallow_default_arg_dict(func, args)
                 original_input = copy.deepcopy(input_data)
                 # Get output of function
-                output = function(*args, **kwargs)
+                output = func(*args, **kwargs)
                 # check inputs
                 for key, value in input_data.items():
                     # If value has been modified, fire event!
@@ -216,11 +218,9 @@ class Decko:
 
                 return output
 
-            self._decorate(self.pure, inner)
-
             # TODO: Abstract this logic
-            if is_class_instance(function):
-                return function
+            if is_class_instance(func):
+                return func
 
             return inner
 
@@ -237,6 +237,7 @@ class Decko:
         :return:
         """
         properties: Dict = util.create_properties(Decko.CLASS_PROPS, **kwargs)
+        print(properties)
         # Filter all methods starting with prefix. If Filter is None or '',
         # will grab all methods
         filter_prefixes = properties['prefix_filter']
