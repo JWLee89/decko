@@ -575,8 +575,8 @@ class Decko:
         :rtype:
         """
 
-        def freeze(self, name, value):
-            msg = f"Class {type(self)} is frozen. " \
+        def freeze(slf, name, value):
+            msg = f"Class {type(slf)} is frozen. " \
                   f"Attempted to set attribute '{name}' to value: '{value}'"
             raise ImmutableError(msg)
 
