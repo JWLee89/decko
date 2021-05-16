@@ -186,7 +186,8 @@ class Decko:
         Will handle callback if mutation is detected.
         """
         def wrapper(func: Union[Type, Callable]):
-            # Decorate with common properties
+            # Decorate with common properties such as debug log messages
+            # And registration
             func = self._decorate(self.pure, func, **kw)
 
             func_name: str = util.get_unique_func_name(func)
