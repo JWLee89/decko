@@ -2,9 +2,9 @@ import typing as t
 import inspect
 
 
-def raise_error_if_not_callable(should_be_callable: t.t.Callable):
+def raise_error_if_not_callable(should_be_callable: t.Callable):
     if inspect.isclass(should_be_callable) \
-            or not isinstance(should_be_callable, t.t.Callable):
+            or not isinstance(should_be_callable, t.Callable):
         raise TypeError(f"Invalid type: {type(should_be_callable)}. "
                         "Please pass in a function. ")
 

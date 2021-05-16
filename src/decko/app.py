@@ -80,11 +80,11 @@ class API_KEYS:
     CALLBACK = 'callback'
 
 
-class CustomFunction(t.Dict):
+class CustomFunction(dict):
     """dot.notation access to dictionary attributes"""
-    __getattr__ = t.Dict.get
-    __setattr__ = t.Dict.__setitem__
-    __delattr__ = t.Dict.__delitem__
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
 
 
 def _check_if_class(cls):
