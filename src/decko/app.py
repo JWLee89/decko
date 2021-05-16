@@ -241,7 +241,7 @@ class Decko:
         """
         If the decorated object is a class, we will add different rules.
         For example, these rules include which types of functions to decorate
-        TODO
+        TODO: Find better way of creating debug messages
         :param cls: The class we are decorating
         :param kwargs:
         :return:
