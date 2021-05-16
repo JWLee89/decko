@@ -260,7 +260,7 @@ class Decko:
             if callable(member_variable) and not member_key.startswith(filter_prefixes):
                 if self.debug:
                     msg.append(f"Decorating: {get_unique_func_name(member_variable)}() "
-                               f"with function: {get_unique_func_name(decorator_func)}")
+                               f"with function: {get_unique_func_name(decorator_func)}()")
                 # Get the class method and decorate
                 decorated_function = self._decorate_func(decorator_func, member_variable)
                 setattr(cls, member_key, decorated_function)
@@ -430,7 +430,6 @@ class Decko:
             def wrapped(*args, **kwargs):
                 self.log_debug(f"Function {func_name} called with args: {args}, kwargs: {kwargs}.")
                 return func(*args, **kwargs)
-
             return wrapped
 
         return func
