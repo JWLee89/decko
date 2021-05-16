@@ -249,16 +249,25 @@ class Decko:
         properties: t.Dict = util.create_properties(Decko.CLASS_PROPS, **kwargs)
         # Filter all methods starting with prefix. If Filter is None or '',
         # will grab all methods
+        dashes = '-' * 100
+        msg = []
+        if self.debug:
+            msg.append(f"\n{dashes}\nDecorating class <{cls.__name__}> ...")
         filter_prefixes = properties['prefix_filter']
         for member_key in dir(cls):
             member_variable = getattr(cls, member_key)
             # We want to filter out certain methods such as dunder methods
             if callable(member_variable) and not member_key.startswith(filter_prefixes):
-                self.log_debug(f"Decorating: {get_unique_func_name(member_variable)}() "
+                if self.debug:
+                    msg.append(f"Decorating: {get_unique_func_name(member_variable)}() "
                                f"with function: {get_unique_func_name(decorator_func)}")
                 # Get the class method and decorate
                 decorated_function = self._decorate_func(decorator_func, member_variable)
                 setattr(cls, member_key, decorated_function)
+
+        if self.debug:
+            msg.append(dashes)
+        self.log_debug('\n'.join(msg))
 
     def _add_function_decorator_rule(self,
                                      decorator_func: t.Callable,
@@ -373,7 +382,7 @@ class Decko:
         in the logging module
         """
         if self.debug:
-            self.log(msg, logging_type)
+            self.log(' ' + msg, logging_type)
 
     def handle_error(self,
                      msg: str,
@@ -440,9 +449,6 @@ class Decko:
         """
         # Register the class
         self.add_decorator_rule(decorator_func, cls, **kw)
-
-        if self.debug:
-            self.log_debug(f"Class: {cls.__name__} has been decorated.")
 
     def execute_if(self,
                    predicate: t.Callable) -> t.Callable:
