@@ -5,12 +5,12 @@ if __name__ == "__main__":
 
 
     # @dk.freeze
-    @dk.trace
     @dk.stopwatch
     class DummyClass:
         def __init__(self, a):
             self.a = a
 
+        @dk.trace(None, callback=print)
         def get_a(self):
             for i in range(10000):
                 lst = list(range(1000))

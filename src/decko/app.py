@@ -686,17 +686,26 @@ class Decko:
         return wrapper
 
     def trace(self,
-              cls,
+              obj,
               **kw):
         def wrapper(func):
             func_name: str = get_unique_func_name(func)
+            if API_KEYS.CALLBACK in kw and callable(kw[API_KEYS.CALLBACK]):
+                callback = kw[API_KEYS.CALLBACK]
+            else:
+                callback = self.log_debug
 
             @wraps(func)
             def race(*args, **kwargs):
-                self.log_debug(f"Function: {func_name}() called with args: {args}, kwargs: {kwargs}")
+                callback(f"Function: {func_name}() called with args: {args}, kwargs: {kwargs}")
                 return func(*args, **kwargs)
             return race
-        return self.add_decorator_rule(self.trace, wrapper, cls, **kw)
+        self.add_decorator_rule(self.trace, wrapper, obj, **kw)
+        if callable(obj):
+            return wrapper(obj)
+        if inspect.isclass(obj):
+            return obj
+        return wrapper
 
     def stopwatch(self,
                   cls,
