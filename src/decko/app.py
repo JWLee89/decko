@@ -397,7 +397,8 @@ class Decko:
 
     def _decorate_func(self,
                        decorator_func: t.Callable,
-                       func: t.Callable, **kw) -> t.Callable:
+                       func: t.Callable,
+                       **kw) -> t.Callable:
         """
         Common function for decorating functions such as registration
         And adding debug messages if decko is being run on debug mode.
@@ -425,14 +426,13 @@ class Decko:
 
         if self.debug:
             func_name = util.get_unique_func_name(func)
+            # print("decorating: ", func_name)
+            # @wraps(func)
+            # def wrapped(*args, **kwargs):
+            #     self.log_debug(f"Function {func_name} called with args: {args}, kwargs: {kwargs}.")
+            #     return decorator_func(func(*args, **kwargs))
 
-            @wraps(func)
-            def wrapped(*args, **kwargs):
-                self.log_debug(f"Function {func_name} called with args: {args}, kwargs: {kwargs}.")
-                return func(*args, **kwargs)
-            return wrapped
-
-        return func
+        return decorator_func(func)
 
     def execute_if(self,
                    predicate: t.Callable) -> t.Callable:
@@ -688,16 +688,25 @@ class Decko:
     def trace(self,
               cls,
               **kw):
-        print("decorated")
-
         def wrapper(func):
-
-            print("wrapper called")
-
             @wraps(func)
             def race(*args, **kwargs):
-                print("yee")
                 return func(*args, **kwargs)
+            return race
+        self.add_decorator_rule(wrapper, cls, **kw)
+        return cls
+
+    def stopwatch(self,
+                  cls,
+                  **kw):
+        def wrapper(func):
+            @wraps(func)
+            def race(*args, **kwargs):
+                start_time = process_time()
+                output = func(*args, **kwargs)
+                end_time = process_time()
+                print(f"Took {(end_time - start_time) * 1000} ms")
+                return output
             return race
         self.add_decorator_rule(wrapper, cls, **kw)
         return cls
@@ -708,13 +717,13 @@ class Decko:
     #               path: str = None,
     #               log_interval: int = 1,
     #               truncate_from: int = 200):
-    # 
+    #
     #     def decorator(func):
     #         self._decorate(self.stopwatch, func)
-    # 
+    #
     #         # # Initialize input
     #         # self.functions[func_name][API_KEYS.STATS_INPUT] = 0
-    # 
+    #
     #         @wraps(func)
     #         def wrapper(*args, **kwargs):
     #             time_start = time.time()
@@ -725,7 +734,7 @@ class Decko:
     #             # # Compute statistics
     #             # self.functions[func_name][API_KEYS.PROPS].update(time_elapsed)
     #             return output
-    # 
+    #
     #         return wrapper
     #         # @wraps(func)
     #         # def wrapper(*args, **kwargs):
@@ -746,10 +755,10 @@ class Decko:
     #         #     # Register the decorated function
     #         #     self._register_object(original_func, original_func.__name__, self.functions, self.time, TimeProperty)
     #         #     return wrapper
-    # 
+    #
     #     if callable(passed_func):
     #         return decorator(passed_func)
-    # 
+    #
     #     return decorator
 
     def _register_class(self,

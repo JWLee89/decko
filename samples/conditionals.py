@@ -19,3 +19,5 @@ if __name__ == "__main__":
         print(f"Hello, i am a {troll}")
 
     do_something(100)
+    do_something("100")
+
