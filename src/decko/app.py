@@ -290,7 +290,7 @@ class Decko:
                            decorator_func: t.Callable,
                            wrap_with: t.Callable,
                            obj_to_decorate: t.Union[t.Callable, t.Type],
-                           **kwargs) -> None:
+                           **kwargs):
         """
         Add common rules to registered decorator which includes
         the following options:
@@ -312,11 +312,12 @@ class Decko:
         :return:
         """
         if is_class_instance(obj_to_decorate):
-            self._add_class_decorator_rule(decorator_func, wrap_with,
-                                           obj_to_decorate, **kwargs)
+            return self._add_class_decorator_rule(decorator_func, wrap_with,
+                                                  obj_to_decorate, **kwargs)
         else:
             self._add_function_decorator_rule(decorator_func, wrap_with,
                                               obj_to_decorate, **kwargs)
+            return wrap_with
 
     @staticmethod
     def get_new_configs(debug: bool,
@@ -374,7 +375,7 @@ class Decko:
         except TypeError as ex:
             self.log_debug(f"||||||| You probably did not profile t.Any functions or "
                            f"overwrote the function that was intended to be profiled. "
-                           f"Check your code |||||||\nStacktrace: {ex}", logging.ERROR)
+                           f"Check your code.\nStacktrace: {ex}", logging.ERROR)
 
     def dump_profile(self, file_path: str, sort_by: str = 'ncalls'):
         stats = pstats.Stats(self._profiler).strip_dirs().sort_stats(sort_by)
@@ -470,6 +471,7 @@ class Decko:
                 fire_event = predicate(*args, **kwargs)
                 if fire_event:
                     return func(*args, **kwargs)
+
             self.add_decorator_rule(self.execute_if, wrapped, func)
 
             return wrapped
@@ -680,18 +682,21 @@ class Decko:
 
             fn: t.Callable = self._decorate_func(self.run_before, inner, fn)
             return inner
+
         return wrapper
 
     def trace(self,
               cls,
               **kw):
         def wrapper(func):
+            func_name: str = get_unique_func_name(func)
+
             @wraps(func)
             def race(*args, **kwargs):
+                self.log_debug(f"Function: {func_name}() called with args: {args}, kwargs: {kwargs}")
                 return func(*args, **kwargs)
             return race
-        self.add_decorator_rule(self.trace, wrapper, cls, **kw)
-        return cls
+        return self.add_decorator_rule(self.trace, wrapper, cls, **kw)
 
     def stopwatch(self,
                   cls,
@@ -704,7 +709,9 @@ class Decko:
                 end_time = process_time()
                 print(f"Took {(end_time - start_time) * 1000} ms")
                 return output
+
             return race
+
         self.add_decorator_rule(self.stopwatch, wrapper, cls, **kw)
         return cls
 

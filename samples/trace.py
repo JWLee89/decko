@@ -5,13 +5,12 @@ if __name__ == "__main__":
 
 
     # @dk.freeze
-    @dk.stopwatch
     @dk.trace
+    @dk.stopwatch
     class DummyClass:
         def __init__(self, a):
             self.a = a
 
-        @dk.profile
         def get_a(self):
             for i in range(10000):
                 lst = list(range(1000))
@@ -27,6 +26,5 @@ if __name__ == "__main__":
         test.a = 10
     except:
         print("Yee ... cannot set attributes of frozen class")
-
 
     print(dk.functions)
