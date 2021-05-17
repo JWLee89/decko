@@ -1,10 +1,10 @@
 from src.decko import Decko
 
 if __name__ == "__main__":
-    dk = Decko(__name__)
+    dk = Decko(__name__, debug=True)
 
 
-    @dk.freeze
+    # @dk.freeze
     @dk.stopwatch
     @dk.trace
     class DummyClass:
@@ -27,3 +27,6 @@ if __name__ == "__main__":
         test.a = 10
     except:
         print("Yee ... cannot set attributes of frozen class")
+
+
+    print(dk.functions)

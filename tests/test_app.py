@@ -189,6 +189,9 @@ def test_pure():
         return c
 
     item = []
+
+    # Should raise ValueError since 'item'
+    # is being modified (values are added)
     with pytest.raises(ValueError) as error:
         yee = input_output_what_how(10, 20, item)
 
