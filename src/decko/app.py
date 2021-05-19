@@ -546,10 +546,10 @@ class Decko:
 
         return wrapper
 
-    def observe_data(self,
-                     filter_predicate: t.Callable = None,
-                     getter: t.Callable = None,
-                     setter: t.Callable = None) -> t.Any:
+    def instance_data(self,
+                      filter_predicate: t.Callable = None,
+                      getter: t.Callable = None,
+                      setter: t.Callable = None) -> t.Any:
         """
         Observe class instance variables and perform various actions when a class
         member variable is accessed or when a variable is overwritten with
@@ -565,7 +565,6 @@ class Decko:
         :return: The wrapped class with observable properties
         """
 
-        # By default, apply observe() to all variables
         if filter_predicate is None:
             filter_predicate = lambda x, y: True
 
@@ -639,7 +638,7 @@ class Decko:
             raise ValueError(f"Cannot set immutable property of type {type(cls_instance)} "
                              f"with value: {new_val}")
 
-        return self.observe_data(filter_predicate, setter=raise_value_error)(cls)
+        return self.instance_data(filter_predicate, setter=raise_value_error)(cls)
 
     def profile(self, func: t.Callable) -> t.Callable:
         """
