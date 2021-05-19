@@ -11,6 +11,10 @@ mission-critical fields where performance is key.
 If there is enough demand, I will create a separate branch which optimizes the runtime performance
 of all decko functions.
 
+## Updates / News 
+
+Self-contained decorators that can be used without creating a `Decko` instance is under development.
+
 ## Install
 
 Install and update using [pip](https://pypi.org/project/pip/):
