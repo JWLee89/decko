@@ -1,6 +1,5 @@
 import pytest
 from src.decko.function_decorators import stopwatch
-from .common.classes import SampleSetterClass
 
 
 @pytest.mark.parametrize("iter_count", [

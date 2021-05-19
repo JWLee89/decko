@@ -479,7 +479,7 @@ class Decko:
         # The decorated function will fire if the predicate function
         # outputs a truthy value.
 
-        @yee.fire_if(lambda x, arr: len(arr) > 5)
+        @execute_if(lambda x, arr: len(arr) > 5)
         def do_something(arr):
             return sum(arr)
 
