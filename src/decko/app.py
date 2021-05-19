@@ -31,7 +31,10 @@ TODO: Write out specifications for each of the functions
  2.2. Accepts two inputs
     - class_to_decorate: The class to decorate
         - Inspect properties:
-    -
+
+
+TODO: Find a way to combine statistics of all decorated functions
+-> Allow both global and contextual management of decorators
 
 TODO: Add common function for handling callbacks if it exists.
 TODO: Add a utility function for creating
@@ -93,6 +96,26 @@ def _check_if_class(cls):
                                            f"{cls} is of type: {type(cls)}")
 
 
+class Singleton(type):
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
+
+
+class DeckoState(metaclass=Singleton):
+    """
+    Manage the state of the decko application
+    """
+    def __init__(self):
+        self.functions = OrderedDict()
+
+    def __repr__(self):
+        return ", ".join([f'{function_name}: {v}' for function_name, v in self.functions.items()])
+
+
 class Decko:
     """
     Yeeeee ....
@@ -131,7 +154,8 @@ class Decko:
                  root_path: str = None,
                  inspect_mode: int = InspectMode.PUBLIC_ONLY,
                  debug: bool = False,
-                 log_path: str = None):
+                 log_path: str = None,
+                 register_globally = True):
 
         #: The name of the package or module that this object belongs
         #: to. Do not change this once it is set by the constructor.
@@ -174,7 +198,12 @@ class Decko:
 
         # Initialize cProfiler
         self._profiler = cProfile.Profile()
-        # TODO: Create parallel decorator for parallel processing
+
+        # If set to true, stats can be examined globally, even from different files.
+        self.register_globally = register_globally
+
+        # Register globally
+        self.global_state = DeckoState()
 
     def pure(self, **kw) -> t.Callable:
         """
@@ -639,20 +668,28 @@ class Decko:
         if func_name in self.functions:
             # Check if function is already decorated with same decorator
             registered_decorators: t.List = self.functions[func_name][API_KEYS.DECORATED_WITH]
+
+            # If decorated, we disallow duplicate decorator since it serves no purpose
             if decorator_func_name in registered_decorators:
                 self.handle_error(f"Found duplicate decorator with identity: {func_name}",
                                   exceptions.DuplicateDecoratorError)
+
+            # If the actual function is different, we allow
+            # Plus, we don't need to register. We just simply add to the list of decorated function
             else:
                 registered_decorators.append(decorator_func_name)
         else:
-            # Register new function
+            # Register new function Locally
             self.functions[func_name] = {
-                API_KEYS.FUNC_NAME: func_name,
                 API_KEYS.FUNCTION: func_to_decorate,
                 API_KEYS.PROPS: props,
                 API_KEYS.DECORATED_WITH: [decorator_func_name]
             }
-            # Add message if set to debug
+
+            # Add to global state
+            self.global_state.functions[func_name] = self.functions[func_name]
+
+        # Add message if set to debug
         self.log_debug(f"Decorated {func_name} with: {decorator_func_name}")
 
     def run_before(self,
@@ -699,7 +736,9 @@ class Decko:
             def race(*args, **kwargs):
                 callback(f"Function: {func_name}() called with args: {args}, kwargs: {kwargs}")
                 return func(*args, **kwargs)
+
             return race
+
         self.add_decorator_rule(self.trace, wrapper, obj, **kw)
         if callable(obj):
             return wrapper(obj)
