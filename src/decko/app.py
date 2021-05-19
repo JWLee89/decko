@@ -747,21 +747,21 @@ class Decko:
             return obj
         return wrapper
 
-    def stopwatch(self,
-                  cls,
-                  **kw):
-        def wrapper(func):
-            @wraps(func)
-            def race(*args, **kwargs):
-                start_time = process_time()
-                output = func(*args, **kwargs)
-                end_time = process_time()
-                return output
-
-            return race
-
-        self.add_decorator_rule(self.stopwatch, wrapper, cls, **kw)
-        return cls
+    # def stopwatch(self,
+    #               cls,
+    #               **kw):
+    #     def wrapper(func):
+    #         @wraps(func)
+    #         def race(*args, **kwargs):
+    #             start_time = process_time()
+    #             output = func(*args, **kwargs)
+    #             end_time = process_time()
+    #             return output
+    #
+    #         return race
+    #
+    #     self.add_decorator_rule(self.stopwatch, wrapper, cls, **kw)
+    #     return cls
 
     # def stopwatch(self,
     #               passed_func: t.Callable = None,

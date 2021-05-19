@@ -4,8 +4,8 @@ Stateless version that provides only decorated functions
 import typing as t
 from functools import wraps
 from time import process_time
-from helper.validation import raise_error_if_not_callable
-from helper.exceptions import TooSlowError
+from .helper.validation import raise_error_if_not_callable
+from .helper.exceptions import TooSlowError
 
 
 def stopwatch(callback: t = print):
@@ -94,13 +94,3 @@ def slower_than(time_ms: float, callback: t.Callable = None):
 
         return returned_func
     return inner
-
-
-if __name__ == "__main__":
-
-    @slower_than(100)
-    def list_gen(n):
-        return list(range(n))
-
-    list_gen(10000000)
-
