@@ -756,7 +756,6 @@ class Decko:
                 start_time = process_time()
                 output = func(*args, **kwargs)
                 end_time = process_time()
-                print(f"Took {(end_time - start_time) * 1000} ms")
                 return output
 
             return race
