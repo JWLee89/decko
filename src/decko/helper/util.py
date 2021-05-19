@@ -277,20 +277,41 @@ def compute_stats(computation_function):
     return inner_func
 
 
-def attach_property(cls, prop, getter = None, setter = None):
-    accessor = f"_{cls.__name__}__{prop}"
+def attach_property(cls: t.Any,
+                    prop: str,
+                    getter = None,
+                    setter = None):
+    accessor: str = f"_{cls.__name__}__{prop}"
+
+    def create_getter(func):
+
+        @wraps(func)
+        def executor(self):
+            func(self)
+            return getattr(self, accessor)
+        return executor
+
+    def create_setter(func):
+
+        @wraps(func)
+        def executor(self, value):
+            func(self, value)
+            setattr(self, accessor, value)
+
+        return executor
+
     # Create property dynamically
-    print(f"accessor: {accessor}")
+    # By default, they are the same
+
     if getter is None:
         def getter(self):
             return getattr(self, accessor)
     if setter is None:
         def setter(self, v):
-            print(f"key: {accessor}, newval: {v}")
             setattr(self, accessor, v)
 
-    test = property(getter)
-    test = test.setter(setter)
+    test = property(create_getter(getter))
+    test = test.setter(create_setter(setter))
     setattr(cls, prop, test)
 
 

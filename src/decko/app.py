@@ -92,7 +92,7 @@ class CustomFunction(dict):
 
 def _check_if_class(cls):
     if not is_class_instance(cls):
-        raise exceptions.NotClassException("Yeezy.observe() observes only classes. "
+        raise exceptions.NotClassException("Item passed must a class instance. "
                                            f"{cls} is of type: {type(cls)}")
 
 
@@ -546,10 +546,10 @@ class Decko:
 
         return wrapper
 
-    def observe(self,
-                filter_predicate: t.Callable = None,
-                getter: t.Callable = None,
-                setter: t.Callable = None) -> t.Any:
+    def observe_data(self,
+                     filter_predicate: t.Callable = None,
+                     getter: t.Callable = None,
+                     setter: t.Callable = None) -> t.Any:
         """
         Observe class instance variables and perform various actions when a class
         member variable is accessed or when a variable is overwritten with
@@ -577,6 +577,8 @@ class Decko:
             class ObservableClass(cls):
                 def __init__(self, *args, **kwargs):
                     super().__init__(*args, **kwargs)
+
+                    # The new observable properties
                     new_attrs = []
 
                     # Create new attributes
@@ -637,7 +639,7 @@ class Decko:
             raise ValueError(f"Cannot set immutable property of type {type(cls_instance)} "
                              f"with value: {new_val}")
 
-        return self.observe(filter_predicate, setter=raise_value_error)(cls)
+        return self.observe_data(filter_predicate, setter=raise_value_error)(cls)
 
     def profile(self, func: t.Callable) -> t.Callable:
         """
