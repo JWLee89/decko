@@ -1,5 +1,5 @@
 import pytest
-import src.decko.function_decorators as fd
+import src.decko.decorators as fd
 
 
 @pytest.mark.parametrize("iter_count", [

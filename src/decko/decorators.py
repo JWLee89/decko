@@ -127,4 +127,3 @@ def freeze(cls: t.Type[t.Any]) -> t.Type[t.Any]:
             setattr(Immutable, '__setattr__', do_freeze)
 
     return Immutable
-
