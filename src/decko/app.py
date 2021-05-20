@@ -610,7 +610,7 @@ class Decko:
         :rtype:
         """
 
-        def freeze(slf, name, value):
+        def do_freeze(slf, name, value):
             msg = f"Class {type(slf)} is frozen. " \
                   f"Attempted to set attribute '{name}' to value: '{value}'"
             raise ImmutableError(msg)
@@ -622,7 +622,7 @@ class Decko:
 
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
-                setattr(Immutable, '__setattr__', freeze)
+                setattr(Immutable, '__setattr__', do_freeze)
 
         return Immutable
 

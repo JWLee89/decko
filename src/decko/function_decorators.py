@@ -4,8 +4,11 @@ Stateless version that provides only decorated functions
 import typing as t
 from functools import wraps
 from time import process_time
+import inspect
+
 from .helper.validation import raise_error_if_not_callable
 from .helper.exceptions import TooSlowError
+from .immutable import ImmutableError
 
 
 def stopwatch(callback: t = print):
@@ -94,3 +97,34 @@ def slower_than(time_ms: float, callback: t.Callable = None):
 
         return returned_func
     return inner
+
+
+def freeze(cls: t.Type[t.Any]) -> t.Type[t.Any]:
+    """
+    Completely freeze a class.
+    A frozen class will raise an error if any of its properties
+    are mutated or if new classes are added
+    :param cls: A Class
+    :return:
+    :rtype:
+    """
+    if not inspect.isclass(cls):
+        raise TypeError(f"{cls} is not a class. "
+                        "freeze() decorates classes only")
+
+    def do_freeze(slf, name, value):
+        msg = f"Class {type(slf)} is frozen. " \
+              f"Attempted to set attribute '{name}' to value: '{value}'"
+        raise ImmutableError(msg)
+
+    class Immutable(cls):
+        """
+        A basic immutable class
+        """
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            setattr(Immutable, '__setattr__', do_freeze)
+
+    return Immutable
+
