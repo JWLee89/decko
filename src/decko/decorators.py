@@ -4,9 +4,16 @@ Stateless version that provides only decorated functions
 import typing as t
 from functools import wraps
 from time import process_time
-import inspect
 
-from .helper.validation import raise_error_if_not_callable
+
+from .helper.validation import (
+    raise_error_if_not_callable,
+    raise_error_if_not_class_instance,
+)
+from .helper.util import (
+    create_instance,
+    attach_property,
+)
 from .helper.exceptions import TooSlowError
 from .immutable import ImmutableError
 
@@ -108,9 +115,7 @@ def freeze(cls: t.Type[t.Any]) -> t.Type[t.Any]:
     :return:
     :rtype:
     """
-    if not inspect.isclass(cls):
-        raise TypeError(f"{cls} is not a class. "
-                        "freeze() decorates classes only")
+    raise_error_if_not_class_instance(cls)
 
     def do_freeze(slf, name, value):
         msg = f"Class {type(slf)} is frozen. " \
@@ -127,3 +132,58 @@ def freeze(cls: t.Type[t.Any]) -> t.Type[t.Any]:
             setattr(Immutable, '__setattr__', do_freeze)
 
     return Immutable
+
+
+def instance_data(filter_predicate: t.Callable = None,
+                  getter: t.Callable = None,
+                  setter: t.Callable = None) -> t.Any:
+    """
+    Observe class instance variables and perform various actions when a class
+    member variable is accessed or when a variable is overwritten with
+    the "equals" operator.
+
+    Note: This does not detect when items are being added to a t.List.
+    If there is such a use case, try extending the t.List and overriding the
+    core methods.
+
+    :param filter_predicate: The items that we want to filter
+    :param getter:
+    :param setter:
+    :return: The wrapped class with observable properties
+    """
+
+    if filter_predicate is None:
+        filter_predicate = lambda x, y: True
+
+    def wrapper(cls: t.Any, *arguments):
+
+        raise_error_if_not_class_instance(cls)
+        inst = create_instance(cls, *arguments)
+
+        class ObservableClass(cls):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+
+                # The new observable properties
+                new_attrs = []
+
+                # Create new attributes
+                for prop, value in inst.__dict__.items():
+                    if filter_predicate(prop, value):
+                        temp = (f"_{cls.__name__}__{prop}", prop)
+                        new_attrs.append(temp)
+
+                # Update old attribute key with new prop key values
+                for new_prop, old_prop in new_attrs:
+                    setattr(self, new_prop, getattr(self, old_prop))
+                    delattr(self, old_prop)
+
+                # Create properties dynamically
+                for prop, value in inst.__dict__.items():
+                    # handle name mangling
+                    attach_property(cls, prop, getter, setter)
+
+        # Now, decorate each method with
+        return ObservableClass
+
+    return wrapper

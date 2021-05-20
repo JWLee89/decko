@@ -45,3 +45,26 @@ def test_class_freeze():
         def random_func(test):
             print(f"Test random_func: {test}")
 
+
+def test_instance_data():
+
+    def setter(self, new_val):
+        if new_val > 20:
+            raise ValueError("Value set is greater than 20 ... ")
+
+    @fd.instance_data(setter=setter)
+    class ClassSample:
+
+        class_var_data = 3
+
+        def __init__(self, a, b):
+            self.a = a
+            self.b = b
+
+        def __repr__(self):
+            return f"a:{self.a}, b: {self.b}"
+
+    class_sample = ClassSample(1, 2)
+
+    with pytest.raises(ValueError) as err:
+        class_sample.a = 22
