@@ -21,7 +21,7 @@ from .immutable import ImmutableError
 def stopwatch(callback: t = print):
     raise_error_if_not_callable(callback)
 
-    def inner(func: t.Callable) -> t.Callable:
+    def decorator(func: t.Callable) -> t.Callable:
 
         @wraps(func)
         def returned_func(*args, **kwargs):
@@ -32,7 +32,7 @@ def stopwatch(callback: t = print):
             return output
         return returned_func
 
-    return inner
+    return decorator
 
 
 def execute_if(predicate: t.Callable) -> t.Callable:
@@ -65,14 +65,14 @@ def execute_if(predicate: t.Callable) -> t.Callable:
     :return: The wrapped function
     """
 
-    def inner(func: t.Callable) -> t.Callable:
+    def decorator(func: t.Callable) -> t.Callable:
         @wraps(func)
         def returned_func(*args, **kwargs):
             fire_event = predicate(*args, **kwargs)
             if fire_event:
                 return func(*args, **kwargs)
         return returned_func
-    return inner
+    return decorator
 
 
 def slower_than(time_ms: float, callback: t.Callable = None):
@@ -91,7 +91,7 @@ def slower_than(time_ms: float, callback: t.Callable = None):
 
     raise_error_if_not_callable(callback)
 
-    def inner(func):
+    def decorator(func):
 
         @wraps(func)
         def returned_func(*args, **kwargs):
@@ -103,7 +103,7 @@ def slower_than(time_ms: float, callback: t.Callable = None):
             return output
 
         return returned_func
-    return inner
+    return decorator
 
 
 def freeze(cls: t.Type[t.Any]) -> t.Type[t.Any]:
@@ -196,7 +196,7 @@ def filter_by_output(predicate: t.Callable) -> t.Callable:
     :param predicate: The predicate function. If output is True,
     return the actual output.
     """
-    def inner(func: t.Callable) -> t.Callable:
+    def decorator(func: t.Callable) -> t.Callable:
 
         @wraps(func)
         def returned_func(*args, **kwargs):
@@ -205,7 +205,7 @@ def filter_by_output(predicate: t.Callable) -> t.Callable:
                 return output
 
         return returned_func
-    return inner
+    return decorator
 
 
 def raise_error_if(condition: t.Callable) -> t.Callable:
@@ -214,7 +214,7 @@ def raise_error_if(condition: t.Callable) -> t.Callable:
     :param condition: A function that returns true when
     """
 
-    def inner(func: t.Callable) -> t.Callable:
+    def decorator(func: t.Callable) -> t.Callable:
 
         raise_error_if_not_callable(func)
 
@@ -228,4 +228,32 @@ def raise_error_if(condition: t.Callable) -> t.Callable:
                                    f"Wrapped function: '{func.__name__}()' "
                                    f"yielded output value {output}")
         return returned_func
-    return inner
+    return decorator
+
+
+def truncate(length: int):
+    """
+    Truncate a slice-able object
+    :param length:
+    :return:
+    """
+
+    def decorator(func: t.Callable) -> t.Callable:
+
+        raise_error_if_not_callable(func)
+
+        @wraps(func)
+        def decorated_func(*args, **kwargs):
+            output: t.Union[str, t.List, t.Tuple] = func(*args, **kwargs)
+            try:
+                output_len = len(output)
+            except:
+                raise TypeError(f"Cannot find len() of output: {output}")
+            try:
+                if output_len > length:
+                    return output[:length]
+            except:
+                raise TypeError(f"Cannt slice object: {output}")
+
+        return decorated_func
+    return decorator

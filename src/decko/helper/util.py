@@ -266,17 +266,6 @@ class TraceDecorator:
         return function_input_str
 
 
-def compute_stats(computation_function):
-    def inner_func(fn):
-        @wraps(fn)
-        def wrapper(*args, **kwargs):
-            output = fn(*args, **kwargs)
-            computation_function(output)
-            return output
-        return wrapper
-    return inner_func
-
-
 def attach_property(cls: t.Any,
                     prop: str,
                     getter = None,
