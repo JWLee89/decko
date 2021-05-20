@@ -187,3 +187,22 @@ def instance_data(filter_predicate: t.Callable = None,
         return ObservableClass
 
     return wrapper
+
+
+def filter_by_output(predicate: t.Callable) -> t.Callable:
+    """
+    Return the value if it passes a predicate function.
+    Else, return None.
+    :param predicate: The predicate function. If output is True,
+    return the actual output.
+    """
+    def inner(func: t.Callable) -> t.Callable:
+
+        @wraps(func)
+        def returned_func(*args, **kwargs):
+            output = func(*args, **kwargs)
+            if predicate(output):
+                return output
+
+        return returned_func
+    return inner

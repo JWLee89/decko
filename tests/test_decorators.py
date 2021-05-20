@@ -68,3 +68,18 @@ def test_instance_data():
 
     with pytest.raises(ValueError) as err:
         class_sample.a = 22
+
+
+def test_filter_by_output():
+
+    @fd.filter_by_output(lambda x : x > 2)
+    def get_number(x):
+        return x
+
+    output = []
+    iter_count = 5
+    for i in range(iter_count):
+        output.append(get_number(i))
+
+    assert output == [None, None, None, 3, 4], \
+        "Hmmm ... weird"
