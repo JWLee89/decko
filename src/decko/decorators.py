@@ -206,3 +206,26 @@ def filter_by_output(predicate: t.Callable) -> t.Callable:
 
         return returned_func
     return inner
+
+
+def raise_error_if(condition: t.Callable) -> t.Callable:
+    """
+    Raise exception if a condition is met
+    :param condition: A function that returns true when
+    """
+
+    def inner(func: t.Callable) -> t.Callable:
+
+        raise_error_if_not_callable(func)
+
+        @wraps(func)
+        def returned_func(*args, **kwargs):
+            output = func(*args, **kwargs)
+            trigger_condition = condition(output)
+            if trigger_condition:
+                raise RuntimeError(f"{raise_error_if.__name__}({condition.__name__}) "
+                                   "triggered because condition was met.\n"
+                                   f"Wrapped function: '{func.__name__}()' "
+                                   f"yielded output value {output}")
+        return returned_func
+    return inner
