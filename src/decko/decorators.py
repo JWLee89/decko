@@ -245,14 +245,9 @@ def truncate(limit: int) -> t.Callable:
         def decorated_func(*args, **kwargs):
             output: t.Union[str, t.List, t.Tuple] = func(*args, **kwargs)
             try:
-                output_len = len(output)
+                return output[:limit]
             except:
-                raise TypeError(f"Cannot find len() of output: {output}")
-            try:
-                if output_len > limit:
-                    return output[:limit]
-            except:
-                raise TypeError(f"Cannt slice object: {output}")
+                raise TypeError(f"Cannot slice object: {output}")
 
         return decorated_func
     return decorator

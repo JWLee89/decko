@@ -87,7 +87,8 @@ def test_filter_by_output():
 
 @pytest.mark.parametrize("inputs", [
     (40, 30),
-    (20, 10)
+    (20, 10),
+    (15, 25)    # does not exceed size limit
 ])
 def test_truncate(inputs):
     size, size_limit = inputs
@@ -100,11 +101,16 @@ def test_truncate(inputs):
     truncated_doubled_list = double(a_list, list)
     truncated_doubled_tuple = double(a_list, tuple)
 
-    msg = "Should be truncated ... "
+    if size_limit > size:
+        target_size = size
+    else:
+        target_size = size_limit
+    msg = f"List should have {target_size} elements"
+
     # Should be the same after size limit
-    assert len(truncated_doubled_list) == size_limit \
+    assert len(truncated_doubled_list) == target_size \
         and isinstance(truncated_doubled_list, list), msg
-    assert len(truncated_doubled_tuple) == size_limit \
+    assert len(truncated_doubled_tuple) == target_size \
            and isinstance(truncated_doubled_tuple, tuple), msg
 
     # Should also work for strings
@@ -114,3 +120,11 @@ def test_truncate(inputs):
 
     repeated_str = repeat_str("badger", size)
     assert len(repeated_str) == size_limit, msg
+
+    # should not work for invalid types
+    @fd.truncate(size_limit)
+    def should_not_work(num):
+        return num * 200
+
+    with pytest.raises(TypeError) as err:
+        num = should_not_work(size)
