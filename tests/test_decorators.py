@@ -83,3 +83,34 @@ def test_filter_by_output():
 
     assert output == [None, None, None, 3, 4], \
         "Hmmm ... weird"
+
+
+@pytest.mark.parametrize("inputs", [
+    (40, 30),
+    (20, 10)
+])
+def test_truncate(inputs):
+    size, size_limit = inputs
+
+    @fd.truncate(size_limit)
+    def double(numbers, sliceable):
+        return sliceable(num * 2 for num in numbers)
+
+    a_list = list(range(size))
+    truncated_doubled_list = double(a_list, list)
+    truncated_doubled_tuple = double(a_list, tuple)
+
+    msg = "Should be truncated ... "
+    # Should be the same after size limit
+    assert len(truncated_doubled_list) == size_limit \
+        and isinstance(truncated_doubled_list, list), msg
+    assert len(truncated_doubled_tuple) == size_limit \
+           and isinstance(truncated_doubled_tuple, tuple), msg
+
+    # Should also work for strings
+    @fd.truncate(size_limit)
+    def repeat_str(msg, count):
+        return msg * count
+
+    repeated_str = repeat_str("badger", size)
+    assert len(repeated_str) == size_limit, msg

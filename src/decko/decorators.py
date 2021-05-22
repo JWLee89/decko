@@ -231,11 +231,10 @@ def raise_error_if(condition: t.Callable) -> t.Callable:
     return decorator
 
 
-def truncate(length: int):
+def truncate(limit: int) -> t.Callable:
     """
     Truncate a slice-able object
-    :param length:
-    :return:
+    :param limit: The maximum size of the target object
     """
 
     def decorator(func: t.Callable) -> t.Callable:
@@ -250,8 +249,8 @@ def truncate(length: int):
             except:
                 raise TypeError(f"Cannot find len() of output: {output}")
             try:
-                if output_len > length:
-                    return output[:length]
+                if output_len > limit:
+                    return output[:limit]
             except:
                 raise TypeError(f"Cannt slice object: {output}")
 
