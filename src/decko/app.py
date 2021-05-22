@@ -49,12 +49,15 @@ import logging
 import os
 import pstats
 import sys
+import threading
 from time import process_time
 from collections import OrderedDict
 from functools import wraps
 import typing as t
 
 # Local imports
+from wrapt import synchronized
+
 from .helper import exceptions
 from .helper import util
 from .helper.validation import (
@@ -90,10 +93,7 @@ class CustomFunction(dict):
     __delattr__ = dict.__delitem__
 
 
-def _check_if_class(cls):
-    if not is_class_instance(cls):
-        raise exceptions.NotClassException("Item passed must a class instance. "
-                                           f"{cls} is of type: {type(cls)}")
+__lock__ = threading.RLock()
 
 
 class Singleton(type):
@@ -101,8 +101,13 @@ class Singleton(type):
 
     def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+            cls._locked_call(*args, **kwargs)
         return cls._instances[cls]
+
+    @synchronized(__lock__)
+    def _locked_call(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
 
 
 class DeckoState(metaclass=Singleton):
