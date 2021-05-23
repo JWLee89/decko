@@ -40,9 +40,12 @@ def decorate(wrapped_obj: t.Any,
         # should be a function
         raise_error_if_not_callable(wrapped_obj)
 
+        is_method = is_instance_method(wrapped_obj)
+        print(f"f Is instance method: {is_method}")
+
         # Now check if it is a class method, static method or just a
         # regular function
-
+    @wraps(wrapped_obj)
     def wrapper(*args, **kwargs):
         return wrapped_obj(*args, **kwargs)
 

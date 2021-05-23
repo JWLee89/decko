@@ -1,5 +1,4 @@
 import typing as t
-import types
 import inspect
 
 
@@ -57,7 +56,6 @@ def is_classmethod(method: t.Callable):
     # If double decorated with staticmethod and classmethod
     # Bound to: <__main__.AClass object at 0x7ffb18699fd0>, True
     if not isinstance(bound_to, type):
-        dir(bound_to)
         # must be bound to a class
         return False
     name: str = method.__name__
@@ -73,6 +71,12 @@ def is_classmethod(method: t.Callable):
     return False
 
 
+def is_staticmethod(method: t.Callable):
+    bound_to: t.Type = getattr(method, '__self__', None)
+    # Static methods are unbound
+    return not bound_to and isinstance(method, staticmethod)
+
+
 def is_instance_method(func: t.Callable) -> bool:
     """
     Returns true if is an instance of method. This method is designed to
@@ -86,11 +90,5 @@ def is_instance_method(func: t.Callable) -> bool:
     # methods are callable
     if not isinstance(func, t.Callable):
         return False
-    # static methods and built-in methods do not have __func__
-    try:
-        _ = func.__func__
-        # instance methods have __func__ property
-        # and are not class_methods
-        return not is_classmethod(func)
-    except AttributeError:
-        return False
+    return not is_classmethod(func) and not is_staticmethod(func) \
+           and getattr(func, '__self__', None) is not None
