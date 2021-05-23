@@ -9,7 +9,7 @@ from time import process_time
 from .helper.validation import (
     raise_error_if_not_callable,
     raise_error_if_not_class_instance,
-    is_instance_method
+    is_instancemethod
 )
 from .helper.util import (
     create_instance,
@@ -40,7 +40,7 @@ def decorate(wrapped_obj: t.Any,
         # should be a function
         raise_error_if_not_callable(wrapped_obj)
 
-        is_method = is_instance_method(wrapped_obj)
+        is_method = is_instancemethod(wrapped_obj)
         print(f"f Is instance method: {is_method}")
 
         # Now check if it is a class method, static method or just a

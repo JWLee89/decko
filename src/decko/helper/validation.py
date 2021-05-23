@@ -77,7 +77,7 @@ def is_staticmethod(method: t.Callable):
     return not bound_to and isinstance(method, staticmethod)
 
 
-def is_instance_method(func: t.Callable) -> bool:
+def is_instancemethod(func: t.Callable) -> bool:
     """
     Returns true if is an instance of method. This method is designed to
     work in cases where no class context is provided.
@@ -90,5 +90,6 @@ def is_instance_method(func: t.Callable) -> bool:
     # methods are callable
     if not isinstance(func, t.Callable):
         return False
-    return not is_classmethod(func) and not is_staticmethod(func) \
-           and getattr(func, '__self__', None) is not None
+    print(f"Func anme: {func.__name__}")
+    print(f"Get attr: {getattr(func, '__self__', None)}")
+    return not is_classmethod(func) and not is_staticmethod(func) and getattr(func, '__self__', None) is not None
