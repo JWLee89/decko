@@ -56,8 +56,6 @@ from functools import wraps
 import typing as t
 
 # Local imports
-from wrapt import synchronized
-
 from .helper import exceptions
 from .helper import util
 from .helper.validation import (
@@ -104,7 +102,7 @@ class Singleton(type):
             cls._locked_call(*args, **kwargs)
         return cls._instances[cls]
 
-    @synchronized(__lock__)
+    # @synchronized(__lock__)
     def _locked_call(cls, *args, **kwargs):
         if cls not in cls._instances:
             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)

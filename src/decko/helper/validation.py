@@ -1,4 +1,5 @@
 import typing as t
+import types
 import inspect
 
 
@@ -38,3 +39,37 @@ def check_instance_of(value: t.Any, target_type: t.Type):
         raise TypeError(f"{value} must be of instance type {target_type}. "
                         f"{value} is of type: {type(value)}")
 
+
+def isclassmethod(method):
+    bound_to = getattr(method, '__self__', None)
+    if not isinstance(bound_to, type):
+        # must be bound to a class
+        return False
+    name = method.__name__
+    for cls in bound_to.__mro__:
+        descriptor = vars(cls).get(name)
+        if descriptor is not None:
+            return isinstance(descriptor, classmethod)
+    return False
+
+
+def is_method(func: t.Callable):
+    """
+    Returns true if is an instance of method. This method is designed to
+    work in cases where no class context is provided.
+
+    This does not include functions that are static methods or
+    class methods
+    :param func:
+    :return:
+    """
+    # methods are callable, non-static and non-class method
+    if not isinstance(func, t.Callable) or isinstance(func, types.FunctionType):
+        return False
+
+    properties = dir(func)
+    if "__qualname__" in properties and '.' in func.__qualname__:
+        return True
+    elif "__func__" not in properties:
+        return False
+    return not isclassmethod(func)

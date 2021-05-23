@@ -1,14 +1,15 @@
 """
 Stateless version that provides only decorated functions
 """
+import inspect
 import typing as t
-from functools import wraps
+from functools import wraps, partial
 from time import process_time
-
 
 from .helper.validation import (
     raise_error_if_not_callable,
     raise_error_if_not_class_instance,
+    is_method
 )
 from .helper.util import (
     create_instance,
@@ -16,6 +17,61 @@ from .helper.util import (
 )
 from .helper.exceptions import TooSlowError
 from .immutable import ImmutableError
+
+# -------------------------------------------
+# ------------ Core decorators --------------
+# -------------------------------------------
+
+
+def decorate(wrapped_obj: t.Any,
+             callback: t.Optional[t.Callable] = None) -> t.Any:
+    """
+    Decorate a function based on its type
+    :param callback: Callback function taht will be
+    :param wrapped_obj: 
+    :return: 
+    """
+    if wrapped_obj is None:
+        return partial(decorate, callback=callback)
+
+    if inspect.isclass(wrapped_obj):
+        print("Wrapped class")
+    else:
+        # should be a function
+        raise_error_if_not_callable(wrapped_obj)
+
+        # Now check if it is a class method, static method or just a
+        # regular function
+
+    def wrapper(*args, **kwargs):
+        return wrapped_obj(*args, **kwargs)
+
+    return wrapper
+
+
+def optional_args(wrapped_func: t.Callable = None,
+                  callback: t.Optional[t.Callable] = None,
+                  **kw) -> t.Callable:
+    """
+    Create function with optional arguments
+    :param wrapped_func: The function to be wrapped
+    :param callback: An
+    :return:
+    """
+    if wrapped_func is None:
+        return partial(optional_args, callback, **kw)
+
+    @wraps(wrapped_func)
+    def returned_func(*args, **kwargs):
+        output = returned_func(*args, **kwargs)
+        return output
+
+    return returned_func
+
+
+# --------------------------------------------
+# ------------ Utility decorators ------------
+# --------------------------------------------
 
 
 def stopwatch(callback: t = print):
