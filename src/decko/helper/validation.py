@@ -40,15 +40,38 @@ def check_instance_of(value: t.Any, target_type: t.Type):
                         f"{value} is of type: {type(value)}")
 
 
-def isclassmethod(method):
-    bound_to = getattr(method, '__self__', None)
+def is_class_method(method: t.Callable):
+    """
+    A python method is a wrapper around a function that also
+    holds a reference to the class it is a method of.
+    When bound, it also holds a reference to the instance.
+
+    @see https://stackoverflow.com/questions/12935241/python-call-instance-method-using-func
+    :param method:
+
+    """
+    #     print(instance.a_method)    # Bounded
+    #     print(AClass.a_method)      # Unbounded
+    bound_to: t.Type = getattr(method, '__self__', None)
+    # Bound to: <class '__main__.AClass'>, False
+    # If double decorated with staticmethod and classmethod
+    # Bound to: <__main__.AClass object at 0x7ffb18699fd0>, True
     if not isinstance(bound_to, type):
+        dir(bound_to)
         # must be bound to a class
         return False
-    name = method.__name__
+    name: str = method.__name__
+    # MRO = Method resolution order
+    # E.g. Class A: pass
+    # A.__mro__
+    # Output: (<class '__main__.AClass'>, <class 'object'>)
+    print(bound_to.__mro__)
     for cls in bound_to.__mro__:
+        print(f"Cls: {cls}, target: {name}")
+        # Get decorator
         descriptor = vars(cls).get(name)
         if descriptor is not None:
+            print(f"Descriptor: {descriptor}")
             return isinstance(descriptor, classmethod)
     return False
 
@@ -63,13 +86,13 @@ def is_method(func: t.Callable):
     :param func:
     :return:
     """
-    # methods are callable, non-static and non-class method
-    if not isinstance(func, t.Callable) or isinstance(func, types.FunctionType):
+    # methods are callable
+    if not isinstance(func, t.Callable):
         return False
-
-    properties = dir(func)
-    if "__qualname__" in properties and '.' in func.__qualname__:
-        return True
-    elif "__func__" not in properties:
+    # static methods and built-in methods do not have __func__
+    try:
+        _ = func.__func__
+        # Now we need to check if the function is a class method
+        return not is_class_method(func)
+    except AttributeError:
         return False
-    return not isclassmethod(func)
