@@ -65,13 +65,10 @@ def is_classmethod(method: t.Callable):
     # E.g. Class A: pass
     # A.__mro__
     # Output: (<class '__main__.AClass'>, <class 'object'>)
-    print(bound_to.__mro__)
     for cls in bound_to.__mro__:
-        print(f"Cls: {cls}, target: {name}")
         # Get decorator
         descriptor = vars(cls).get(name)
         if descriptor is not None:
-            print(f"Descriptor: {descriptor}")
             return isinstance(descriptor, classmethod)
     return False
 
