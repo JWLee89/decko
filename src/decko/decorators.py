@@ -9,7 +9,7 @@ from time import process_time
 from .helper.validation import (
     raise_error_if_not_callable,
     raise_error_if_not_class_instance,
-    is_method
+    is_instance_method
 )
 from .helper.util import (
     create_instance,

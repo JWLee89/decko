@@ -1,5 +1,5 @@
 from src.decko.helper.validation import (
-    is_method,
+    is_instance_method,
 )
 
 
@@ -31,12 +31,12 @@ def test_is_method():
     error_msg = "Something is off"
 
     # Should yield false
-    assert not is_method(instance.class_method), error_msg
-    assert not is_method(AClass.static_method), error_msg
-    assert not is_method(AClass.another_static), error_msg
-    assert not is_method(print), error_msg
-    assert not is_method(10), error_msg
-    assert not is_method((1, "str", 3)), error_msg
+    assert not is_instance_method(instance.class_method), error_msg
+    assert not is_instance_method(AClass.static_method), error_msg
+    assert not is_instance_method(AClass.another_static), error_msg
+    assert not is_instance_method(print), error_msg
+    assert not is_instance_method(10), error_msg
+    assert not is_instance_method((1, "str", 3)), error_msg
 
     # Only this should yield true
-    assert is_method(instance.a_method), error_msg
+    assert is_instance_method(instance.a_method), error_msg

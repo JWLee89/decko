@@ -40,7 +40,7 @@ def check_instance_of(value: t.Any, target_type: t.Type):
                         f"{value} is of type: {type(value)}")
 
 
-def is_class_method(method: t.Callable):
+def is_classmethod(method: t.Callable):
     """
     A python method is a wrapper around a function that also
     holds a reference to the class it is a method of.
@@ -76,7 +76,7 @@ def is_class_method(method: t.Callable):
     return False
 
 
-def is_method(func: t.Callable):
+def is_instance_method(func: t.Callable) -> bool:
     """
     Returns true if is an instance of method. This method is designed to
     work in cases where no class context is provided.
@@ -92,7 +92,8 @@ def is_method(func: t.Callable):
     # static methods and built-in methods do not have __func__
     try:
         _ = func.__func__
-        # Now we need to check if the function is a class method
-        return not is_class_method(func)
+        # instance methods have __func__ property
+        # and are not class_methods
+        return not is_classmethod(func)
     except AttributeError:
         return False
