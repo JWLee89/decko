@@ -5,6 +5,7 @@ import inspect
 import typing as t
 from functools import wraps, partial
 from time import process_time
+import threading
 
 from .helper.validation import (
     raise_error_if_not_callable,
@@ -17,6 +18,7 @@ from .helper.util import (
 )
 from .helper.exceptions import TooSlowError
 from .immutable import ImmutableError
+
 
 # -------------------------------------------
 # ------------ Core decorators --------------
@@ -45,6 +47,7 @@ def decorate(wrapped_obj: t.Any,
 
         # Now check if it is a class method, static method or just a
         # regular function
+
     @wraps(wrapped_obj)
     def wrapper(*args, **kwargs):
         return wrapped_obj(*args, **kwargs)
@@ -81,7 +84,6 @@ def stopwatch(callback: t = print):
     raise_error_if_not_callable(callback)
 
     def decorator(func: t.Callable) -> t.Callable:
-
         @wraps(func)
         def returned_func(*args, **kwargs):
             start_time = process_time()
@@ -89,6 +91,7 @@ def stopwatch(callback: t = print):
             time_elapsed = process_time() - start_time
             callback(time_elapsed)
             return output
+
         return returned_func
 
     return decorator
@@ -130,7 +133,9 @@ def execute_if(predicate: t.Callable) -> t.Callable:
             fire_event = predicate(*args, **kwargs)
             if fire_event:
                 return func(*args, **kwargs)
+
         return returned_func
+
     return decorator
 
 
@@ -162,6 +167,7 @@ def slower_than(time_ms: float, callback: t.Callable = None):
             return output
 
         return returned_func
+
     return decorator
 
 
@@ -191,6 +197,40 @@ def freeze(cls: t.Type[t.Any]) -> t.Type[t.Any]:
             setattr(Immutable, '__setattr__', do_freeze)
 
     return Immutable
+
+
+def singleton(thread_safe: bool = False) -> t.Type[t.Any]:
+    """
+    If decorated with singleton,
+    this class will be a singleton object
+    """
+
+    def wrapper(cls: t.Any, *arguments):
+        raise_error_if_not_class_instance(cls)
+        # inst = create_instance(cls, *arguments)
+        if thread_safe:
+            class Singleton(cls):
+                __lock = threading.Lock()
+                __instance = {}
+
+                def __call__(self, *args, **kwargs):
+                    if cls not in cls._instances:
+                        with cls.__lock:
+                            if cls not in cls._instances:
+                                cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+                    return cls._instances[cls]
+        else:
+            class Singleton(cls):
+                __instance = {}
+
+                def __call__(self, *args, **kwargs):
+                    if cls not in cls._instances:
+                        cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+                    return cls._instances[cls]
+
+        return Singleton
+
+    return wrapper
 
 
 def instance_data(filter_predicate: t.Callable = None,
@@ -255,8 +295,8 @@ def filter_by_output(predicate: t.Callable) -> t.Callable:
     :param predicate: The predicate function. If output is True,
     return the actual output.
     """
-    def decorator(func: t.Callable) -> t.Callable:
 
+    def decorator(func: t.Callable) -> t.Callable:
         @wraps(func)
         def returned_func(*args, **kwargs):
             output = func(*args, **kwargs)
@@ -264,6 +304,7 @@ def filter_by_output(predicate: t.Callable) -> t.Callable:
                 return output
 
         return returned_func
+
     return decorator
 
 
@@ -274,7 +315,6 @@ def raise_error_if(condition: t.Callable) -> t.Callable:
     """
 
     def decorator(func: t.Callable) -> t.Callable:
-
         raise_error_if_not_callable(func)
 
         @wraps(func)
@@ -286,7 +326,9 @@ def raise_error_if(condition: t.Callable) -> t.Callable:
                                    "triggered because condition was met.\n"
                                    f"Wrapped function: '{func.__name__}()' "
                                    f"yielded output value {output}")
+
         return returned_func
+
     return decorator
 
 
@@ -309,4 +351,5 @@ def truncate(limit: int) -> t.Callable:
                 raise TypeError(f"Cannot slice object: {output}")
 
         return decorated_func
+
     return decorator

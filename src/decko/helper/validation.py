@@ -90,6 +90,6 @@ def is_instancemethod(func: t.Callable) -> bool:
     # methods are callable
     if not isinstance(func, t.Callable):
         return False
-    print(f"Func anme: {func.__name__}")
-    print(f"Get attr: {getattr(func, '__self__', None)}")
-    return not is_classmethod(func) and not is_staticmethod(func) and getattr(func, '__self__', None) is not None
+
+    return not is_classmethod(func) and not is_staticmethod(func) \
+           and getattr(func, '__self__', None) is not None
