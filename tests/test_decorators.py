@@ -47,14 +47,12 @@ def test_class_freeze():
 
 
 def test_instance_data():
-
     def setter(self, new_val):
         if new_val > 20:
             raise ValueError("Value set is greater than 20 ... ")
 
     @fd.instance_data(setter=setter)
     class ClassSample:
-
         class_var_data = 3
 
         def __init__(self, a, b):
@@ -71,8 +69,7 @@ def test_instance_data():
 
 
 def test_filter_by_output():
-
-    @fd.filter_by_output(lambda x : x > 2)
+    @fd.filter_by_output(lambda x: x > 2)
     def get_number(x):
         return x
 
@@ -88,7 +85,7 @@ def test_filter_by_output():
 @pytest.mark.parametrize("inputs", [
     (40, 30),
     (20, 10),
-    (15, 25)    # does not exceed size limit
+    (15, 25)  # does not exceed size limit
 ])
 def test_truncate(inputs):
     size, size_limit = inputs
@@ -109,7 +106,7 @@ def test_truncate(inputs):
 
     # Should be the same after size limit
     assert len(truncated_doubled_list) == target_size \
-        and isinstance(truncated_doubled_list, list), msg
+           and isinstance(truncated_doubled_list, list), msg
     assert len(truncated_doubled_tuple) == target_size \
            and isinstance(truncated_doubled_tuple, tuple), msg
 
@@ -128,3 +125,17 @@ def test_truncate(inputs):
 
     with pytest.raises(TypeError) as err:
         num = should_not_work(size)
+
+
+def test_singleton():
+    @fd.singleton()
+    class ShouldBeSingleton:
+        def __init__(self):
+            self.a = 1
+
+    first_obj = ShouldBeSingleton()
+    second_obj = ShouldBeSingleton()
+    first_obj.a = 2
+
+    assert first_obj is second_obj, "singletons should point to same object"
+    assert first_obj.a == second_obj.a, "Change in first_obj should be reflected in second_obj"

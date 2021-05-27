@@ -205,31 +205,34 @@ def singleton(thread_safe: bool = False) -> t.Type[t.Any]:
     this class will be a singleton object
     """
 
-    def wrapper(cls: t.Any, *arguments):
-        raise_error_if_not_class_instance(cls)
+    def wrapper(wrapped_class: t.Any, *arguments):
+        raise_error_if_not_class_instance(wrapped_class)
         # inst = create_instance(cls, *arguments)
         if thread_safe:
-            class Singleton(cls):
+            class Singleton(type):
                 __lock = threading.Lock()
                 __instance = {}
 
                 def __call__(self, *args, **kwargs):
-                    if cls not in cls._instances:
-                        with cls.__lock:
-                            if cls not in cls._instances:
-                                cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-                    return cls._instances[cls]
+                    if self not in self.__instance:
+                        with self.__lock:
+                            if self not in self.__instance:
+                                self.__instance[self] = super(Singleton, self).__call__(*args, **kwargs)
+                    return self.__instance[self]
         else:
-            class Singleton(cls):
+            class Singleton(type):
                 __instance = {}
 
                 def __call__(self, *args, **kwargs):
-                    if cls not in cls._instances:
-                        cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-                    return cls._instances[cls]
+                    if self not in self.__instance:
+                        self.__instance[self] = super(Singleton, self).__call__(*args, **kwargs)
+                    return self.__instance[self]
 
-        return Singleton
+        class SingletonWrapped(wrapped_class, metaclass=Singleton):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
 
+        return SingletonWrapped
     return wrapper
 
 
