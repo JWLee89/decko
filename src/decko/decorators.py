@@ -25,38 +25,45 @@ from .immutable import ImmutableError
 # -------------------------------------------
 
 
-def decorate(wrapped_obj: t.Any,
-             callback: t.Optional[t.Callable] = None) -> t.Any:
+def decorator(*type_template_args) -> t.Any:
     """
-    Decorate a function based on its type
-    :param callback: Callback function taht will be
-    :param wrapped_obj: 
-    :return: 
+    Decorate a function based on its type.
+    Decorators come in two forms.
+    :return:
     """
-    if wrapped_obj is None:
-        return partial(decorate, callback=callback)
+    print(f"type temp: {type_template_args}")
 
-    if inspect.isclass(wrapped_obj):
-        print("Wrapped class")
-    else:
-        # should be a function
-        raise_error_if_not_callable(wrapped_obj)
+    def wrapper(newly_decorated_object: t.Union[t.Callable, t.Any]):
+        """
+        :param newly_decorated_object: The wrapped object from inner
 
-        is_method = is_instancemethod(wrapped_obj)
-        print(f"f Is instance method: {is_method}")
+        e.g. the inner_wrapped_object in the example below would be
+        "decorated_function"
 
-        # Now check if it is a class method, static method or just a
-        # regular function
+        @decorator
+        def decorated_function(inputs):
+            print(inputs)
 
-    @wraps(wrapped_obj)
-    def wrapper(*args, **kwargs):
-        return wrapped_obj(*args, **kwargs)
+        :param kw:
+        """
+        @wraps(newly_decorated_object)
+        def returned_obj(decorated_obj):
+            print(f"decorator_to_construct: {newly_decorated_object}, "
+                  f"inner_wrapped_object: {decorated_obj}, "
+                  f"returned object: {returned_obj}")
 
+            @wraps(decorated_obj)
+            def return_func(*args, **kwargs):
+                print(f"args: {args}, kwargs: {kwargs}")
+                return newly_decorated_object(decorated_obj, *args, **kwargs)
+
+            return return_func
+
+        return returned_obj
     return wrapper
 
 
 def optional_args(wrapped_func: t.Callable = None,
-                  callback: t.Optional[t.Callable] = None,
                   **kw) -> t.Callable:
     """
     Create function with optional arguments
@@ -65,7 +72,7 @@ def optional_args(wrapped_func: t.Callable = None,
     :return:
     """
     if wrapped_func is None:
-        return partial(optional_args, callback, **kw)
+        return partial(optional_args, **kw)
 
     @wraps(wrapped_func)
     def returned_func(*args, **kwargs):
