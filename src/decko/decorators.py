@@ -20,6 +20,7 @@ from .helper.util import (
     create_instance,
     attach_property,
 )
+
 from .helper.exceptions import TooSlowError
 from .immutable import ImmutableError
 from types import MappingProxyType
@@ -198,13 +199,27 @@ def decorator(*type_template_args, **kw) -> t.Any:
                         def decorate_me():
                             ...
                     """
+
                     print(f"Decorating function '{wrapped_object.__name__}' "
                           f"with decorator: '{new_decorator_function.__name__}'")
 
                     def return_func(*args, **kwargs):
                         return decorator_args_applied_fn(*args, **kwargs)
+                elif isinstance(wrapped_object, staticmethod):
+                    # Passed in function decorated by static method decorator
+                    print("Passed in staticmethod decorator")
+
+                    def return_func(*args, **kwargs):
+                        return decorator_args_applied_fn(*args, **kwargs)
+                elif isinstance(wrapped_object, classmethod):
+                    # Passed in function decorated by static method decorator
+                    print("Passed in classmethod decorator")
+
+                    def return_func(*args, **kwargs):
+                        return decorator_args_applied_fn(*args, **kwargs)
                 else:
-                    raise TypeError("Wrapped object must be either a class or callable object")
+                    raise TypeError("Wrapped object must be either a class or callable object. "
+                                    f"Passed in '{wrapped_object}'")
 
                 return return_func
 
