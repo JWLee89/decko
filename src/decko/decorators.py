@@ -111,14 +111,16 @@ def decorator(*type_template_args, **kw) -> t.Any:
             :param decorator_args:
             :param decorator_kwargs:
             """
-            print(f"decorator_to_construct: {newly_decorated_object}, \n "
-                  f"Decorated args: {decorator_args}, kwargs: {decorator_kwargs} \n"
-                  f"returned object: {returned_obj}")
+            print("-" * 100)
+            print(f"decorator_to_construct: {newly_decorated_object},\n"
+                  f"Decorated args: {decorator_args}, kwargs: {decorator_kwargs}\n"
+                  f"Returned object: {returned_obj}")
+            print("-" * 100)
 
             # Sanity checks
             # -----------------------------------
 
-            # decorator should have equal length of arguments as specified
+            # Decorator should have equal length of arguments as specified
             # by the template
             decorator_name = newly_decorated_object.__name__
             if len(decorator_args) != len(type_template_args):
@@ -129,15 +131,22 @@ def decorator(*type_template_args, **kw) -> t.Any:
 
             # And arguments that correspond to the specified types ...
             for decorator_arg, target_type in zip(decorator_args, type_template_args):
-                if not isinstance(decorator_arg, target_type):
+                if not type(decorator_arg) == target_type:
                     raise TypeError(f"Passed invalid type: {type(decorator_arg)}. "
                                     f"Expected type: '{target_type}'")
 
-            def return_func(*args, **kwargs):
-                print(f"args: {args}, kwargs: {kwargs}")
-                return newly_decorated_object(*args, **kwargs)
+            def another_inner_func(func: t.Callable):
+                """
+                TODO: Write comment for this code soon
+                :param func:
+                :return:
+                """
+                def return_func(*args, **kwargs):
+                    # print(f"Func: {func.__name__}, newly_decorated_object: {newly_decorated_object.__name__}")
+                    return newly_decorated_object(func, *decorator_args, *args, **decorator_kwargs, **kwargs)
+                return return_func
 
-            return return_func
+            return another_inner_func
 
         return returned_obj
 
@@ -149,7 +158,6 @@ def optional_args(wrapped_func: t.Callable = None,
     """
     Create function with optional arguments
     :param wrapped_func: The function to be wrapped
-    :param callback: An
     :return:
     """
     if wrapped_func is None:
