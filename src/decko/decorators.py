@@ -131,11 +131,13 @@ def decorator(*type_template_args, **kw) -> t.Any:
 
             # And arguments that correspond to the specified types ...
             for decorator_arg, target_type in zip(decorator_args, type_template_args):
-                valid_type = False
+                valid_type: bool = False
                 try:
                     valid_type = isinstance(decorator_arg, target_type)
                 except TypeError:
-                    valid_type = isinstance(decorator_arg, type(target_type))
+                    print("Type error occurred")
+                    valid_type = isinstance(decorator_arg, *target_type)
+
                 if not valid_type:
                     raise TypeError(f"Passed invalid type: {type(decorator_arg)}. "
                                     f"Expected type: '{target_type}'")

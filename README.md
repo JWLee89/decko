@@ -107,9 +107,9 @@ def timer(func):
 
 
 # Create decorator called "time_it" that accepts the following args
-# 1. Int value
+# 1. Int or float value
 # 2. A callable object
-@decorator(int, t.Callable)
+@decorator((int, float), t.Callable)
 def time_it(function_to_wrap,
             interval,
             callback,
@@ -134,7 +134,7 @@ def handle_printing(elapsed, iteration_count):
 
 
 # Decorate function with created decorator "time_it"
-@time_it(5, handle_printing)
+@time_it(5.0, handle_printing)
 def long_list(n, i):
     print(f"yeeee: {i}")
     return list(range(n))
