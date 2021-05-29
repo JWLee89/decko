@@ -117,18 +117,17 @@ def timer(func):
 def time_it(wrapped_function,
             interval,
             callback,
-            *args,
-            **kwargs):
+            n,
+            i):
     # Check every 5 interval
-    iteration_count = args[1]
-    if (iteration_count + 1) % interval == 0:
+    if (i + 1) % interval == 0:
         print(f"Function name: {wrapped_function.__name__}")
         start_time = time.time()
-        output = wrapped_function(*args, **kwargs)
+        output = wrapped_function(n, i)
         elapsed = time.time() - start_time
         callback(elapsed, i + 1)
     else:
-        output = wrapped_function(*args, **kwargs)
+        output = wrapped_function(n, i)
     return output
 
 
@@ -145,7 +144,9 @@ def long_list(n, i):
 
 
 @decorator()
-def freeze(cls_to_decorate, a):
+def freeze(cls_to_decorate,
+           should_not_work,
+           teemo = 30):
 
     def do_freeze(self, name, value):
         msg = f"Class {type(self)} is frozen. " \
@@ -157,24 +158,28 @@ def freeze(cls_to_decorate, a):
             super().__init__(*args, **kwargs)
             setattr(Immutable, '__setattr__', do_freeze)
 
-    return Immutable(a)
+    return Immutable(should_not_work, teemo)
 
 
 @freeze()
 class SampleClass:
-    def __init__(self, a):
+    def __init__(self, a, teemo):
         self.a = a
+
+    @time_it(1, print)
+    def method(self):
+        return self.a
 
 
 if __name__ == "__main__":
     for i in range(10):
         long_list(10000000, i)
 
-    deco_cls = SampleClass(10)
+    deco_cls = SampleClass(10, 20)
     try:
-        deco_cls.a = 20
+        deco_cls.a = 10
     except AttributeError:
-        print("cannot set deco_cls.a = 20. Class frozen.")
+        print("cannot set deco_cls.a = 10. Class frozen.")
 ```
 
 
