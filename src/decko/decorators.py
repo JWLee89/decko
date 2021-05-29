@@ -6,6 +6,7 @@ The bells and whistles such as state management
 and debugging / profiling utilities will be provided
 by each Decko instance.
 """
+import inspect
 import typing as t
 from functools import wraps, partial
 from time import process_time
@@ -135,28 +136,35 @@ def decorator(*type_template_args, **kw) -> t.Any:
                     raise TypeError(f"Passed invalid type: {type(decorator_arg)}. "
                                     f"Expected type: '{target_type}'")
 
-            def another_inner_func(wrapped_function: t.Callable):
+            def another_inner_func(wrapped_object: t.Union[t.Callable, t.Type]):
                 """
-                :param wrapped_function: The function that was wrapped.
-                In the example below, the function would be decorate_me ...
-                E.g.
-
-                @decorate
-                function time_it(args ...):
-                    ...
-
-                @time_it
-                def decorate_me():
-                    ...
-
-                :return: decorated function
+                :param wrapped_object: The function or class that was wrapped.
                 """
-                def return_func(*args, **kwargs):
-                    return newly_decorated_object(wrapped_function,
-                                                  *decorator_args,
-                                                  *args,
-                                                  **decorator_kwargs,
-                                                  **kwargs)
+                if inspect.isclass(wrapped_object):
+                    """
+                        In the example below, 'wrapped_object' would be 'decorate_me'
+                        -------------------------------------------------------------
+                        E.g.
+        
+                        @decorate
+                        function time_it(args ...):
+                            ...
+        
+                        @time_it
+                        def decorate_me():
+                            ...
+                    """
+                    return wrapped_object
+                elif isinstance(wrapped_object, t.Callable):
+                    def return_func(*args, **kwargs):
+                        return newly_decorated_object(wrapped_object,
+                                                      *decorator_args,
+                                                      *args,
+                                                      **decorator_kwargs,
+                                                      **kwargs)
+                else:
+                    raise TypeError("Wrapped object must be either a class or callable object")
+
                 return return_func
 
             return another_inner_func
