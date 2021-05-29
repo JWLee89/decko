@@ -3,13 +3,17 @@
 A decorator based utility module for Python developers. The module is designed to 
 aid developers in debugging their python applications.
 
-Decko is not dependent on any external libraries outside of the standard Python libraries.
+Decko is not dependent on any external libraries that are not included in the standard Python package.
 However, one may choose to extend with external libraries such as numba to improve its performance. 
 
 Decko is meant to a utility to help people debug and extend code. Its original use case is not in
 mission-critical fields where performance is key. 
 If there is enough demand, I will create a separate branch which optimizes the runtime performance
 of all decko functions.
+
+## Updates / News 
+
+Self-contained decorators that can be used without creating a `Decko` instance is under development.
 
 ## Install
 
@@ -74,6 +78,109 @@ if __name__ == "__main__":
     for i in range(20):
         create_list(100000)
 ```
+
+Decko also provides standalone decorators that can be applied immediately to your projects. 
+It also has built-in decorator functions to help developers quickly build debuggable custom 
+decorators. This allows developers to modify and extend code with minimal modifications to 
+the existing codebase.
+
+`decorator` creates function decorators that can be used to decorate both functions and
+classes. Demo for creating class and function decorators is shown below.
+
+```python
+from decko import decorators as dk
+import time
+import typing as t
+
+
+def timer(func):
+    """
+    An ordinary decorator.
+    Will be used to check the
+    performance of decorate function
+    """
+
+    def inner(*args, **kwargs):
+        start_time = time.time()
+        output = func(*args, **kwargs)
+        elapsed = time.time() - start_time
+        print(f"Time elapsed: {elapsed}")
+        return output
+
+    return inner
+
+
+# Create decorator called "time_it" that accepts the following args
+# 1. Int value
+# 2. A callable object or a List
+@decorator((int, float), (t.Callable, t.List))
+def time_it(wrapped_function,
+            interval,
+            callback,
+            *args,
+            **kwargs):
+    # Check every 5 interval
+    iteration_count = args[1]
+    if (iteration_count + 1) % interval == 0:
+        print(f"Function name: {wrapped_function.__name__}")
+        start_time = time.time()
+        output = wrapped_function(*args, **kwargs)
+        elapsed = time.time() - start_time
+        callback(elapsed, i + 1)
+    else:
+        output = wrapped_function(*args, **kwargs)
+    return output
+
+
+def handle_printing(elapsed, iteration_count):
+    print(f"The elapsed time is: {elapsed:.2f} seconds ... "
+          f"Iterated {iteration_count} times ...")
+
+
+# Decorate function with created decorator "time_it"
+@time_it(5.0, handle_printing)
+def long_list(n, i):
+    print(f"yeeee: {i}")
+    return list(range(n))
+
+
+@decorator(str)
+def freeze(cls_to_decorate,
+           yee,
+           *a,
+           **kw):
+
+    def do_freeze(self, name, value):
+        msg = f"Class {type(self)} is frozen. " \
+              f"Attempted to set attribute '{name}' to value: '{value}' ... "
+        msg += yee
+        raise AttributeError(msg)
+
+    class Immutable(cls_to_decorate):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            setattr(Immutable, '__setattr__', do_freeze)
+
+    return Immutable(*a, **kw)
+
+
+@freeze("yeeeeee")
+class SampleClass:
+    def __init__(self, a):
+        self.a = a
+
+
+if __name__ == "__main__":
+    for i in range(10):
+        long_list(10000000, i)
+
+    deco_cls = SampleClass(10)
+    try:
+        deco_cls.a = 10
+    except AttributeError:
+        print("cannot set deco_cls.a = 10. Class frozen.")
+```
+
 
 ### Features
 

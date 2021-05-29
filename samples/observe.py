@@ -5,7 +5,7 @@ if __name__ == "__main__":
 
     dk = Decko(__name__)
 
-    @dk.observe(filter_predicate=None)
+    @dk.instance_data(filter_predicate=None)
     class DummyClass:
         def __init__(self, a, b):
             # Properties are already initialized at this point
@@ -58,8 +58,17 @@ if __name__ == "__main__":
     cls_instance = PropertyClass(1, "two")
     print(cls_instance.__dict__)
 
-    @dk.observe()
+    def setter(self, new_val):
+        print(new_val)
+        if new_val > 20:
+            raise ValueError("Value set is greater than 20 ... ")
+
+
+    @dk.instance_data(setter=setter)
     class Frozen:
+
+        class_member = 3
+
         def __init__(self, a, b):
             self.a = a
             self.b = b
@@ -70,7 +79,8 @@ if __name__ == "__main__":
     let_it_go = Frozen("one", "two")
 
     # Invalid
-    let_it_go.b = 20
+    let_it_go.class_member = 22
     # Also invalid
     # let_it_go.do_something = print
     print(let_it_go)
+    print(let_it_go.class_member)
