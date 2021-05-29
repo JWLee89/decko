@@ -147,15 +147,41 @@ def decorator(*type_template_args, **kw) -> t.Any:
                         E.g.
         
                         @decorate
+                        function decorate_class(class_to_decorate, args ...):
+                            
+                            class ExtendedClass(class_to_decorate):
+                                def __init__(self, *args, **kwargs):
+                                    super().__init__(*args, **kwargs)
+                                    print("Decorated a class!")
+        
+                        @decorate_class
+                        class NewClass:
+                            def __init__(a):
+                                self.a = a
+                        
+                        new_cls = NewClass()
+                    """
+
+                    def return_func(*args, **kwargs):
+                        return newly_decorated_object(wrapped_object,
+                                                      *decorator_args,
+                                                      *args,
+                                                      **decorator_kwargs,
+                                                      **kwargs)
+                elif isinstance(wrapped_object, t.Callable):
+                    """
+                        In the example below, 'wrapped_object' would be 'decorate_me'
+                        -------------------------------------------------------------
+                        E.g.
+
+                        @decorate
                         function time_it(args ...):
                             ...
-        
+
                         @time_it
                         def decorate_me():
                             ...
                     """
-                    return wrapped_object
-                elif isinstance(wrapped_object, t.Callable):
                     def return_func(*args, **kwargs):
                         return newly_decorated_object(wrapped_object,
                                                       *decorator_args,
