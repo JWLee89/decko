@@ -89,6 +89,12 @@ def decorator(*type_template_args, **kw) -> t.Any:
         def decorated_function(inputs):
             print(inputs)
         """
+        # called without open brackets.
+        # therefore, decorator func must be first argument in
+        # "type_template_args"
+        print("Decorating function: ", new_decorator_function)
+        print(f"Wrapping function: {new_decorator_function.__name__}")
+        print("-" * 150)
 
         def returned_obj(*decorator_args,
                          **decorator_kwargs) -> t.Callable:
@@ -113,11 +119,11 @@ def decorator(*type_template_args, **kw) -> t.Any:
             :param decorator_args:
             :param decorator_kwargs:
             """
-            print("-" * 100)
-            print(f"decorator_to_construct: {new_decorator_function},\n"
-                  f"Decorated args: {decorator_args}, kwargs: {decorator_kwargs}\n"
-                  f"Returned object: {returned_obj}")
-            print("-" * 100)
+            # print("-" * 100)
+            # print(f"decorator_to_construct: {new_decorator_function},\n"
+            #       f"Decorated args: {decorator_args}, kwargs: {decorator_kwargs}\n"
+            #       f"Returned object: {returned_obj}")
+            # print("-" * 100)
 
             # Sanity checks
             # -----------------------------------
@@ -128,6 +134,7 @@ def decorator(*type_template_args, **kw) -> t.Any:
             # as specified by the template
             decorator_name = new_decorator_function.__name__
             if len(decorator_args) != len(type_template_args):
+                print(f"decorator args: {decorator_args} vs template args: {type_template_args}")
                 raise ValueError(f"Passed '{len(decorator_args)}' arguments --> {decorator_args} "
                                  f"to decorator: '{decorator_name}'. "
                                  f"Should have '{len(type_template_args)}' arguments "
@@ -197,11 +204,14 @@ def decorator(*type_template_args, **kw) -> t.Any:
                         def decorate_me():
                             ...
                     """
+                    # print(f"Function decorator called: {decorator_args} on {new_decorator_function.__name__}")
+                    func_name = wrapped_object.__name__
                     decorator_args_applied_fn = partial(new_decorator_function,
                                                         wrapped_object,
                                                         *decorator_args,
                                                         **decorator_kwargs)
                 elif isinstance(wrapped_object, (staticmethod, classmethod)):
+                    func_name = wrapped_object.__func__.__name__
                     # Must add __func__ to call static or class method
                     # @see https://stackoverflow.com/questions/41921255/staticmethod-object-is-not-callable
                     decorator_args_applied_fn = partial(new_decorator_function,
@@ -215,11 +225,22 @@ def decorator(*type_template_args, **kw) -> t.Any:
                 def return_func(*args, **kwargs):
                     return decorator_args_applied_fn(*args, **kwargs)
 
+                # Update function name to preserve contextual information
+                return_func.__name__ = func_name
+
                 return return_func
 
             return newly_created_decorator
 
         return returned_obj
+
+    # Called as follows
+    # @decorator instead of @decorator(...)
+    if len(type_template_args) == 1 and isinstance(type_template_args[0], t.Callable):
+        wrapped_function = type_template_args[0]
+        # Since it is not a type template args, set type_template_args to empty tuple
+        type_template_args = ()
+        return wrapper(wrapped_function)
 
     return wrapper
 
