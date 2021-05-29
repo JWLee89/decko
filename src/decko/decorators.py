@@ -71,7 +71,7 @@ def decorator(*type_template_args, **kw) -> t.Any:
         - Class decorators
     """
     _set_defaults_if_not_defined(kw, __DECORATOR_SPECS__)
-    print(f"type temp: {type_template_args}, specs: {kw}")
+    # print(f"type temp: {type_template_args}, specs: {kw}")
 
     # TODO: After finishing function api, work on class api.
     def wrapper(newly_decorated_object: t.Union[t.Callable, t.Any]):
@@ -111,11 +111,11 @@ def decorator(*type_template_args, **kw) -> t.Any:
             :param decorator_args:
             :param decorator_kwargs:
             """
-            print("-" * 100)
-            print(f"decorator_to_construct: {newly_decorated_object},\n"
-                  f"Decorated args: {decorator_args}, kwargs: {decorator_kwargs}\n"
-                  f"Returned object: {returned_obj}")
-            print("-" * 100)
+            # print("-" * 100)
+            # print(f"decorator_to_construct: {newly_decorated_object},\n"
+            #       f"Decorated args: {decorator_args}, kwargs: {decorator_kwargs}\n"
+            #       f"Returned object: {returned_obj}")
+            # print("-" * 100)
 
             # Sanity checks
             # -----------------------------------
@@ -131,25 +131,32 @@ def decorator(*type_template_args, **kw) -> t.Any:
 
             # And arguments that correspond to the specified types ...
             for decorator_arg, target_type in zip(decorator_args, type_template_args):
-                valid_type: bool = False
-                try:
-                    valid_type = isinstance(decorator_arg, target_type)
-                except TypeError:
-                    print("Type error occurred")
-                    valid_type = isinstance(decorator_arg, *target_type)
-
-                if not valid_type:
+                if not isinstance(decorator_arg, target_type):
                     raise TypeError(f"Passed invalid type: {type(decorator_arg)}. "
                                     f"Expected type: '{target_type}'")
 
-            def another_inner_func(func: t.Callable):
+            def another_inner_func(wrapped_function: t.Callable):
                 """
-                TODO: Write comment for this code soon and rename
-                :param func:
-                :return:
+                :param wrapped_function: The function that was wrapped.
+                In the example below, the function would be decorate_me ...
+                E.g.
+
+                @decorate
+                function time_it(args ...):
+                    ...
+
+                @time_it
+                def decorate_me():
+                    ...
+
+                :return: decorated function
                 """
                 def return_func(*args, **kwargs):
-                    return newly_decorated_object(func, *decorator_args, *args, **decorator_kwargs, **kwargs)
+                    return newly_decorated_object(wrapped_function,
+                                                  *decorator_args,
+                                                  *args,
+                                                  **decorator_kwargs,
+                                                  **kwargs)
                 return return_func
 
             return another_inner_func
