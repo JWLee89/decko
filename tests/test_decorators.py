@@ -128,6 +128,10 @@ def test_truncate(inputs):
 
 
 def test_singleton():
+    """
+    Singleton classes should point to the same object.
+    TODO: Test later with race conditions
+    """
     @fd.singleton()
     class ShouldBeSingleton:
         def __init__(self):
@@ -139,3 +143,8 @@ def test_singleton():
 
     assert first_obj is second_obj, "singletons should point to same object"
     assert first_obj.a == second_obj.a, "Change in first_obj should be reflected in second_obj"
+
+
+def test__set_defaults_if_not_defined():
+    pass
+

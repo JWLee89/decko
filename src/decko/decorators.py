@@ -1,7 +1,11 @@
 """
-Stateless version that provides only decorated functions
+Stateless version that provides only decorated functions.
+This API will be consumed by users who want access
+to decorator functions.
+The bells and whistles such as state management
+and debugging / profiling utilities will be provided
+by each Decko instance.
 """
-import inspect
 import typing as t
 from functools import wraps, partial
 from time import process_time
@@ -10,7 +14,6 @@ import threading
 from .helper.validation import (
     raise_error_if_not_callable,
     raise_error_if_not_class_instance,
-    is_instancemethod
 )
 from .helper.util import (
     create_instance,
@@ -18,6 +21,41 @@ from .helper.util import (
 )
 from .helper.exceptions import TooSlowError
 from .immutable import ImmutableError
+from types import MappingProxyType
+
+
+__DECORATOR_SPECS__ = MappingProxyType({
+    # By default, a type check is performed on decorators
+    # to ensure that the defined functions meet specifications
+    'enable_type_check': (bool, True)
+})
+
+
+def _set_defaults_if_not_defined(user_specs: t.Dict,
+                                 default_specs: t.Dict) -> None:
+    """
+    Update user_specs with default values if not specified.
+    Also does a type check on user specifications to ensure
+    that type validity and sanity is maintained.
+    This modifies the original
+
+    :param user_specs: The specifications provided by the user
+    :param default_specs: A dictionary of default specifications
+    """
+    for prop_name, (prop_type, default_value) in default_specs.items():
+        # Set default values if not defined by user
+        if prop_name not in user_specs:
+            user_specs[prop_name] = default_value
+            continue
+
+        user_value: t.Any = user_specs[prop_name]
+
+        # If the value passed by the user does not meet
+        # specifications, raise an error
+        if not isinstance(user_value, prop_type):
+            raise TypeError(f"property: '{prop_name}' should be of type: {prop_type}. "
+                            f"Passed in value: '{user_value}' "
+                            f"of type: '{type(user_value)}'")
 
 
 # -------------------------------------------
@@ -25,17 +63,23 @@ from .immutable import ImmutableError
 # -------------------------------------------
 
 
-def decorator(*type_template_args) -> t.Any:
+def decorator(*type_template_args, **kw) -> t.Any:
     """
     Decorate a function based on its type.
-    Decorators come in two forms.
-    :return:
+    Decorators come in two forms:
+        - Function decorators
+        - Class decorators
     """
-    print(f"type temp: {type_template_args}")
+    _set_defaults_if_not_defined(kw, __DECORATOR_SPECS__)
 
+    print(f"type temp: {type_template_args}, specs: {kw}")
+
+    # TODO: After finishing function api, work on class api.
     def wrapper(newly_decorated_object: t.Union[t.Callable, t.Any]):
         """
-        :param newly_decorated_object: The wrapped object from inner
+        :param newly_decorated_object: The wrapped object from inner.
+        The defined function would then be the custom decorator
+        defined by the consumer
 
         e.g. the inner_wrapped_object in the example below would be
         "decorated_function"
@@ -43,11 +87,23 @@ def decorator(*type_template_args) -> t.Any:
         @decorator
         def decorated_function(inputs):
             print(inputs)
-
-        :param kw:
         """
         @wraps(newly_decorated_object)
-        def returned_obj(*decorator_args, **decorator_kwargs):
+        def returned_obj(*decorator_args, **decorator_kwargs) -> t.Callable:
+            """
+            Arguments passed to the "decorated_function".
+            Ideally, the number of arguments in the decorator should be identical
+            to what was defined below. The API will also perform a type check to ensure
+            that the arguments passed are identical to what was specified.
+            E.g.
+
+            @decorator(int)
+            def
+
+
+            :param decorator_args:
+            :param decorator_kwargs:
+            """
             print(f"decorator_to_construct: {newly_decorated_object}, \n "
                   f"Decorated args: {decorator_args}, kwargs: {decorator_kwargs} \n"
                   f"returned object: {returned_obj}")
