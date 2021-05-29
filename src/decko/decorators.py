@@ -48,6 +48,7 @@ def _set_defaults_if_not_defined(user_specs: t.Dict,
             user_specs[prop_name] = default_value
             continue
 
+        # Value exists at this point
         user_value: t.Any = user_specs[prop_name]
 
         # If the value passed by the user does not meet

@@ -145,6 +145,28 @@ def test_singleton():
     assert first_obj.a == second_obj.a, "Change in first_obj should be reflected in second_obj"
 
 
-def test__set_defaults_if_not_defined():
-    pass
+@pytest.mark.parametrize("default_args", [
+    {'test_default': (bool, True), 'numeric': (int, 10)},
+])
+@pytest.mark.parametrize("user_defined_args", [
+    {'test_default': True}
+])
+@pytest.mark.parametrize('expected', [
+    {'test_default': True, 'numeric': 10}
+])
+def test_set_defaults_if_not_defined(default_args,
+                                     user_defined_args,
+                                     expected):
+    fd._set_defaults_if_not_defined(user_defined_args, default_args)
+
+    for prop_name, value in user_defined_args.items():
+        # The property should exist in both the expected and default dictionary
+        assert prop_name in expected, f"Missing expected property: {prop_name}"
+        assert prop_name in default_args, f"Missing expected property: {prop_name} " \
+                                          "in default_args dictionary"
+        # Value should be expected type
+        expected_type = default_args[prop_name][0]
+        assert isinstance(value, expected_type), \
+            f"Expected type: '{expected_type}', got '{type(value)}'"
+
 
