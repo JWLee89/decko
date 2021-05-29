@@ -47,15 +47,14 @@ def decorator(*type_template_args) -> t.Any:
         :param kw:
         """
         @wraps(newly_decorated_object)
-        def returned_obj(decorated_obj):
-            print(f"decorator_to_construct: {newly_decorated_object}, "
-                  f"inner_wrapped_object: {decorated_obj}, "
+        def returned_obj(*decorator_args, **decorator_kwargs):
+            print(f"decorator_to_construct: {newly_decorated_object}, \n "
+                  f"Decorated args: {decorator_args}, kwargs: {decorator_kwargs} \n"
                   f"returned object: {returned_obj}")
 
-            @wraps(decorated_obj)
             def return_func(*args, **kwargs):
                 print(f"args: {args}, kwargs: {kwargs}")
-                return newly_decorated_object(decorated_obj, *args, **kwargs)
+                return newly_decorated_object(*args, **kwargs)
 
             return return_func
 
@@ -212,28 +211,27 @@ def singleton(thread_safe: bool = False) -> t.Type[t.Any]:
     this class will be a singleton object
     """
 
-    def wrapper(wrapped_class: t.Any, *arguments):
+    def wrapper(wrapped_class: t.Any):
         raise_error_if_not_class_instance(wrapped_class)
-        # inst = create_instance(cls, *arguments)
         if thread_safe:
             class Singleton(type):
                 __lock = threading.Lock()
                 __instance = {}
 
-                def __call__(self, *args, **kwargs):
-                    if self not in self.__instance:
-                        with self.__lock:
-                            if self not in self.__instance:
-                                self.__instance[self] = super(Singleton, self).__call__(*args, **kwargs)
-                    return self.__instance[self]
+                def __call__(cls, *args, **kwargs):
+                    if cls not in cls.__instance:
+                        with cls.__lock:
+                            if cls not in cls.__instance:
+                                cls.__instance[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+                    return cls.__instance[cls]
         else:
             class Singleton(type):
                 __instance = {}
 
-                def __call__(self, *args, **kwargs):
-                    if self not in self.__instance:
-                        self.__instance[self] = super(Singleton, self).__call__(*args, **kwargs)
-                    return self.__instance[self]
+                def __call__(cls, *args, **kwargs):
+                    if cls not in cls.__instance:
+                        cls.__instance[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+                    return cls.__instance[cls]
 
         class SingletonWrapped(wrapped_class, metaclass=Singleton):
             def __init__(self, *args, **kwargs):
