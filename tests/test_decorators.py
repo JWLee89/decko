@@ -47,6 +47,7 @@ def test_class_freeze():
 
 
 def test_instance_data():
+
     def setter(self, new_val):
         if new_val > 20:
             raise ValueError("Value set is greater than 20 ... ")
@@ -168,5 +169,3 @@ def test_set_defaults_if_not_defined(default_args,
         expected_type = default_args[prop_name][0]
         assert isinstance(value, expected_type), \
             f"Expected type: '{expected_type}', got '{type(value)}'"
-
-
