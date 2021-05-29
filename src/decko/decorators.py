@@ -72,7 +72,7 @@ def decorator(*type_template_args, **kw) -> t.Any:
         - Class decorators
     """
     _set_defaults_if_not_defined(kw, __DECORATOR_SPECS__)
-    # print(f"creating decorator ... type temp: {type_template_args}, specs: {kw}")
+    print(f"creating decorator ... type temp: {type_template_args}, specs: {kw}")
 
     # TODO: After finishing function api, work on class api.
     def wrapper(newly_decorated_object: t.Union[t.Callable, t.Any]):

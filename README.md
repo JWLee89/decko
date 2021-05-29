@@ -144,16 +144,12 @@ def long_list(n, i):
     return list(range(n))
 
 
-@decorator(str)
-def freeze(cls_to_decorate,
-           yee,
-           *a,
-           **kw):
+@decorator()
+def freeze(cls_to_decorate, a):
 
     def do_freeze(self, name, value):
         msg = f"Class {type(self)} is frozen. " \
               f"Attempted to set attribute '{name}' to value: '{value}' ... "
-        msg += yee
         raise AttributeError(msg)
 
     class Immutable(cls_to_decorate):
@@ -161,10 +157,10 @@ def freeze(cls_to_decorate,
             super().__init__(*args, **kwargs)
             setattr(Immutable, '__setattr__', do_freeze)
 
-    return Immutable(*a, **kw)
+    return Immutable(a)
 
 
-@freeze("yeeeeee")
+@freeze()
 class SampleClass:
     def __init__(self, a):
         self.a = a
@@ -176,9 +172,9 @@ if __name__ == "__main__":
 
     deco_cls = SampleClass(10)
     try:
-        deco_cls.a = 10
+        deco_cls.a = 20
     except AttributeError:
-        print("cannot set deco_cls.a = 10. Class frozen.")
+        print("cannot set deco_cls.a = 20. Class frozen.")
 ```
 
 
