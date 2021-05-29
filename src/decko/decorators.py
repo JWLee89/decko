@@ -131,18 +131,22 @@ def decorator(*type_template_args, **kw) -> t.Any:
 
             # And arguments that correspond to the specified types ...
             for decorator_arg, target_type in zip(decorator_args, type_template_args):
-                if not type(decorator_arg) == target_type:
+                valid_type = False
+                try:
+                    valid_type = isinstance(decorator_arg, target_type)
+                except TypeError:
+                    valid_type = isinstance(decorator_arg, type(target_type))
+                if not valid_type:
                     raise TypeError(f"Passed invalid type: {type(decorator_arg)}. "
                                     f"Expected type: '{target_type}'")
 
             def another_inner_func(func: t.Callable):
                 """
-                TODO: Write comment for this code soon
+                TODO: Write comment for this code soon and rename
                 :param func:
                 :return:
                 """
                 def return_func(*args, **kwargs):
-                    # print(f"Func: {func.__name__}, newly_decorated_object: {newly_decorated_object.__name__}")
                     return newly_decorated_object(func, *decorator_args, *args, **decorator_kwargs, **kwargs)
                 return return_func
 

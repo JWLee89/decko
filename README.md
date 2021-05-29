@@ -88,6 +88,7 @@ the existing codebase.
 ```python
 from decko import decorators as dk
 import time
+import typing as t
 
 
 def timer(func):
@@ -105,23 +106,43 @@ def timer(func):
     return inner
 
 
-@decorator(int)
-def time_it(function_to_wrap, *args, **kwargs):
-    start_time = time.time()
-    output = function_to_wrap(*args, **kwargs)
-    elapsed = time.time() - start_time
-    print(f"Time elapsed: {elapsed}")
+# Create decorator called "time_it" that accepts the following args
+# 1. Int value
+# 2. A callable object
+@decorator(int, t.Callable)
+def time_it(function_to_wrap,
+            interval,
+            callback,
+            *args,
+            **kwargs):
+
+    # Check every 5 interval
+    iteration_count = args[1]
+    if (iteration_count + 1) % interval == 0:
+        start_time = time.time()
+        output = function_to_wrap(*args, **kwargs)
+        elapsed = time.time() - start_time
+        callback(elapsed, i + 1)
+    else:
+        output = function_to_wrap(*args, **kwargs)
     return output
 
 
-@time_it(9)
-def long_list(n):
+def handle_printing(elapsed, iteration_count):
+    print(f"The elapsed time is: {elapsed:.2f} seconds ... "
+          f"Iterated {iteration_count} times ...")
+
+
+# Decorate function with created decorator "time_it"
+@time_it(5, handle_printing)
+def long_list(n, i):
+    print(f"yeeee: {i}")
     return list(range(n))
 
 
 if __name__ == "__main__":
     for i in range(10):
-        print(f"Yee: {len(long_list(1000000))}")
+        long_list(10000000, i)
 ```
 
 
