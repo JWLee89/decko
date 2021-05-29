@@ -24,10 +24,11 @@ from .helper.exceptions import TooSlowError
 from .immutable import ImmutableError
 from types import MappingProxyType
 
+# List of specific checks required when creating a decorator
 __DECORATOR_SPECS__ = MappingProxyType({
     # By default, a type check is performed on decorators
     # to ensure that the defined functions meet specifications
-    'enable_type_check': (bool, True)
+    'enable_type_check': (bool, True),
 })
 
 
@@ -75,11 +76,10 @@ def decorator(*type_template_args, **kw) -> t.Any:
     print(f"creating decorator ... type temp: {type_template_args}, specs: {kw}")
 
     # TODO: After finishing function api, work on class api.
-    def wrapper(newly_decorated_object: t.Union[t.Callable, t.Any]):
+    def wrapper(new_decorator_function: t.Callable):
         """
-        :param newly_decorated_object: The wrapped object from inner.
-        The defined function would then be the custom decorator
-        defined by the consumer
+        :param new_decorator_function: The newly defined decorator function,
+        This function is the custom decorator defined by the consumer
 
         e.g. the inner_wrapped_object in the example below would be
         "decorated_function"
@@ -89,8 +89,8 @@ def decorator(*type_template_args, **kw) -> t.Any:
             print(inputs)
         """
 
-        # @wraps(newly_decorated_object)
-        def returned_obj(*decorator_args, **decorator_kwargs) -> t.Callable:
+        def returned_obj(*decorator_args,
+                         **decorator_kwargs) -> t.Callable:
             """
             Arguments passed to the "decorated_function".
             Ideally, the number of arguments in the decorator should be identical
@@ -112,35 +112,54 @@ def decorator(*type_template_args, **kw) -> t.Any:
             :param decorator_args:
             :param decorator_kwargs:
             """
-            # print("-" * 100)
-            # print(f"decorator_to_construct: {newly_decorated_object},\n"
-            #       f"Decorated args: {decorator_args}, kwargs: {decorator_kwargs}\n"
-            #       f"Returned object: {returned_obj}")
-            # print("-" * 100)
+            print("-" * 100)
+            print(f"decorator_to_construct: {new_decorator_function},\n"
+                  f"Decorated args: {decorator_args}, kwargs: {decorator_kwargs}\n"
+                  f"Returned object: {returned_obj}")
+            print("-" * 100)
 
             # Sanity checks
             # -----------------------------------
+            if not isinstance(new_decorator_function, t.Callable):
+                raise TypeError(f"{new_decorator_function} must be a callable object ... ")
 
-            # Decorator should have equal length of arguments as specified
-            # by the template
-            decorator_name = newly_decorated_object.__name__
+            # Decorator should have equal argument length
+            # as specified by the template
+            decorator_name = new_decorator_function.__name__
             if len(decorator_args) != len(type_template_args):
                 raise ValueError(f"Passed '{len(decorator_args)}' arguments --> {decorator_args} "
                                  f"to decorator: '{decorator_name}'. "
                                  f"Should have '{len(type_template_args)}' arguments "
                                  f"of type: {type_template_args}")
 
-            # print(f"Deco args: {decorator_args}, Target type: {type_template_args}")
             # And arguments that correspond to the specified types ...
-            for decorator_arg, target_type in zip(decorator_args, type_template_args):
-                if not isinstance(decorator_arg, target_type):
-                    raise TypeError(f"Passed invalid type: {type(decorator_arg)}. "
-                                    f"Expected type: '{target_type}'")
+            if kw['enable_type_check']:
+                for decorator_arg, target_type in zip(decorator_args, type_template_args):
+                    if not isinstance(decorator_arg, target_type):
+                        raise TypeError(f"Passed invalid type: {type(decorator_arg)}. "
+                                        f"Expected type: '{target_type}'")
 
-            def another_inner_func(wrapped_object: t.Union[t.Callable, t.Type]):
+            def newly_created_decorator(wrapped_object: t.Union[t.Callable, t.Type]):
                 """
                 :param wrapped_object: The function or class that was wrapped.
+                TODO: What if the decorator is called with zero arguments?
+
+                E.g.
+
+                @decorator()
+                def func():
+                    pass
+                vs
+
+                @decorator
+                def func():
+                    pass
                 """
+                # Apply all arguments that we have already gathered
+                decorator_args_applied_fn = partial(new_decorator_function,
+                                                    wrapped_object,
+                                                    *decorator_args,
+                                                    **decorator_kwargs)
                 if inspect.isclass(wrapped_object):
                     """
                         In the example below, 'wrapped_object' would be 'decorate_me'
@@ -164,13 +183,7 @@ def decorator(*type_template_args, **kw) -> t.Any:
                     """
 
                     def return_func(*args, **kwargs):
-                        print(f"Wrapped object: {wrapped_object}. "
-                              f"Deco args: {decorator_args}")
-                        return newly_decorated_object(wrapped_object,
-                                                      *decorator_args,
-                                                      *args,
-                                                      **decorator_kwargs,
-                                                      **kwargs)
+                        return decorator_args_applied_fn(*args, **kwargs)
                 elif isinstance(wrapped_object, t.Callable):
                     """
                         In the example below, 'wrapped_object' would be 'decorate_me'
@@ -185,18 +198,17 @@ def decorator(*type_template_args, **kw) -> t.Any:
                         def decorate_me():
                             ...
                     """
+                    print(f"Decorating function '{wrapped_object.__name__}' "
+                          f"with decorator: '{new_decorator_function.__name__}'")
+
                     def return_func(*args, **kwargs):
-                        return newly_decorated_object(wrapped_object,
-                                                      *decorator_args,
-                                                      *args,
-                                                      **decorator_kwargs,
-                                                      **kwargs)
+                        return decorator_args_applied_fn(*args, **kwargs)
                 else:
                     raise TypeError("Wrapped object must be either a class or callable object")
 
                 return return_func
 
-            return another_inner_func
+            return newly_created_decorator
 
         return returned_obj
 
