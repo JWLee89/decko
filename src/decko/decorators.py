@@ -115,6 +115,24 @@ def decorator(*type_template_args, **kw) -> t.Any:
                   f"Decorated args: {decorator_args}, kwargs: {decorator_kwargs} \n"
                   f"returned object: {returned_obj}")
 
+            # Sanity checks
+            # -----------------------------------
+
+            # decorator should have equal length of arguments as specified
+            # by the template
+            decorator_name = newly_decorated_object.__name__
+            if len(decorator_args) != len(type_template_args):
+                raise ValueError(f"Passed '{len(decorator_args)}' arguments --> {decorator_args} "
+                                 f"to decorator: '{decorator_name}'. "
+                                 f"Should have '{len(type_template_args)}' arguments "
+                                 f"of type: {type_template_args}")
+
+            # And arguments that correspond to the specified types ...
+            for decorator_arg, target_type in zip(decorator_args, type_template_args):
+                if not isinstance(decorator_arg, target_type):
+                    raise TypeError(f"Passed invalid type: {type(decorator_arg)}. "
+                                    f"Expected type: '{target_type}'")
+
             def return_func(*args, **kwargs):
                 print(f"args: {args}, kwargs: {kwargs}")
                 return newly_decorated_object(*args, **kwargs)
