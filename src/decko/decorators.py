@@ -72,7 +72,7 @@ def decorator(*type_template_args, **kw) -> t.Any:
         - Class decorators
     """
     _set_defaults_if_not_defined(kw, __DECORATOR_SPECS__)
-    # print(f"type temp: {type_template_args}, specs: {kw}")
+    # print(f"creating decorator ... type temp: {type_template_args}, specs: {kw}")
 
     # TODO: After finishing function api, work on class api.
     def wrapper(newly_decorated_object: t.Union[t.Callable, t.Any]):
@@ -89,7 +89,7 @@ def decorator(*type_template_args, **kw) -> t.Any:
             print(inputs)
         """
 
-        @wraps(newly_decorated_object)
+        # @wraps(newly_decorated_object)
         def returned_obj(*decorator_args, **decorator_kwargs) -> t.Callable:
             """
             Arguments passed to the "decorated_function".
@@ -130,6 +130,7 @@ def decorator(*type_template_args, **kw) -> t.Any:
                                  f"Should have '{len(type_template_args)}' arguments "
                                  f"of type: {type_template_args}")
 
+            # print(f"Deco args: {decorator_args}, Target type: {type_template_args}")
             # And arguments that correspond to the specified types ...
             for decorator_arg, target_type in zip(decorator_args, type_template_args):
                 if not isinstance(decorator_arg, target_type):
@@ -163,6 +164,8 @@ def decorator(*type_template_args, **kw) -> t.Any:
                     """
 
                     def return_func(*args, **kwargs):
+                        print(f"Wrapped object: {wrapped_object}. "
+                              f"Deco args: {decorator_args}")
                         return newly_decorated_object(wrapped_object,
                                                       *decorator_args,
                                                       *args,

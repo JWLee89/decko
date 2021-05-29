@@ -84,6 +84,8 @@ It also has built-in decorator functions to help developers quickly build debugg
 decorators. This allows developers to modify and extend code with minimal modifications to 
 the existing codebase.
 
+`decorator` creates function decorators that can be used to decorate both functions and
+classes. Demo for creating class and function decorators is shown below.
 
 ```python
 from decko import decorators as dk
@@ -97,34 +99,36 @@ def timer(func):
     Will be used to check the
     performance of decorate function
     """
+
     def inner(*args, **kwargs):
         start_time = time.time()
         output = func(*args, **kwargs)
         elapsed = time.time() - start_time
         print(f"Time elapsed: {elapsed}")
         return output
+
     return inner
 
 
 # Create decorator called "time_it" that accepts the following args
-# 1. Int or float value
-# 2. A callable object
-@decorator((int, float), t.Callable)
-def time_it(function_to_wrap,
+# 1. Int value
+# 2. A callable object or a List
+@decorator((int, float), (t.Callable, t.List))
+def time_it(wrapped_function,
             interval,
             callback,
             *args,
             **kwargs):
-
     # Check every 5 interval
     iteration_count = args[1]
     if (iteration_count + 1) % interval == 0:
+        print(f"Function name: {wrapped_function.__name__}")
         start_time = time.time()
-        output = function_to_wrap(*args, **kwargs)
+        output = wrapped_function(*args, **kwargs)
         elapsed = time.time() - start_time
         callback(elapsed, i + 1)
     else:
-        output = function_to_wrap(*args, **kwargs)
+        output = wrapped_function(*args, **kwargs)
     return output
 
 
@@ -140,9 +144,41 @@ def long_list(n, i):
     return list(range(n))
 
 
+@decorator(str)
+def freeze(cls_to_decorate,
+           yee,
+           *a,
+           **kw):
+
+    def do_freeze(self, name, value):
+        msg = f"Class {type(self)} is frozen. " \
+              f"Attempted to set attribute '{name}' to value: '{value}' ... "
+        msg += yee
+        raise AttributeError(msg)
+
+    class Immutable(cls_to_decorate):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            setattr(Immutable, '__setattr__', do_freeze)
+
+    return Immutable(*a, **kw)
+
+
+@freeze("yeeeeee")
+class SampleClass:
+    def __init__(self, a):
+        self.a = a
+
+
 if __name__ == "__main__":
     for i in range(10):
         long_list(10000000, i)
+
+    deco_cls = SampleClass(10)
+    try:
+        deco_cls.a = 10
+    except AttributeError:
+        print("cannot set deco_cls.a = 10. Class frozen.")
 ```
 
 
