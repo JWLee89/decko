@@ -3,7 +3,7 @@
 A decorator based utility module for Python developers. The module is designed to 
 aid developers in debugging their python applications.
 
-Decko is not dependent on any external libraries outside of the standard Python libraries.
+Decko is not dependent on any external libraries that are not included in the standard Python package.
 However, one may choose to extend with external libraries such as numba to improve its performance. 
 
 Decko is meant to a utility to help people debug and extend code. Its original use case is not in
@@ -78,6 +78,52 @@ if __name__ == "__main__":
     for i in range(20):
         create_list(100000)
 ```
+
+Decko also provides standalone decorators that can be applied immediately to your projects. 
+It also has built-in decorator functions to help developers quickly build debuggable custom 
+decorators. This allows developers to modify and extend code with minimal modifications to 
+the existing codebase.
+
+
+```python
+from decko import decorators as dk
+import time
+
+
+def timer(func):
+    """
+    An ordinary decorator.
+    Will be used to check the
+    performance of decorate function
+    """
+    def inner(*args, **kwargs):
+        start_time = time.time()
+        output = func(*args, **kwargs)
+        elapsed = time.time() - start_time
+        print(f"Time elapsed: {elapsed}")
+        return output
+    return inner
+
+
+@decorator(int)
+def time_it(function_to_wrap, *args, **kwargs):
+    start_time = time.time()
+    output = function_to_wrap(*args, **kwargs)
+    elapsed = time.time() - start_time
+    print(f"Time elapsed: {elapsed}")
+    return output
+
+
+@time_it(9)
+def long_list(n):
+    return list(range(n))
+
+
+if __name__ == "__main__":
+    for i in range(10):
+        print(f"Yee: {len(long_list(1000000))}")
+```
+
 
 ### Features
 

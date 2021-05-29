@@ -23,7 +23,6 @@ from .helper.exceptions import TooSlowError
 from .immutable import ImmutableError
 from types import MappingProxyType
 
-
 __DECORATOR_SPECS__ = MappingProxyType({
     # By default, a type check is performed on decorators
     # to ensure that the defined functions meet specifications
@@ -32,7 +31,7 @@ __DECORATOR_SPECS__ = MappingProxyType({
 
 
 def _set_defaults_if_not_defined(user_specs: t.Dict,
-                                 default_specs: t.Dict) -> None:
+                                 default_specs: t.Mapping) -> None:
     """
     Update user_specs with default values if not specified.
     Also does a type check on user specifications to ensure
@@ -72,7 +71,6 @@ def decorator(*type_template_args, **kw) -> t.Any:
         - Class decorators
     """
     _set_defaults_if_not_defined(kw, __DECORATOR_SPECS__)
-
     print(f"type temp: {type_template_args}, specs: {kw}")
 
     # TODO: After finishing function api, work on class api.
@@ -89,6 +87,7 @@ def decorator(*type_template_args, **kw) -> t.Any:
         def decorated_function(inputs):
             print(inputs)
         """
+
         @wraps(newly_decorated_object)
         def returned_obj(*decorator_args, **decorator_kwargs) -> t.Callable:
             """
@@ -99,8 +98,15 @@ def decorator(*type_template_args, **kw) -> t.Any:
             E.g.
 
             @decorator(int)
-            def
+            def decorated_function(inputs):
+                print(inputs)
 
+            - Argument passed to decorated_function must be an 'int' if type checking
+            is set to True
+
+            @decorated_function(10)
+            def another_function():
+                ... write your function code here ...
 
             :param decorator_args:
             :param decorator_kwargs:
@@ -116,6 +122,7 @@ def decorator(*type_template_args, **kw) -> t.Any:
             return return_func
 
         return returned_obj
+
     return wrapper
 
 
@@ -295,6 +302,7 @@ def singleton(thread_safe: bool = False) -> t.Type[t.Any]:
                 super().__init__(*args, **kwargs)
 
         return SingletonWrapped
+
     return wrapper
 
 
@@ -410,6 +418,10 @@ def truncate(limit: int) -> t.Callable:
         @wraps(func)
         def decorated_func(*args, **kwargs):
             output: t.Union[str, t.List, t.Tuple] = func(*args, **kwargs)
+
+            # Check if object is sliceable
+            # Raise exception if the passed in object
+            # does not support slicing
             try:
                 return output[:limit]
             except:
