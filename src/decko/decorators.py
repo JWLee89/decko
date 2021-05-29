@@ -161,12 +161,15 @@ def decorator(*type_template_args, **kw) -> t.Any:
                                                     wrapped_object,
                                                     *decorator_args,
                                                     **decorator_kwargs)
-                if inspect.isclass(wrapped_object):
+                if inspect.isclass(wrapped_object) or isinstance(wrapped_object, t.Callable):
                     """
-                        In the example below, 'wrapped_object' would be 'decorate_me'
+                        There are two cases. Decorated object is a
+                        1. Class
+                        2. Function
                         -------------------------------------------------------------
-                        E.g.
-        
+                        Example 1) 
+                        In the example below, 'wrapped_object' would be 'decorate_me'
+
                         @decorate
                         function decorate_class(class_to_decorate, args ...):
                             
@@ -181,15 +184,10 @@ def decorator(*type_template_args, **kw) -> t.Any:
                                 self.a = a
                         
                         new_cls = NewClass()
-                    """
-
-                    def return_func(*args, **kwargs):
-                        return decorator_args_applied_fn(*args, **kwargs)
-                elif isinstance(wrapped_object, t.Callable):
-                    """
-                        In the example below, 'wrapped_object' would be 'decorate_me'
+                        
                         -------------------------------------------------------------
-                        E.g.
+                        Example 2)
+                        In the example below, 'wrapped_object' would be 'decorate_me'
 
                         @decorate
                         function time_it(args ...):
@@ -199,27 +197,23 @@ def decorator(*type_template_args, **kw) -> t.Any:
                         def decorate_me():
                             ...
                     """
-
-                    print(f"Decorating function '{wrapped_object.__name__}' "
-                          f"with decorator: '{new_decorator_function.__name__}'")
-
-                    def return_func(*args, **kwargs):
-                        return decorator_args_applied_fn(*args, **kwargs)
-                elif isinstance(wrapped_object, staticmethod):
-                    # Passed in function decorated by static method decorator
-                    print("Passed in staticmethod decorator")
-
-                    def return_func(*args, **kwargs):
-                        return decorator_args_applied_fn(*args, **kwargs)
-                elif isinstance(wrapped_object, classmethod):
-                    # Passed in function decorated by static method decorator
-                    print("Passed in classmethod decorator")
-
-                    def return_func(*args, **kwargs):
-                        return decorator_args_applied_fn(*args, **kwargs)
+                    decorator_args_applied_fn = partial(new_decorator_function,
+                                                        wrapped_object,
+                                                        *decorator_args,
+                                                        **decorator_kwargs)
+                elif isinstance(wrapped_object, (staticmethod, classmethod)):
+                    # Must add __func__ to call static or class method
+                    # @see https://stackoverflow.com/questions/41921255/staticmethod-object-is-not-callable
+                    decorator_args_applied_fn = partial(new_decorator_function,
+                                                        wrapped_object.__func__,
+                                                        *decorator_args,
+                                                        **decorator_kwargs)
                 else:
                     raise TypeError("Wrapped object must be either a class or callable object. "
                                     f"Passed in '{wrapped_object}'")
+
+                def return_func(*args, **kwargs):
+                    return decorator_args_applied_fn(*args, **kwargs)
 
                 return return_func
 
