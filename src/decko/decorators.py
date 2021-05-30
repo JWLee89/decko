@@ -228,13 +228,14 @@ def deckorator(*type_template_args, **kw) -> t.Any:
                         raise TypeError(f"Passed invalid type: {type(decorator_arg)}. "
                                         f"Expected type: '{target_type}'")
 
+
             return newly_created_decorator
 
         return returned_obj
 
     # Called as follows
     # @decorator instead of @decorator(...)
-    if len(type_template_args) == 1 and isinstance(type_template_args[0], t.Callable):
+    if len(type_template_args) == 1 and inspect.isfunction(type_template_args[0]):
         # This is the wrapped function
         wrapped_function = type_template_args[0]
         # Since wrapped function is not a type template args,
