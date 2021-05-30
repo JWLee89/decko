@@ -94,7 +94,6 @@ def deckorator(*type_template_args, **type_template_kw) -> t.Any:
     #                          tuple(type_template[1] for type_template in type_template_kw.values())
     # else:
     #     type_template_args = type_template_arguments
-
     def wrapper(new_decorator_function: t.Callable):
         """
         :param new_decorator_function: The newly defined decorator function,
@@ -110,7 +109,6 @@ def deckorator(*type_template_args, **type_template_kw) -> t.Any:
         # called without open brackets.
         # therefore, decorator func must be first argument in
         # "type_template_args"
-
         @wraps(new_decorator_function)
         def returned_obj(*decorator_args,
                          **decorator_kwargs) -> t.Callable:
@@ -157,11 +155,6 @@ def deckorator(*type_template_args, **type_template_kw) -> t.Any:
                 def func():
                     pass
                 """
-                # Apply all arguments that we have already gathered
-                # decorator_args_applied_fn = partial(new_decorator_function,
-                #                                     wrapped_object,
-                #                                     *decorator_args,
-                #                                     **decorator_kwargs)
                 if inspect.isclass(wrapped_object) or isinstance(wrapped_object, t.Callable):
                     """
                         There are two cases. Decorated object is a
@@ -214,12 +207,10 @@ def deckorator(*type_template_args, **type_template_kw) -> t.Any:
                 else:
                     raise TypeError("Wrapped object must be either a class or callable object. "
                                     f"Passed in '{wrapped_object}'")
-
                 # Wrap with wrapped object instead of new_decorator func to preserve metadata
                 @wraps(wrapped_object)
                 def return_func(*args, **kwargs):
                     return decorator_args_applied_fn(*args, **kwargs)
-
                 return return_func
 
             # wrapped decorator called with zero args
@@ -244,8 +235,8 @@ def deckorator(*type_template_args, **type_template_kw) -> t.Any:
                                     f"Expected type: '{target_type}'")
 
             return newly_created_decorator
-
         return returned_obj
+
 
     # Called as follows
     # @decorator instead of @decorator(...)

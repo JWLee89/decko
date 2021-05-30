@@ -236,7 +236,7 @@ def test_freeze():
 
     frozen_class = dk.freeze(Props)(1, 2)
 
-    with pytest.raises(ImmutableError) as err:
+    with pytest.raises(ImmutableError):
         frozen_class.a = 100
 
     # Frozen version
