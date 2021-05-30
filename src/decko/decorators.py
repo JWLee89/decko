@@ -228,7 +228,6 @@ def deckorator(*type_template_args, **kw) -> t.Any:
                         raise TypeError(f"Passed invalid type: {type(decorator_arg)}. "
                                         f"Expected type: '{target_type}'")
 
-
             return newly_created_decorator
 
         return returned_obj
