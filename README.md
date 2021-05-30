@@ -88,7 +88,7 @@ the existing codebase.
 classes. Demo for creating class and function decorators is shown below.
 
 ```python
-from decko import decorators as dk
+from decko import decorators.deckorator as deckorator
 import time
 import typing as t
 
