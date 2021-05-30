@@ -66,7 +66,7 @@ def _set_defaults_if_not_defined(user_specs: t.Dict,
 # -------------------------------------------
 
 
-def decorator(*type_template_args, **kw) -> t.Any:
+def deckorator(*type_template_args, **kw) -> t.Any:
     """
     Decorate a function based on its type.
     Decorators come in two forms:
@@ -286,7 +286,10 @@ def stopwatch(callback: t = print):
     return decorator
 
 
-def execute_if(predicate: t.Callable) -> t.Callable:
+@deckorator(t.Callable)
+def execute_if(function_to_decorate: t.Callable,
+               predicate: t.Callable,
+               *args, **kwargs) -> t.Callable:
     """
     Given a t.List of subscribed callables and an predicate function,
     create a wrapper that fires events when predicates are fulfilled
@@ -312,20 +315,13 @@ def execute_if(predicate: t.Callable) -> t.Callable:
 
     >> End code sample
     ----------------------------------
+    :param function_to_decorate: Function decorated by this function
     :param predicate: The condition for triggering the event
     :return: The wrapped function
     """
-
-    def decorator(func: t.Callable) -> t.Callable:
-        @wraps(func)
-        def returned_func(*args, **kwargs):
-            fire_event = predicate(*args, **kwargs)
-            if fire_event:
-                return func(*args, **kwargs)
-
-        return returned_func
-
-    return decorator
+    fire_event = predicate(*args, **kwargs)
+    if fire_event:
+        return function_to_decorate(*args, **kwargs)
 
 
 def slower_than(time_ms: float, callback: t.Callable = None):
