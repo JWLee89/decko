@@ -96,6 +96,7 @@ def deckorator(*type_template_args, **kw) -> t.Any:
         # print(f"Wrapping function: {new_decorator_function.__name__}")
         # print("-" * 150)
 
+        @wraps(new_decorator_function)
         def returned_obj(*decorator_args,
                          **decorator_kwargs) -> t.Callable:
             """
@@ -182,28 +183,26 @@ def deckorator(*type_template_args, **kw) -> t.Any:
                             ...
                     """
                     # print(f"Function decorator called: {decorator_args} on {new_decorator_function.__name__}")
-                    func_name = wrapped_object.__name__
                     decorator_args_applied_fn = partial(new_decorator_function,
                                                         wrapped_object,
                                                         *decorator_args,
                                                         **decorator_kwargs)
                 elif isinstance(wrapped_object, (staticmethod, classmethod)):
-                    func_name = wrapped_object.__func__.__name__
+                    wrapped_object = wrapped_object.__func__
                     # Must add __func__ to call static or class method
                     # @see https://stackoverflow.com/questions/41921255/staticmethod-object-is-not-callable
                     decorator_args_applied_fn = partial(new_decorator_function,
-                                                        wrapped_object.__func__,
+                                                        wrapped_object,
                                                         *decorator_args,
                                                         **decorator_kwargs)
                 else:
                     raise TypeError("Wrapped object must be either a class or callable object. "
                                     f"Passed in '{wrapped_object}'")
 
+                # Wrap with wrapped object instead of new_decorator func to preserve metadata
+                @wraps(wrapped_object)
                 def return_func(*args, **kwargs):
                     return decorator_args_applied_fn(*args, **kwargs)
-
-                # Update function name to preserve contextual information
-                return_func.__name__ = func_name
 
                 return return_func
 
@@ -341,7 +340,6 @@ def slower_than(time_ms: float, callback: t.Callable = None):
     raise_error_if_not_callable(callback)
 
     def decorator(func):
-
         @wraps(func)
         def returned_func(*args, **kwargs):
             start = process_time() * 1000
