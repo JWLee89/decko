@@ -2,6 +2,7 @@ import pytest
 import typing as t
 
 import src.decko.decorators as fd
+from src.decko import decorators
 
 
 @pytest.mark.parametrize("iter_count", [
@@ -116,6 +117,31 @@ def test_stopwatch(iter_count):
 
     assert len(time_elapsed_arr) == iter_count, \
         f"Should have {len(time_elapsed_arr)} items"
+
+
+@pytest.mark.parametrize("input_data",
+                         [
+                             (10000000, 50),
+                             (20000000, 100),
+                             (30000000, 150),
+                         ])
+def test_slower_than(input_data):
+    input_size, milliseconds = input_data
+
+    def raise_error(time_elapsed, threshold_time):
+        raise ValueError(f"Took {time_elapsed} milliseconds. "
+                         f"Should take less than {threshold_time}")
+
+    @decorators.slower_than(milliseconds, raise_error)
+    def long_func(n):
+        x = 0
+        for i in range(n):
+            x += i
+        return x
+
+    # Ideally these functions should take some time to complete
+    with pytest.raises(ValueError):
+        long_func(input_size)
 
 
 def test_class_freeze():

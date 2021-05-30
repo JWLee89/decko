@@ -13,7 +13,6 @@ from time import process_time
 import threading
 
 from .helper.validation import (
-    raise_error_if_not_callable,
     raise_error_if_not_class_instance,
 )
 from .helper.util import (
@@ -61,22 +60,41 @@ def _set_defaults_if_not_defined(user_specs: t.Dict,
                             f"of type: '{type(user_value)}'")
 
 
+def _merge_into_decorator_args(decorator_args, decorator_kwargs, default_kwargs):
+    """
+    Merge the two properties together if
+    default value is not overriden.
+    :param decorator_kwargs: The kwargs passed to decorator
+    :param default_kwargs: The kwargs passed to decorator
+    """
+    for key in default_kwargs.keys():
+        if key not in decorator_kwargs:
+            decorator_kwargs[key] = default_kwargs[key]
+
+    return decorator_args + tuple(value for value in decorator_kwargs.values())
+
 # -------------------------------------------
 # ------------ Core decorators --------------
 # -------------------------------------------
 
 
-def deckorator(*type_template_args, **kw) -> t.Any:
+def deckorator(*type_template_args, **type_template_kw) -> t.Any:
     """
     Decorate a function based on its type.
     Decorators come in two forms:
         - Function decorators
         - Class decorators
     """
-    _set_defaults_if_not_defined(kw, __DECORATOR_SPECS__)
-    # print(f"creating decorator ... type temp: {type_template_args}, specs: {kw}")
+    # TODO: Disable for now and add later
+    # _set_defaults_if_not_defined(kw, __DECORATOR_SPECS__)
 
-    # TODO: After finishing function api, work on class api.
+    # if type_template_kw:
+    #     print("Non empty")
+    #     type_template_args = type_template_arguments + \
+    #                          tuple(type_template[1] for type_template in type_template_kw.values())
+    # else:
+    #     type_template_args = type_template_arguments
+
     def wrapper(new_decorator_function: t.Callable):
         """
         :param new_decorator_function: The newly defined decorator function,
@@ -92,9 +110,6 @@ def deckorator(*type_template_args, **kw) -> t.Any:
         # called without open brackets.
         # therefore, decorator func must be first argument in
         # "type_template_args"
-        # print("Decorating function: ", new_decorator_function)
-        # print(f"Wrapping function: {new_decorator_function.__name__}")
-        # print("-" * 150)
 
         @wraps(new_decorator_function)
         def returned_obj(*decorator_args,
@@ -125,10 +140,11 @@ def deckorator(*type_template_args, **kw) -> t.Any:
             if not isinstance(new_decorator_function, t.Callable):
                 raise TypeError(f"{new_decorator_function} must be a callable object ... ")
 
+            # Merge to handle keyword arguments
+            # decorator_args = _merge_into_decorator_args(decorator_arguments, decorator_kwargs, type_template_kw)
             def newly_created_decorator(wrapped_object: t.Union[t.Callable, t.Type]):
                 """
                 :param wrapped_object: The function or class that was wrapped.
-                TODO: What if the decorator is called with zero arguments?
 
                 E.g.
 
@@ -142,10 +158,10 @@ def deckorator(*type_template_args, **kw) -> t.Any:
                     pass
                 """
                 # Apply all arguments that we have already gathered
-                decorator_args_applied_fn = partial(new_decorator_function,
-                                                    wrapped_object,
-                                                    *decorator_args,
-                                                    **decorator_kwargs)
+                # decorator_args_applied_fn = partial(new_decorator_function,
+                #                                     wrapped_object,
+                #                                     *decorator_args,
+                #                                     **decorator_kwargs)
                 if inspect.isclass(wrapped_object) or isinstance(wrapped_object, t.Callable):
                     """
                         There are two cases. Decorated object is a
@@ -222,11 +238,10 @@ def deckorator(*type_template_args, **kw) -> t.Any:
                                  f"of type: {type_template_args}")
 
             # And arguments that correspond to the specified types ...
-            if kw['enable_type_check']:
-                for decorator_arg, target_type in zip(decorator_args, type_template_args):
-                    if not isinstance(decorator_arg, target_type):
-                        raise TypeError(f"Passed invalid type: {type(decorator_arg)}. "
-                                        f"Expected type: '{target_type}'")
+            for decorator_arg, target_type in zip(decorator_args, type_template_args):
+                if not isinstance(decorator_arg, target_type):
+                    raise TypeError(f"Passed invalid type: {type(decorator_arg)}. "
+                                    f"Expected type: '{target_type}'")
 
             return newly_created_decorator
 
@@ -241,7 +256,6 @@ def deckorator(*type_template_args, **kw) -> t.Any:
         # set type_template_args to empty tuple
         type_template_args = ()
         return wrapper(wrapped_function)
-
     return wrapper
 
 
@@ -317,35 +331,31 @@ def execute_if(function_to_decorate: t.Callable,
         return function_to_decorate(*args, **kwargs)
 
 
-def slower_than(time_ms: float, callback: t.Callable = None):
+def _default_slower_than_callback(time_elapsed, threshold_time):
+    raise TooSlowError("Function took too long to run ... "
+                       f"Should take less than {threshold_time} "
+                       f"ms but took {time_elapsed} ms")
+
+
+@deckorator((float, int), t.Callable)
+def slower_than(wrapped_function: t.Callable,
+                time_ms: float,
+                callback: t.Callable,
+                *args,
+                **kwargs) -> t.Any:
     """
     Executes callback if time taken takes longer than specified time
+    :param wrapped_function: The function that was wrapped.
     :param time_ms: If the function does not complete in specified time,
     :param callback: The function that is called if decorator is triggered
     a warning will be raised.
-    :return:
     """
-    if callback is None:
-        def callback(time_elapsed):
-            raise TooSlowError("Function took too long to run ... "
-                               f"Should take less than {time_ms} "
-                               f"ms but took {time_elapsed} ms")
-
-    raise_error_if_not_callable(callback)
-
-    def decorator(func):
-        @wraps(func)
-        def returned_func(*args, **kwargs):
-            start = process_time() * 1000
-            output = func(*args, **kwargs)
-            elapsed = (process_time() * 1000) - start
-            if elapsed > time_ms:
-                callback(elapsed)
-            return output
-
-        return returned_func
-
-    return decorator
+    start = process_time() * 1000
+    output = wrapped_function(*args, **kwargs)
+    elapsed = (process_time() * 1000) - start
+    if elapsed > time_ms:
+        callback(elapsed, time_ms)
+    return output
 
 
 def freeze(cls: t.Type[t.Any]) -> t.Type[t.Any]:
