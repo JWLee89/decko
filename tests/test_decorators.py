@@ -1,5 +1,100 @@
 import pytest
+import typing as t
+
 import src.decko.decorators as fd
+
+
+@pytest.mark.parametrize("iter_count", [
+    10, 50, 7
+])
+def test_deckorator(iter_count):
+    """
+    Basic decoration test
+    """
+
+    counter_dict = {'counter': 0}
+
+    @fd.deckorator(t.Dict)
+    def new_decorator(decorated_func,
+                      passed_in_counter_dict,
+                      *args,
+                      **kwargs):
+        output = decorated_func(*args, **kwargs)
+        passed_in_counter_dict['counter'] += 1
+        return output
+
+    @new_decorator(counter_dict)
+    def get_int(i):
+        return i
+
+    for i in range(iter_count):
+        get_int(i)
+
+    assert counter_dict['counter'] == iter_count, "Decorator not working as intended ..."
+
+
+@pytest.mark.parametrize("data_types", [
+    (int, float),
+    (int, str, t.Callable),
+])
+@pytest.mark.parametrize("decorator_args", [
+    (1, print),     # print is a callable, not a float
+    (1, "here"),    # Missing required argument: callable
+])
+def test_check_for_invalid_data_types(data_types, decorator_args):
+    """
+    Type check safety should work and raise Errors since
+    passed in arguments do not match the specified data types
+    """
+
+    @fd.deckorator(*data_types)
+    def a_decorator(wrapped_function,
+                    *args,
+                    **kwargs):
+        return wrapped_function(*args, **kwargs)
+
+    with pytest.raises((ValueError, TypeError)):
+        @a_decorator(*decorator_args)
+        def decorate_me(num):
+            return num
+
+
+def test_check_valid_data_types():
+    """
+    Since we passed in the right data types here,
+    there should be no exception when running or instantiating
+    the function
+    """
+    data_types = [
+        (int, t.Callable),
+        (int, str, t.Callable),
+        ((int, float), str),    # passes if input is either a float or int
+    ]
+
+    decorator_args = [
+        (1, print),             # print is a callable, not a float
+        (1, "here", print),     # Missing required argument: callable
+        (1.0, "here"),
+    ]
+
+    assert len(data_types) == len(decorator_args), "Invalid unit test. Check input sizes"
+
+    for i, (data_type, decorator_arguments) in enumerate(zip(data_types, decorator_args)):
+
+        @fd.deckorator(*data_type)
+        def a_decorator(wrapped_function,
+                        *args,
+                        **kwargs):
+            print(f"args: {args}")
+            decorate_me_input = args[len(data_types[i])]
+            return wrapped_function(decorate_me_input, **kwargs)
+
+        # Should
+        @a_decorator(*decorator_arguments)
+        def decorate_me(num):
+            return num
+
+        decorate_me(100)
 
 
 @pytest.mark.parametrize("iter_count", [
@@ -47,7 +142,6 @@ def test_class_freeze():
 
 
 def test_instance_data():
-
     def setter(self, new_val):
         if new_val > 20:
             raise ValueError("Value set is greater than 20 ... ")
@@ -133,6 +227,7 @@ def test_singleton():
     Singleton classes should point to the same object.
     TODO: Test later with race conditions
     """
+
     @fd.singleton()
     class ShouldBeSingleton:
         def __init__(self):
