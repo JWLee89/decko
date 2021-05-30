@@ -1,8 +1,8 @@
 # Local imports
 from .app import Decko
-from .decorators import deckorator
 
 # Function decorators
+from .decorators import deckorator
 from .decorators import stopwatch
 from .decorators import execute_if
 from .decorators import slower_than
