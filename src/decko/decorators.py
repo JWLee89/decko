@@ -268,22 +268,16 @@ def optional_args(wrapped_func: t.Callable = None,
 # ------------ Utility decorators ------------
 # --------------------------------------------
 
-
-def stopwatch(callback: t = print):
-    raise_error_if_not_callable(callback)
-
-    def decorator(func: t.Callable) -> t.Callable:
-        @wraps(func)
-        def returned_func(*args, **kwargs):
-            start_time = process_time()
-            output = func(*args, **kwargs)
-            time_elapsed = process_time() - start_time
-            callback(time_elapsed)
-            return output
-
-        return returned_func
-
-    return decorator
+@deckorator(t.Callable)
+def stopwatch(wrapped_func,
+              callback: t = print,
+              *args,
+              **kwargs):
+    start_time = process_time()
+    output = wrapped_func(*args, **kwargs)
+    time_elapsed = process_time() - start_time
+    callback(time_elapsed)
+    return output
 
 
 @deckorator(t.Callable)
@@ -475,24 +469,20 @@ def instance_data(filter_predicate: t.Callable = None,
     return wrapper
 
 
-def filter_by_output(predicate: t.Callable) -> t.Callable:
+@deckorator(t.Callable)
+def filter_by_output(wrapped_func,
+                     predicate: t.Callable,
+                     *args, **kwargs) -> t.Callable:
     """
     Return the value if it passes a predicate function.
     Else, return None.
+    :param wrapped_func: The function that was wrapped
     :param predicate: The predicate function. If output is True,
     return the actual output.
     """
-
-    def decorator(func: t.Callable) -> t.Callable:
-        @wraps(func)
-        def returned_func(*args, **kwargs):
-            output = func(*args, **kwargs)
-            if predicate(output):
-                return output
-
-        return returned_func
-
-    return decorator
+    output = wrapped_func(*args, **kwargs)
+    if predicate(output):
+        return output
 
 
 def raise_error_if(condition: t.Callable) -> t.Callable:
