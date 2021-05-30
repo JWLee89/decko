@@ -1,7 +1,11 @@
 # Decko
 
-A decorator based utility module for Python developers. The module is designed to 
-aid developers in debugging their python applications.
+Decko is a decorator-based library designed for the following purposes
+
+1. Make the creation of decorators simple and reduce boilerplate
+2. Change the behavior of existing classes and function with minimal modifications
+3. Manage the state
+4. Provide a rich set of pre-made and tested decorators.
 
 Decko is not dependent on any external libraries that are not included in the standard Python package.
 However, one may choose to extend with external libraries such as numba to improve its performance. 
