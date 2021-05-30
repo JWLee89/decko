@@ -472,7 +472,7 @@ def instance_data(filter_predicate: t.Callable = None,
 @deckorator(t.Callable)
 def filter_by_output(wrapped_func,
                      predicate: t.Callable,
-                     *args, **kwargs) -> t.Callable:
+                     *args, **kwargs) -> t.Any:
     """
     Return the value if it passes a predicate function.
     Else, return None.
@@ -485,54 +485,34 @@ def filter_by_output(wrapped_func,
         return output
 
 
-def raise_error_if(condition: t.Callable) -> t.Callable:
+@deckorator(t.Callable)
+def raise_error_if(wrapped_function: t.Callable,
+                   trigger_condition: t.Callable,
+                   *args, **kwargs) -> t.Any:
     """
     Raise exception if a condition is met
-    :param condition: A function that returns true when
+    :param wrapped_function: The function that was wrapped
+    :param trigger_condition: A function that returns true when
     """
-
-    def decorator(func: t.Callable) -> t.Callable:
-        raise_error_if_not_callable(func)
-
-        @wraps(func)
-        def returned_func(*args, **kwargs):
-            output = func(*args, **kwargs)
-            trigger_condition = condition(output)
-            if trigger_condition:
-                raise RuntimeError(f"{raise_error_if.__name__}({condition.__name__}) "
-                                   "triggered because condition was met.\n"
-                                   f"Wrapped function: '{func.__name__}()' "
-                                   f"yielded output value {output}")
-
-        return returned_func
-
-    return decorator
+    output = wrapped_function(*args, **kwargs)
+    if trigger_condition(output):
+        raise RuntimeError(f"{raise_error_if.__name__}({trigger_condition.__name__}) "
+                           "triggered because condition was met.\n"
+                           f"Wrapped function: '{wrapped_function.__name__}()' "
+                           f"yielded output value {output}")
 
 
-def truncate(limit: int) -> t.Callable:
+@deckorator(int)
+def truncate(wrapped_function: t.Callable,
+             limit: int,
+             *args, **kwargs) -> t.Callable:
     """
     Truncate a slice-able object
+    :param wrapped_function: The function that was wrapped
     :param limit: The maximum size of the target object
     """
-
-    def decorator(func: t.Callable) -> t.Callable:
-
-        raise_error_if_not_callable(func)
-
-        @wraps(func)
-        def decorated_func(*args, **kwargs):
-            output: t.Union[str, t.List, t.Tuple] = func(*args, **kwargs)
-
-            # Check if object is sliceable
-            # Raise exception if the passed in object
-            # does not support slicing
-            try:
-                return output[:limit]
-            except:
-                raise TypeError(f"Cannot slice object: {output}")
-
-        return decorated_func
-
-    return decorator
-
-
+    output: t.Union[str, t.List, t.Tuple] = wrapped_function(*args, **kwargs)
+    try:
+        return output[:limit]
+    except:
+        raise TypeError(f"Cannot slice object: {output}")
