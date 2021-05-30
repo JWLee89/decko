@@ -1,5 +1,6 @@
 # Local imports
 from .app import Decko
+from .decorators import deckorator
 
 # Function decorators
 from .decorators import stopwatch
