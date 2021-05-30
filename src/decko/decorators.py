@@ -543,3 +543,5 @@ def truncate(limit: int) -> t.Callable:
         return decorated_func
 
     return decorator
+
+

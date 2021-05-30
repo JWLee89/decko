@@ -109,77 +109,76 @@ def timer(func):
 
     return inner
 
-
 # Create decorator called "time_it" that accepts the following args
 # 1. Int value
 # 2. A callable object or a List
-@decorator((int, float), (t.Callable, t.List))
+@deckorator((int, float), (t.Callable, t.List))
 def time_it(wrapped_function,
             interval,
             callback,
-            n,
-            i):
+            *args, **kwargs):
+    print(f"wrapped function: {wrapped_function.__name__}, interval: {interval},"
+          f" args: {args}")
     # Check every 5 interval
+    i = time_it.called
     if (i + 1) % interval == 0:
-        print(f"Function name: {wrapped_function.__name__}")
         start_time = time.time()
-        output = wrapped_function(n, i)
+        output = wrapped_function(*args, **kwargs)
         elapsed = time.time() - start_time
         callback(elapsed, i + 1)
     else:
-        output = wrapped_function(n, i)
+        output = wrapped_function(*args, **kwargs)
+    time_it.called += 1
     return output
 
 
-def handle_printing(elapsed, iteration_count):
-    print(f"The elapsed time is: {elapsed:.2f} seconds ... "
-          f"Iterated {iteration_count} times ...")
+time_it.called = 0
 
 
-# Decorate function with created decorator "time_it"
-@time_it(5.0, handle_printing)
-def long_list(n, i):
-    print(f"yeeee: {i}")
-    return list(range(n))
+@deckorator
+def immutable(wrapped_class,
+              *args,
+              **kwargs):
 
-
-@decorator()
-def freeze(cls_to_decorate,
-           should_not_work,
-           teemo = 30):
-
-    def do_freeze(self, name, value):
-        msg = f"Class {type(self)} is frozen. " \
-              f"Attempted to set attribute '{name}' to value: '{value}' ... "
+    def do_freeze(slf, name, value):
+        msg = f"Class {type(slf)} is immutable. " \
+              f"Attempted to set attribute '{name}' to value: '{value}'"
         raise AttributeError(msg)
 
-    class Immutable(cls_to_decorate):
+    class Immutable(wrapped_class):
+        """
+        A basic immutable class
+        """
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             setattr(Immutable, '__setattr__', do_freeze)
 
-    return Immutable(should_not_work, teemo)
+    return Immutable(*args, **kwargs)
 
 
-@freeze()
+@immutable
 class SampleClass:
     def __init__(self, a, teemo):
         self.a = a
 
     @time_it(1, print)
-    def method(self):
-        return self.a
+    @classmethod
+    def method(cls):
+        return "yee"
 
 
 if __name__ == "__main__":
-    for i in range(10):
-        long_list(10000000, i)
+    # for i in range(10):
+    #     long_list(10000000, i)
 
     deco_cls = SampleClass(10, 20)
+    deco_cls.method()
+    test = SampleClass(20, 40)
     try:
-        deco_cls.a = 10
+        deco_cls.a = 50
     except AttributeError:
-        print("cannot set deco_cls.a = 10. Class frozen.")
+        print("class is immutable")
+    print(deco_cls.a)
 ```
 
 
