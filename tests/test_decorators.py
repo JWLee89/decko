@@ -98,6 +98,50 @@ def test_check_valid_data_types():
         decorate_me(100)
 
 
+def test_decorator_kwarg():
+
+    arg_one = 20
+
+    @fd.deckorator((float, int), kwarg_val=10)
+    def a_decorator(wrapped_function,
+                    arg_1,
+                    kwarg_val,
+                    *args,
+                    **kwargs):
+        assert kwarg_val == 10 and arg_1 == arg_one
+        return wrapped_function(*args, **kwargs)
+
+    @a_decorator(arg_one)
+    def test(new_num):
+        return new_num
+
+    test(15)
+
+
+@pytest.mark.parametrize("invalid_inputs", [
+    10, 200.0, "string is also invalid"
+])
+def test_invalid_decorator_kwarg(invalid_inputs):
+
+    # This should raise an error, since default arg 10 is not Callable
+    @fd.deckorator(kwarg_val=(10, t.Callable))
+    def error_decorator(wrapped_function,
+                    kwarg_val,
+                    *args,
+                    **kwargs):
+        return wrapped_function(*args, **kwargs)
+
+    with pytest.raises(TypeError):
+        @error_decorator()
+        def test(new_num):
+            return new_num
+
+    with pytest.raises(TypeError):
+        @error_decorator()
+        def test(new_num):
+            return new_num
+
+
 @pytest.mark.parametrize("iter_count", [
     4, 8, 12
 ])
