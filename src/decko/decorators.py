@@ -305,8 +305,9 @@ def deckorator(*type_template_args, **type_template_kwargs) -> t.Any:
                     return decorator_args_applied_fn(*args, **kwargs)
                 return return_func
 
-
+            print(f"Decorator args: {decorator_args}, type_template_args: {type_template_arguments}")
             # TODO: Refactor! This is going to be hell to debug in the future
+            # TODO: Fix bug with breaking unit test
             # wrapped decorator called with zero args
             if len(decorator_args) > len(type_template_arguments):
                 function_to_wrap = decorator_args[0]

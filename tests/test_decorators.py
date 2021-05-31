@@ -137,9 +137,31 @@ def test_invalid_decorator_kwarg(invalid_inputs):
             return new_num
 
     with pytest.raises(TypeError):
-        @error_decorator()
+        @error_decorator(invalid_inputs)
         def test(new_num):
             return new_num
+
+
+@pytest.mark.parametrize("valid_input", [
+    10, 200.0, "a string"
+])
+def test_override_decorator_kwarg_val(valid_input):
+
+    # This should raise an error, since default arg 10 is not Callable
+    @fd.deckorator(kwarg_val=(10, int, float, str))
+    def valid_decorator(wrapped_function,
+                    kwarg_val,
+                    *args,
+                    **kwargs):
+        assert kwarg_val == valid_input, "This value should be overriden ..."
+        return wrapped_function(*args, **kwargs)
+
+    # Override default values
+    @valid_decorator(valid_input)
+    def test(new_num):
+        return new_num
+
+    test(10)
 
 
 @pytest.mark.parametrize("iter_count", [
