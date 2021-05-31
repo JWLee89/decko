@@ -60,7 +60,7 @@ def _set_defaults_if_not_defined(user_specs: t.Dict,
                             f"of type: '{type(user_value)}'")
 
 
-def _merge_into_decorator_args(decorator_args, decorator_kwargs, default_kwargs):
+def _merge_into_decorator_args(decorator_args, decorator_kwargs, default_kwargs) -> t.Tuple:
     """
     Merge the two properties together if
     default value is not overriden.
@@ -73,27 +73,118 @@ def _merge_into_decorator_args(decorator_args, decorator_kwargs, default_kwargs)
 
     return decorator_args + tuple(value for value in decorator_kwargs.values())
 
+
+def _handle_decorator_kwargs(type_template_kwargs: t.Dict,
+                             decorator_kwargs: t.Dict) -> t.Tuple:
+    """
+    Two-step approach.
+    1. Check if user specified kwarg value.
+        - If the specified value is invalid (an empty tuple), we will raise an error
+        - If a tuple of length 1 is specified, we will add object, since it can be of any type
+
+    :param type_template_kwargs: The type template
+    :param decorator_kwargs:
+    :returns two tuples with newly added decorator values and types.
+    """
+    decorator_values, decorator_types = [], []
+    for key, corresponding_values in type_template_kwargs.items():
+        is_tuple = isinstance(corresponding_values, t.Tuple)
+        is_non_empty_tuple = is_tuple and len(corresponding_values) > 0
+
+        # kwarg not specified in decorator.
+        # Replace with default value
+        # Add to decorator arguments
+        use_default = key not in decorator_kwargs
+        if use_default:
+            if is_non_empty_tuple:
+                decorator_values.append(corresponding_values[0])
+            # Not a tuple, just a single value passed
+            elif not is_tuple:
+                decorator_values.append(corresponding_values)
+            else:
+                raise ValueError("Cannot provide non-empty tuple as default kwarg.")
+        else:
+            decorator_values.append(decorator_kwargs[key])
+
+        # Now if the data has no specified type or is not a tuple
+        if (is_tuple and len(corresponding_values) == 1) or not is_tuple:
+            decorator_types.append(object)
+        elif is_non_empty_tuple and len(corresponding_values) > 1:
+            value_to_compare = corresponding_values[0] if use_default else decorator_kwargs[key]
+            target_type = corresponding_values[1:]
+            if not isinstance(value_to_compare, target_type):
+                raise TypeError(f"value: {value_to_compare} should be of type: {target_type}")
+            decorator_types.append(target_type)
+        else:
+            decorator_types.append(corresponding_values[1:])
+
+    return decorator_values, decorator_types
+
 # -------------------------------------------
 # ------------ Core decorators --------------
 # -------------------------------------------
 
 
-def deckorator(*type_template_args, **type_template_kw) -> t.Any:
+def deckorator(*type_template_args, **type_template_kwargs) -> t.Any:
     """
     Decorate a function based on its type.
     Decorators come in two forms:
         - Function decorators
         - Class decorators
+
+    :param type_template_args: These are used to define the data types
+    that the decorator will be accepting. The type-safety ensures
+    that the behavior of the decorator is more predictable, making it easier
+    to write decorators whose behaviors are more predictable.
+
+    A tuple can be used as a placeholder. This means that the argument
+    can be an instance of two or more types.
+
+    E.g.
+
+    @deckorator((float, int), t.Callable)
+    def new_decorator(wrapped_func,
+                    float_or_int_arg,
+                    callable_arg,
+                    *args,
+                    **kwargs):
+        pass
+
+    :param type_template_kwargs: We also want users to be able to provide keyword
+    args with default behaviors if not specified, which helps reduce boilerplate
+    in some cases.
+
+    if a keyword argument is passed, the provided value can be
+    1. An object representing default value or
+    2. A non-empty tuple
+
+    In case of a tuple, the first item represents the default value and the
+    following values represents the allowed types.
+    In the example below, the keyword argument 'val' has a default value of '5'
+    and can either be an instance of type int or float.
+
+    @deckorator(val=(5, int, float))
+    def some_functi
+    E.g.
+
+    Below is a more concrete example of the new decorator
+
+    @deckorator((float, int), callback=(print, t.Callable))
+    def new_decorator(wrapped_func,
+                    float_or_int_arg,
+                    *args,
+                    **decorator_kwargs,
+                    **kwargs):
+        callback = decorator_kwargs['callback']
+
+    # callback does not need to be defined.
+    @new_decorator(100)
+    def function_to_decorate(arg1, arg2):
+        ..
+
     """
-    # TODO: Disable for now and add later
     # _set_defaults_if_not_defined(kw, __DECORATOR_SPECS__)
 
-    # if type_template_kw:
-    #     print("Non empty")
-    #     type_template_args = type_template_arguments + \
-    #                          tuple(type_template[1] for type_template in type_template_kw.values())
-    # else:
-    #     type_template_args = type_template_arguments
     def wrapper(new_decorator_function: t.Callable):
         """
         :param new_decorator_function: The newly defined decorator function,
@@ -138,22 +229,22 @@ def deckorator(*type_template_args, **type_template_kw) -> t.Any:
             if not isinstance(new_decorator_function, t.Callable):
                 raise TypeError(f"{new_decorator_function} must be a callable object ... ")
 
+            # Place kwargs into decorator args (handle default values as well)
+            new_args, new_type_args = _handle_decorator_kwargs(type_template_kwargs, decorator_kwargs)
+
+            # Update old args
+            if new_args:
+                decorator_args = tuple(list(decorator_args) + new_args)
+            if new_type_args:
+                type_template_arguments = tuple(list(type_template_args) + new_type_args)
+            else:
+                type_template_arguments = type_template_args
+
             # Merge to handle keyword arguments
             # decorator_args = _merge_into_decorator_args(decorator_arguments, decorator_kwargs, type_template_kw)
             def newly_created_decorator(wrapped_object: t.Union[t.Callable, t.Type]):
                 """
                 :param wrapped_object: The function or class that was wrapped.
-
-                E.g.
-
-                @decorator()
-                def func():
-                    pass
-                vs
-
-                @decorator
-                def func():
-                    pass
                 """
                 if inspect.isclass(wrapped_object) or isinstance(wrapped_object, t.Callable):
                     """
@@ -207,14 +298,17 @@ def deckorator(*type_template_args, **type_template_kw) -> t.Any:
                 else:
                     raise TypeError("Wrapped object must be either a class or callable object. "
                                     f"Passed in '{wrapped_object}'")
+
                 # Wrap with wrapped object instead of new_decorator func to preserve metadata
                 @wraps(wrapped_object)
                 def return_func(*args, **kwargs):
                     return decorator_args_applied_fn(*args, **kwargs)
                 return return_func
 
+
+            # TODO: Refactor! This is going to be hell to debug in the future
             # wrapped decorator called with zero args
-            if len(decorator_args) > len(type_template_args):
+            if len(decorator_args) > len(type_template_arguments):
                 function_to_wrap = decorator_args[0]
                 decorator_args = ()
                 return newly_created_decorator(function_to_wrap)
@@ -222,14 +316,14 @@ def deckorator(*type_template_args, **type_template_kw) -> t.Any:
             # Decorator should have equal argument length
             # as specified by the template
             decorator_name = new_decorator_function.__name__
-            if len(decorator_args) != len(type_template_args):
+            if len(decorator_args) != len(type_template_arguments):
                 raise ValueError(f"Passed '{len(decorator_args)}' arguments --> {decorator_args} "
                                  f"to decorator: '{decorator_name}'. "
-                                 f"Should have '{len(type_template_args)}' arguments "
-                                 f"of type: {type_template_args}")
+                                 f"Should have '{len(type_template_arguments)}' arguments "
+                                 f"of type: {type_template_arguments}")
 
             # And arguments that correspond to the specified types ...
-            for decorator_arg, target_type in zip(decorator_args, type_template_args):
+            for decorator_arg, target_type in zip(decorator_args, type_template_arguments):
                 if not isinstance(decorator_arg, target_type):
                     raise TypeError(f"Passed invalid type: {type(decorator_arg)}. "
                                     f"Expected type: '{target_type}'")
@@ -237,8 +331,7 @@ def deckorator(*type_template_args, **type_template_kw) -> t.Any:
             return newly_created_decorator
         return returned_obj
 
-
-    # Called as follows
+    # Triggered when called as follows
     # @decorator instead of @decorator(...)
     if len(type_template_args) == 1 and inspect.isfunction(type_template_args[0]):
         # This is the wrapped function
@@ -273,8 +366,8 @@ def optional_args(wrapped_func: t.Callable = None,
 # --------------------------------------------
 
 @deckorator(t.Callable)
-def stopwatch(wrapped_func,
-              callback: t = print,
+def stopwatch(wrapped_func: t.Callable,
+              callback: t.Callable = print,
               *args,
               **kwargs):
     start_time = process_time()
