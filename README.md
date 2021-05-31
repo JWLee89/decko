@@ -2,18 +2,13 @@
 
 Decko is a decorator-based library designed for the following purposes
 
-1. Make the creation of decorators simple and reduce boilerplate
+1. Simplify the creation of decorators and reduce boilerplate
 2. Change the behavior of existing classes and function with minimal modifications
-3. Manage the state
-4. Provide a rich set of pre-made and tested decorators.
+3. Manage and monitor the state of instantiated decorators
+4. Provide a rich set of pre-made and tested decorators
 
 Decko is not dependent on any external libraries that are not included in the standard Python package.
 However, one may choose to extend with external libraries such as numba to improve its performance. 
-
-Decko is meant to a utility to help people debug and extend code. Its original use case is not in
-mission-critical fields where performance is key. 
-If there is enough demand, I will create a separate branch which optimizes the runtime performance
-of all decko functions.
 
 ## Updates / News 
 
@@ -172,9 +167,6 @@ class SampleClass:
 
 
 if __name__ == "__main__":
-    # for i in range(10):
-    #     long_list(10000000, i)
-
     deco_cls = SampleClass(10, 20)
     deco_cls.method()
     test = SampleClass(20, 40)
