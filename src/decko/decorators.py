@@ -99,7 +99,6 @@ def _handle_decorator_kwargs(type_template_args: t.Tuple,
         is_empty_tuple = is_tuple and len(corresponding_values) == 0
         use_default = key not in decorator_kwargs
 
-        value_to_append = None
         # by default, pass if any type
         types_to_check = object
 
@@ -109,6 +108,11 @@ def _handle_decorator_kwargs(type_template_args: t.Tuple,
         # Find value to append. If it is a tuple, we are targeting the first value
         if use_default and is_non_empty_tuple:
             value_to_append = corresponding_values[0]
+            # do type checking
+            value_to_compare = corresponding_values[0] if use_default else decorator_kwargs[key]
+            types_to_check = corresponding_values[1:]
+            if not isinstance(value_to_compare, types_to_check):
+                raise TypeError(f"value: {value_to_compare} should be of type: {types_to_check}")
         elif not is_tuple:
             value_to_append = corresponding_values
         else:
@@ -116,13 +120,6 @@ def _handle_decorator_kwargs(type_template_args: t.Tuple,
 
         # Append to decorator value
         decorator_values.append(value_to_append)
-
-        # Now if the data has no specified type or is not a tuple
-        if is_non_empty_tuple and len(corresponding_values) > 1:
-            value_to_compare = corresponding_values[0] if use_default else decorator_kwargs[key]
-            types_to_check = corresponding_values[1:]
-            if not isinstance(value_to_compare, types_to_check):
-                raise TypeError(f"value: {value_to_compare} should be of type: {types_to_check}")
 
         # Lastly append the types to check
         decorator_types.append(types_to_check)
