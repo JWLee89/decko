@@ -119,7 +119,7 @@ def test_decorator_kwarg():
 
 
 @pytest.mark.parametrize("invalid_inputs", [
-    10, 200.0, "string is also invalid"
+    10, 200.0, "string is also invalid",
 ])
 def test_invalid_decorator_kwarg(invalid_inputs):
 
@@ -127,6 +127,7 @@ def test_invalid_decorator_kwarg(invalid_inputs):
     @fd.deckorator(kwarg_val=(10, t.Callable))
     def error_decorator(wrapped_function,
                     kwarg_val,
+                    cowbell,
                     *args,
                     **kwargs):
         return wrapped_function(*args, **kwargs)
@@ -148,12 +149,14 @@ def test_invalid_decorator_kwarg(invalid_inputs):
 def test_override_decorator_kwarg_val(valid_input):
 
     # This should raise an error, since default arg 10 is not Callable
-    @fd.deckorator(kwarg_val=(10, int, float, str))
+    @fd.deckorator(kwarg_val=(10, int, float, str), new_kw=print)
     def valid_decorator(wrapped_function,
                     kwarg_val,
+                        new_kw,
                     *args,
                     **kwargs):
         assert kwarg_val == valid_input, "This value should be overriden ..."
+        assert new_kw == print, "default new_kw should be print since not overridden"
         return wrapped_function(*args, **kwargs)
 
     # Override default values

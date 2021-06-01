@@ -229,10 +229,13 @@ def deckorator(*type_template_args, **type_template_kwargs) -> t.Any:
             if not isinstance(new_decorator_function, t.Callable):
                 raise TypeError(f"{new_decorator_function} must be a callable object ... ")
 
+            print(f"Decorator args: {decorator_args}, kwargs: {decorator_kwargs}")
             # Place kwargs into decorator args (handle default values as well)
             new_args, new_type_args = _handle_decorator_kwargs(type_template_kwargs, decorator_kwargs)
 
-            # Update old args
+            # Update old args:
+            # TODO: This is really ugly ... Find a better way to do this without breaking existing unit tests
+            # TODO: Current Status --> Examining how to effectively write unit tests.
             if new_args:
                 decorator_args = tuple(list(decorator_args) + new_args)
             if new_type_args:
@@ -285,16 +288,14 @@ def deckorator(*type_template_args, **type_template_kwargs) -> t.Any:
                     # print(f"Function decorator called: {decorator_args} on {new_decorator_function.__name__}")
                     decorator_args_applied_fn = partial(new_decorator_function,
                                                         wrapped_object,
-                                                        *decorator_args,
-                                                        **decorator_kwargs)
+                                                        *decorator_args)
                 elif isinstance(wrapped_object, (staticmethod, classmethod)):
                     wrapped_object = wrapped_object.__func__
                     # Must add __func__ to call static or class method
                     # @see https://stackoverflow.com/questions/41921255/staticmethod-object-is-not-callable
                     decorator_args_applied_fn = partial(new_decorator_function,
                                                         wrapped_object,
-                                                        *decorator_args,
-                                                        **decorator_kwargs)
+                                                        *decorator_args)
                 else:
                     raise TypeError("Wrapped object must be either a class or callable object. "
                                     f"Passed in '{wrapped_object}'")
@@ -302,6 +303,7 @@ def deckorator(*type_template_args, **type_template_kwargs) -> t.Any:
                 # Wrap with wrapped object instead of new_decorator func to preserve metadata
                 @wraps(wrapped_object)
                 def return_func(*args, **kwargs):
+                    print(f"yee:{decorator_args}, {decorator_kwargs}, {args}, {kwargs}")
                     return decorator_args_applied_fn(*args, **kwargs)
                 return return_func
 
