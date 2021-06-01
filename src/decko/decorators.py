@@ -76,6 +76,7 @@ def _merge_into_decorator_args(decorator_args, decorator_kwargs, default_kwargs)
 
 def _handle_decorator_kwargs(type_template_args: t.Tuple,
                              type_template_kwargs: t.Dict,
+                             decorator_args: t.Tuple,
                              decorator_kwargs: t.Dict) -> t.Tuple:
     """
     Two-step approach.
@@ -124,7 +125,7 @@ def _handle_decorator_kwargs(type_template_args: t.Tuple,
         # Lastly append the types to check
         decorator_types.append(types_to_check)
 
-    return decorator_values, decorator_types
+    return tuple(list(decorator_args) + decorator_values), tuple(list(type_template_args) + decorator_types)
 
 # -------------------------------------------
 # ------------ Core decorators --------------
@@ -235,24 +236,12 @@ def deckorator(*type_template_args, **type_template_kwargs) -> t.Any:
             if not isinstance(new_decorator_function, t.Callable):
                 raise TypeError(f"{new_decorator_function} must be a callable object ... ")
 
-            print(f"Decorator args: {decorator_args}, kwargs: {decorator_kwargs}")
             # Place kwargs into decorator args (handle default values as well)
-            new_args, new_type_args = _handle_decorator_kwargs(type_template_args,
-                                                               type_template_kwargs,
-                                                               decorator_kwargs)
+            decorator_args, type_template_arguments = _handle_decorator_kwargs(type_template_args,
+                                                                               type_template_kwargs,
+                                                                               decorator_args,
+                                                                               decorator_kwargs)
 
-            # Update old args:
-            # TODO: This is really ugly ... Find a better way to do this without breaking existing unit tests
-            # TODO: Current Status --> Examining how to effectively write unit tests.
-            if new_args:
-                decorator_args = tuple(list(decorator_args) + new_args)
-            if new_type_args:
-                type_template_arguments = tuple(list(type_template_args) + new_type_args)
-            else:
-                type_template_arguments = type_template_args
-
-            # Merge to handle keyword arguments
-            # decorator_args = _merge_into_decorator_args(decorator_arguments, decorator_kwargs, type_template_kw)
             def newly_created_decorator(wrapped_object: t.Union[t.Callable, t.Type]):
                 """
                 :param wrapped_object: The function or class that was wrapped.
