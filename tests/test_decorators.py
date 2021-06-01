@@ -151,16 +151,16 @@ def test_override_decorator_kwarg_val(valid_input):
     # This should raise an error, since default arg 10 is not Callable
     @fd.deckorator(kwarg_val=(10, int, float, str), new_kw=print)
     def valid_decorator(wrapped_function,
-                    kwarg_val,
+                        kwarg_val,
                         new_kw,
-                    *args,
-                    **kwargs):
+                        *args,
+                        **kwargs):
         assert kwarg_val == valid_input, "This value should be overriden ..."
         assert new_kw == print, "default new_kw should be print since not overridden"
         return wrapped_function(*args, **kwargs)
 
     # Override default values
-    @valid_decorator(valid_input)
+    @valid_decorator(kwarg_val=valid_input)
     def test(new_num):
         return new_num
 

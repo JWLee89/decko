@@ -74,7 +74,8 @@ def _merge_into_decorator_args(decorator_args, decorator_kwargs, default_kwargs)
     return decorator_args + tuple(value for value in decorator_kwargs.values())
 
 
-def _handle_decorator_kwargs(type_template_kwargs: t.Dict,
+def _handle_decorator_kwargs(type_template_args: t.Tuple,
+                             type_template_kwargs: t.Dict,
                              decorator_kwargs: t.Dict) -> t.Tuple:
     """
     Two-step approach.
@@ -82,41 +83,49 @@ def _handle_decorator_kwargs(type_template_kwargs: t.Dict,
         - If the specified value is invalid (an empty tuple), we will raise an error
         - If a tuple of length 1 is specified, we will add object, since it can be of any type
 
+    :param type_template_args: The type template
     :param type_template_kwargs: The type template
+    :param decorator_args: The type template
     :param decorator_kwargs:
     :returns two tuples with newly added decorator values and types.
     """
     decorator_values, decorator_types = [], []
+
+    # Merge
     for key, corresponding_values in type_template_kwargs.items():
+
         is_tuple = isinstance(corresponding_values, t.Tuple)
         is_non_empty_tuple = is_tuple and len(corresponding_values) > 0
-
-        # kwarg not specified in decorator.
-        # Replace with default value
-        # Add to decorator arguments
+        is_empty_tuple = is_tuple and len(corresponding_values) == 0
         use_default = key not in decorator_kwargs
-        if use_default:
-            if is_non_empty_tuple:
-                decorator_values.append(corresponding_values[0])
-            # Not a tuple, just a single value passed
-            elif not is_tuple:
-                decorator_values.append(corresponding_values)
-            else:
-                raise ValueError("Cannot provide non-empty tuple as default kwarg.")
+
+        value_to_append = None
+        # by default, pass if any type
+        types_to_check = object
+
+        if is_empty_tuple:
+            raise ValueError("Cannot provide non-empty tuple as default kwarg.")
+
+        # Find value to append. If it is a tuple, we are targeting the first value
+        if use_default and is_non_empty_tuple:
+            value_to_append = corresponding_values[0]
+        elif not is_tuple:
+            value_to_append = corresponding_values
         else:
-            decorator_values.append(decorator_kwargs[key])
+            value_to_append = decorator_kwargs[key]
+
+        # Append to decorator value
+        decorator_values.append(value_to_append)
 
         # Now if the data has no specified type or is not a tuple
-        if (is_tuple and len(corresponding_values) == 1) or not is_tuple:
-            decorator_types.append(object)
-        elif is_non_empty_tuple and len(corresponding_values) > 1:
+        if is_non_empty_tuple and len(corresponding_values) > 1:
             value_to_compare = corresponding_values[0] if use_default else decorator_kwargs[key]
-            target_type = corresponding_values[1:]
-            if not isinstance(value_to_compare, target_type):
-                raise TypeError(f"value: {value_to_compare} should be of type: {target_type}")
-            decorator_types.append(target_type)
-        else:
-            decorator_types.append(corresponding_values[1:])
+            types_to_check = corresponding_values[1:]
+            if not isinstance(value_to_compare, types_to_check):
+                raise TypeError(f"value: {value_to_compare} should be of type: {types_to_check}")
+
+        # Lastly append the types to check
+        decorator_types.append(types_to_check)
 
     return decorator_values, decorator_types
 
@@ -231,7 +240,9 @@ def deckorator(*type_template_args, **type_template_kwargs) -> t.Any:
 
             print(f"Decorator args: {decorator_args}, kwargs: {decorator_kwargs}")
             # Place kwargs into decorator args (handle default values as well)
-            new_args, new_type_args = _handle_decorator_kwargs(type_template_kwargs, decorator_kwargs)
+            new_args, new_type_args = _handle_decorator_kwargs(type_template_args,
+                                                               type_template_kwargs,
+                                                               decorator_kwargs)
 
             # Update old args:
             # TODO: This is really ugly ... Find a better way to do this without breaking existing unit tests
