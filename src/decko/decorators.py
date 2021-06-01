@@ -109,11 +109,7 @@ def _handle_decorator_kwargs(type_template_args: t.Tuple,
         # Find value to append. If it is a tuple, we are targeting the first value
         if use_default and is_non_empty_tuple:
             value_to_append = corresponding_values[0]
-            # do type checking
-            value_to_compare = corresponding_values[0] if use_default else decorator_kwargs[key]
             types_to_check = corresponding_values[1:]
-            if not isinstance(value_to_compare, types_to_check):
-                raise TypeError(f"value: {value_to_compare} should be of type: {types_to_check}")
         elif not is_tuple:
             value_to_append = corresponding_values
         else:
@@ -125,14 +121,16 @@ def _handle_decorator_kwargs(type_template_args: t.Tuple,
         # Lastly append the types to check
         decorator_types.append(types_to_check)
 
-    return tuple(list(decorator_args) + decorator_values), tuple(list(type_template_args) + decorator_types)
+    return tuple(list(decorator_args) + decorator_values), \
+           tuple(list(type_template_args) + decorator_types)
 
 # -------------------------------------------
 # ------------ Core decorators --------------
 # -------------------------------------------
 
 
-def deckorator(*type_template_args, **type_template_kwargs) -> t.Any:
+def deckorator(*type_template_args,
+               **type_template_kwargs) -> t.Any:
     """
     Decorate a function based on its type.
     Decorators come in two forms:
@@ -246,6 +244,12 @@ def deckorator(*type_template_args, **type_template_kwargs) -> t.Any:
                 """
                 :param wrapped_object: The function or class that was wrapped.
                 """
+                # If class decorator specified and type template
+                if 'is_class_decorator' in type_template_kwargs and \
+                    type_template_kwargs['is_class_decorator'] is True and \
+                    not inspect.isclass(wrapped_object):
+                    raise TypeError(f"Created a class decorator type but wrapping a non-class type: {wrapped_object}")
+
                 if inspect.isclass(wrapped_object) or isinstance(wrapped_object, t.Callable):
                     """
                         There are two cases. Decorated object is a
@@ -282,6 +286,7 @@ def deckorator(*type_template_args, **type_template_kwargs) -> t.Any:
                         def decorate_me():
                             ...
                     """
+                    print(f"Wrapped object: {wrapped_object}")
                     # print(f"Function decorator called: {decorator_args} on {new_decorator_function.__name__}")
                     decorator_args_applied_fn = partial(new_decorator_function,
                                                         wrapped_object,
@@ -300,13 +305,10 @@ def deckorator(*type_template_args, **type_template_kwargs) -> t.Any:
                 # Wrap with wrapped object instead of new_decorator func to preserve metadata
                 @wraps(wrapped_object)
                 def return_func(*args, **kwargs):
-                    print(f"yee:{decorator_args}, {decorator_kwargs}, {args}, {kwargs}")
                     return decorator_args_applied_fn(*args, **kwargs)
                 return return_func
 
-            print(f"Decorator args: {decorator_args}, type_template_args: {type_template_arguments}")
             # TODO: Refactor! This is going to be hell to debug in the future
-            # TODO: Fix bug with breaking unit test
             # wrapped decorator called with zero args
             if len(decorator_args) > len(type_template_arguments):
                 function_to_wrap = decorator_args[0]
@@ -442,7 +444,7 @@ def slower_than(wrapped_function: t.Callable,
     return output
 
 
-@deckorator
+@deckorator(is_class_decorator=True)
 def freeze(cls: t.Type[t.Any],
            *args, **kwargs) -> t.Type[t.Any]:
     """
@@ -451,6 +453,8 @@ def freeze(cls: t.Type[t.Any],
     are mutated or if new classes are added
     :param cls: A Class
     """
+    print(f"freeez: {cls}")
+
     def do_freeze(slf, name, value):
         msg = f"Class {type(slf)} is frozen. " \
               f"Attempted to set attribute '{name}' to value: '{value}'"
@@ -468,12 +472,12 @@ def freeze(cls: t.Type[t.Any],
     return Immutable(*args, **kwargs)
 
 
+
 def singleton(thread_safe: bool = False) -> t.Type[t.Any]:
     """
     If decorated with singleton,
     this class will be a singleton object
     """
-
     def wrapper(wrapped_class: t.Any):
         raise_error_if_not_class_instance(wrapped_class)
         if thread_safe:

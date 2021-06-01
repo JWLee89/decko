@@ -64,6 +64,9 @@ from .helper.validation import (
 from .helper.validation import is_class_instance, is_iterable
 from .helper.util import get_unique_func_name
 from .immutable import ImmutableError
+from .decorators import (
+    deckorator,
+)
 
 
 class InspectMode:
@@ -208,6 +211,21 @@ class Decko:
         # Register globally
         self.global_state = DeckoState()
 
+    def deckorate(self,
+                  *type_template_args,
+                  **type_template_kwargs):
+        """
+        The building block of
+        :param new_decorator:
+        :param type_template_args:
+        :param type_template_kwargs:
+        :return:
+        :rtype:
+        """
+        decorated_fun = deckorator(*type_template_args, **type_template_kwargs)
+        print(f"decorated_fun")
+        return decorated_fun
+
     def pure(self, **kw) -> t.Callable:
         """
         Check to see whether a given function is pure.
@@ -346,10 +364,9 @@ class Decko:
         if is_class_instance(obj_to_decorate):
             return self._add_class_decorator_rule(decorator_func, wrap_with,
                                                   obj_to_decorate, **kwargs)
-        else:
-            self._add_function_decorator_rule(decorator_func, wrap_with,
-                                              obj_to_decorate, **kwargs)
-            return wrap_with
+        self._add_function_decorator_rule(decorator_func, wrap_with,
+                                          obj_to_decorate, **kwargs)
+        return wrap_with
 
     @staticmethod
     def get_new_configs(debug: bool,

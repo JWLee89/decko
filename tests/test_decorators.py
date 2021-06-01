@@ -232,7 +232,8 @@ def test_class_freeze():
         cls_instance.new_prop = 100
 
     # Decorating a function with freeze should raise an error
-    with pytest.raises(Exception):
+    with pytest.raises(TypeError):
+
         @fd.freeze
         def random_func(test):
             print(f"Test random_func: {test}")
