@@ -233,7 +233,6 @@ def test_class_freeze():
 
     # Decorating a function with freeze should raise an error
     with pytest.raises(TypeError):
-
         @fd.freeze
         def random_func(test):
             print(f"Test random_func: {test}")

@@ -130,6 +130,8 @@ def _handle_decorator_kwargs(type_template_args: t.Tuple,
 
 
 def deckorator(*type_template_args,
+               dk_is_class_decorator: bool = None,
+               attach_stats: bool = None,
                **type_template_kwargs) -> t.Any:
     """
     Decorate a function based on its type.
@@ -137,6 +139,7 @@ def deckorator(*type_template_args,
         - Function decorators
         - Class decorators
 
+    :param dk_is_class_instance:
     :param type_template_args: These are used to define the data types
     that the decorator will be accepting. The type-safety ensures
     that the behavior of the decorator is more predictable, making it easier
@@ -188,6 +191,7 @@ def deckorator(*type_template_args,
         ..
 
     """
+    # compute_stats = 'dk_compute' in
     # _set_defaults_if_not_defined(kw, __DECORATOR_SPECS__)
 
     def wrapper(new_decorator_function: t.Callable):
@@ -245,8 +249,7 @@ def deckorator(*type_template_args,
                 :param wrapped_object: The function or class that was wrapped.
                 """
                 # If class decorator specified and type template
-                if 'is_class_decorator' in type_template_kwargs and \
-                    type_template_kwargs['is_class_decorator'] is True and \
+                if dk_is_class_decorator is True and \
                     not inspect.isclass(wrapped_object):
                     raise TypeError(f"Created a class decorator type but wrapping a non-class type: {wrapped_object}")
 
@@ -444,7 +447,7 @@ def slower_than(wrapped_function: t.Callable,
     return output
 
 
-@deckorator(is_class_decorator=True)
+@deckorator(dk_is_class_decorator=True)
 def freeze(cls: t.Type[t.Any],
            *args, **kwargs) -> t.Type[t.Any]:
     """
