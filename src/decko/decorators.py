@@ -456,7 +456,7 @@ def freeze(cls: t.Type[t.Any],
     are mutated or if new classes are added
     :param cls: A Class
     """
-    print(f"freeez: {cls}")
+    print(f"freeez: {cls}, {args}")
 
     def do_freeze(slf, name, value):
         msg = f"Class {type(slf)} is frozen. " \
@@ -475,12 +475,12 @@ def freeze(cls: t.Type[t.Any],
     return Immutable(*args, **kwargs)
 
 
-
 def singleton(thread_safe: bool = False) -> t.Type[t.Any]:
     """
     If decorated with singleton,
     this class will be a singleton object
     """
+
     def wrapper(wrapped_class: t.Any):
         raise_error_if_not_class_instance(wrapped_class)
         if thread_safe:
