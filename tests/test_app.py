@@ -127,6 +127,7 @@ def test_invalid_set_debug() -> None:
                          )
 def test_slower_than(input_size, milliseconds):
     dk = Decko(__name__)
+
     def raise_error(time_elapsed):
         raise ValueError(f"Took {time_elapsed} milliseconds")
 

@@ -139,7 +139,6 @@ def deckorator(*type_template_args,
         - Function decorators
         - Class decorators
 
-    :param dk_is_class_instance:
     :param type_template_args: These are used to define the data types
     that the decorator will be accepting. The type-safety ensures
     that the behavior of the decorator is more predictable, making it easier
@@ -302,18 +301,28 @@ def deckorator(*type_template_args,
                                                         wrapped_object,
                                                         *decorator_args)
                 else:
-                    raise TypeError("Wrapped object must be either a class or callable object. "
-                                    f"Passed in '{wrapped_object}'")
+                    # If we reach here, we likely decorated a class method and mishandled self.
+                    # If we cannot handle this, then we really did wrap an invalid object
+                    try:
+                        self = wrapped_object
+                        method = getattr(self, new_decorator_function.__name__)
+                        decorator_args_applied_fn = partial(method,
+                                                            wrapped_object,
+                                                            *decorator_args)
+                    except:
+                        raise TypeError("Wrapped object must be either a class or callable object. "
+                                        f"Passed in '{wrapped_object}'")
 
                 # Wrap with wrapped object instead of new_decorator func to preserve metadata
                 @wraps(wrapped_object)
                 def return_func(*args, **kwargs):
                     return decorator_args_applied_fn(*args, **kwargs)
                 return return_func
-
             # TODO: Refactor! This is going to be hell to debug in the future
             # wrapped decorator called with zero args
             if len(decorator_args) > len(type_template_arguments):
+                print(f"Decorator args: {decorator_args}, Type template: {type_template_arguments}")
+
                 function_to_wrap = decorator_args[0]
                 decorator_args = ()
                 return newly_created_decorator(function_to_wrap)

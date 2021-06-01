@@ -223,8 +223,11 @@ class Decko:
         :rtype:
         """
         decorated_fun = deckorator(*type_template_args, **type_template_kwargs)
-        print(f"decorated_fun")
-        return decorated_fun
+        # add_decorator_rule = self.add_decorator_rule
+        def func_to_decorate(wrapped_obj):
+            # add_decorator_rule(self.deckorate, wrapped_obj)
+            return decorated_fun(wrapped_obj)
+        return func_to_decorate
 
     def pure(self, **kw) -> t.Callable:
         """
@@ -277,7 +280,7 @@ class Decko:
 
                 return output
 
-            self.add_decorator_rule(self.pure, inner, func, **kw)
+            self.add_decorator_rule(self.pure, func, **kw)
             # TODO: Abstract this logic
             if is_class_instance(func):
                 return func
@@ -288,7 +291,6 @@ class Decko:
 
     def _add_class_decorator_rule(self,
                                   decorator_func: t.Callable,
-                                  wrap_with: t.Callable,
                                   cls, **kwargs) -> None:
         """
         If the decorated object is a class, we will add different rules.
@@ -314,7 +316,7 @@ class Decko:
                     msg.append(f"Decorating: {get_unique_func_name(member_variable)}() "
                                f"with function: {get_unique_func_name(decorator_func)}()")
                 # Get the class method and decorate
-                decorated_function = self._decorate_func(decorator_func, wrap_with, member_variable)
+                decorated_function = self._decorate_func(decorator_func, member_variable)
                 setattr(cls, member_key, decorated_function)
 
         if self.debug:
@@ -324,7 +326,6 @@ class Decko:
 
     def _add_function_decorator_rule(self,
                                      decorator_func: t.Callable,
-                                     wrap_with: t.Callable,
                                      func: t.Callable, **kwargs) -> None:
         """
         Add common metadata regarding the decorated function.
@@ -338,7 +339,6 @@ class Decko:
 
     def add_decorator_rule(self,
                            decorator_func: t.Callable,
-                           wrap_with: t.Callable,
                            obj_to_decorate: t.Union[t.Callable, t.Type],
                            **kwargs):
         """
@@ -362,11 +362,9 @@ class Decko:
         :return:
         """
         if is_class_instance(obj_to_decorate):
-            return self._add_class_decorator_rule(decorator_func, wrap_with,
+            return self._add_class_decorator_rule(decorator_func,
                                                   obj_to_decorate, **kwargs)
-        self._add_function_decorator_rule(decorator_func, wrap_with,
-                                          obj_to_decorate, **kwargs)
-        return wrap_with
+        self._add_function_decorator_rule(decorator_func, obj_to_decorate, **kwargs)
 
     @staticmethod
     def get_new_configs(debug: bool,
@@ -454,7 +452,6 @@ class Decko:
 
     def _decorate_func(self,
                        decorator_func: t.Callable,
-                       wrap_with: t.Callable,
                        func: t.Callable,
                        **kw) -> t.Callable:
         """
@@ -480,11 +477,13 @@ class Decko:
         :return:
         """
         # Register the function and add appropriate metadata
-        self._add_function_decorator_rule(decorator_func, wrap_with, func, **kw)
-        return wrap_with(func)
+        self._add_function_decorator_rule(decorator_func, func, **kw)
 
+    @deckorator(t.Callable)
     def execute_if(self,
-                   predicate: t.Callable) -> t.Callable:
+                   function_to_wrap,
+                   predicate: t.Callable,
+                   *args, **kwargs) -> t.Callable:
         """
         Given a t.List of subscribed callables and an predicate function,
         create a wrapper that fires events when predicates are fulfilled
@@ -513,21 +512,28 @@ class Decko:
         :param predicate: The condition for triggering the event
         :return: The wrapped function
         """
+        if predicate(*args, **kwargs):
+            return function_to_wrap(*args, **kwargs)
 
-        def wrap(func: t.Callable) -> t.Callable:
-            @wraps(func)
-            def wrapped(*args, **kwargs):
-                fire_event = predicate(*args, **kwargs)
-                if fire_event:
-                    return func(*args, **kwargs)
+        # def wrap(func: t.Callable) -> t.Callable:
+        #     @wraps(func)
+        #     def wrapped(*args, **kwargs):
+        #         fire_event = predicate(*args, **kwargs)
+        #         if fire_event:
+        #             return func(*args, **kwargs)
+        #
+        #     self.add_decorator_rule(self.execute_if, func)
+        #
+        #     return wrapped
+        #
+        # return wrap
 
-            self.add_decorator_rule(self.execute_if, wrapped, func)
-
-            return wrapped
-
-        return wrap
-
-    def slower_than(self, time_ms: float, **kw):
+    @deckorator((float, int), callback=(None, t.Callable))
+    def slower_than(self,
+                    wrapped_func: t.Callable,
+                    time_ms: t.Union[float, int],
+                    callback: t.Callable,
+                    *args, **kwargs):
         """
         Raise a warning if time taken takes longer than
         specified time
@@ -537,34 +543,22 @@ class Decko:
         :return:
         :rtype:
         """
-
-        def wrapper(func):
-            func_name = get_unique_func_name(func)
-            callback = None
-            if "callback" in kw:
-                callback = kw['callback']
-
-            @wraps(func)
-            def inner(*args, **kwargs):
-                start = process_time() * 1000
-                output = func(*args, **kwargs)
-                elapsed = (process_time() * 1000) - start
-                self.log_debug(f"Function {func_name} called. Time elapsed: "
-                               f"{elapsed} milliseconds.")
-                if elapsed > time_ms:
-                    if callback:
-                        callback(time_ms)
-                    else:
-                        self.log(f"Function: {func_name} took longer than"
-                                 f"{time_ms} milliseconds. Total time taken: {elapsed}",
-                                 logging.WARNING)
-                return output
-
-            self.add_decorator_rule(self.slower_than, inner, func)
-
-            return inner
-
-        return wrapper
+        func_name = get_unique_func_name(wrapped_func)
+        start = process_time() * 1000
+        output = wrapped_func(*args, **kwargs)
+        elapsed = (process_time() * 1000) - start
+        print(f"elapsed: {elapsed}")
+        self.log_debug(f"Function {func_name} called. Time elapsed: "
+                       f"{elapsed} milliseconds.")
+        if elapsed > time_ms:
+            if callback:
+                callback(time_ms)
+            else:
+                self.log(f"Function: {func_name} took longer than"
+                         f"{time_ms} milliseconds. Total time taken: {elapsed}",
+                         logging.WARNING)
+        self.add_decorator_rule(self.slower_than, wrapped_func)
+        return output
 
     def instance_data(self,
                       filter_predicate: t.Callable = None,
@@ -676,7 +670,7 @@ class Decko:
             self._profiler.disable()
             return output
 
-        self.add_decorator_rule(self.profile, wrapped, func)
+        self.add_decorator_rule(self.profile, func)
         return wrapped
 
     def _update_decoration_info(self,
@@ -738,7 +732,7 @@ class Decko:
                 preprocess(functions, *args, **kwargs)
                 return fn(*args, **kwargs)
 
-            fn: t.Callable = self._decorate_func(self.run_before, inner, fn)
+            fn: t.Callable = self._decorate_func(self.run_before, fn)
             return inner
 
         return wrapper
