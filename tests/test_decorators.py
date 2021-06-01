@@ -402,3 +402,31 @@ def test_freeze():
     # But they should not be able to assign a new list
     with pytest.raises(ImmutableError):
         frozen_class.list = 200
+
+
+@pytest.mark.parametrize('threshold',
+                         [
+                             100,
+                             200,
+                             300,
+                         ]
+                         )
+def test_execute_if(threshold):
+
+
+    def greater_than(output):
+        return output > threshold
+
+    @decorators.execute_if(greater_than)
+    def run(output):
+        return output
+
+    answer_arr = []
+
+    for i in range(int(threshold * 2)):
+        output = run(i)
+        if output:
+            answer_arr.append(output)
+
+    assert len(answer_arr) == (threshold - 1), \
+        f"Array should be size: {len(answer_arr)}"

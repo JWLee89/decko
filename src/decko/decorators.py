@@ -242,15 +242,14 @@ def deckorator(*type_template_args,
                                                                                type_template_kwargs,
                                                                                decorator_args,
                                                                                decorator_kwargs)
-
             def newly_created_decorator(wrapped_object: t.Union[t.Callable, t.Type]):
                 """
                 :param wrapped_object: The function or class that was wrapped.
                 """
                 # If class decorator specified and type template
-                if dk_is_class_decorator is True and \
-                    not inspect.isclass(wrapped_object):
-                    raise TypeError(f"Created a class decorator type but wrapping a non-class type: {wrapped_object}")
+                if dk_is_class_decorator is True and not inspect.isclass(wrapped_object):
+                    raise TypeError(f"Created a class decorator type "
+                                    f"but wrapping a non-class type: {wrapped_object}")
 
                 if inspect.isclass(wrapped_object) or isinstance(wrapped_object, t.Callable):
                     """
@@ -313,12 +312,8 @@ def deckorator(*type_template_args,
             # wrapped decorator called with zero args
             if len(decorator_args) > len(type_template_arguments):
                 function_to_wrap = decorator_args[0]
+                # set argument to empty afterwards
                 decorator_args = ()
-
-                print(f"Decorator args: {decorator_args}, "
-                      f"Type template: {type_template_arguments}, "
-                      f"Callable: {callable(function_to_wrap)}")
-
                 return newly_created_decorator(function_to_wrap)
 
             # Decorator should have equal argument length
@@ -335,7 +330,6 @@ def deckorator(*type_template_args,
                 if not isinstance(decorator_arg, target_type):
                     raise TypeError(f"Passed invalid type: {type(decorator_arg)}. "
                                     f"Expected type: '{target_type}'")
-
             return newly_created_decorator
         return returned_obj
 

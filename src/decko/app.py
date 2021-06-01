@@ -66,6 +66,7 @@ from .helper.util import get_unique_func_name
 from .immutable import ImmutableError
 from .decorators import (
     deckorator,
+    execute_if
 )
 
 
@@ -123,6 +124,7 @@ class DeckoState(metaclass=Singleton):
 
 
 def deckorate_method(
+             self,
               *type_template_args,
               **type_template_kwargs):
     """
@@ -483,7 +485,6 @@ class Decko:
         # Register the function and add appropriate metadata
         self._add_function_decorator_rule(decorator_func, func, **kw)
 
-    @deckorate_method(t.Callable)
     def execute_if(self,
                    function_to_wrap,
                    predicate: t.Callable,
@@ -516,9 +517,9 @@ class Decko:
         :param predicate: The condition for triggering the event
         :return: The wrapped function
         """
-        print(f"test: {self}")
+        print(f"test: {args}, {function_to_wrap}, predicate: {predicate}")
         if predicate(*args, **kwargs):
-            return function_to_wrap(*args, **kwargs)
+            return execute_if(function_to_wrap, *args, **kwargs)
 
         # def wrap(func: t.Callable) -> t.Callable:
         #     @wraps(func)
