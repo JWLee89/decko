@@ -122,6 +122,28 @@ class DeckoState(metaclass=Singleton):
         return ", ".join([f'{function_name}: {v}' for function_name, v in self.functions.items()])
 
 
+def deckorate_method(
+              *type_template_args,
+              **type_template_kwargs):
+    """
+    The building block of
+    :param new_decorator:
+    :param type_template_args:
+    :param type_template_kwargs:
+    :return:
+    :rtype:
+    """
+    print(f"Type template args: {type_template_args}")
+    decorated_fun = deckorator(*type_template_args, **type_template_kwargs)
+
+    # add_decorator_rule = self.add_decorator_rule
+    def func_to_decorate(wrapped_obj):
+        # self.add_decorator_rule(self.deckorate, wrapped_obj)
+        return decorated_fun(wrapped_obj)
+
+    return func_to_decorate
+
+
 class Decko:
     """
     Yeeeee ....
@@ -210,24 +232,6 @@ class Decko:
 
         # Register globally
         self.global_state = DeckoState()
-
-    def deckorate(self,
-                  *type_template_args,
-                  **type_template_kwargs):
-        """
-        The building block of
-        :param new_decorator:
-        :param type_template_args:
-        :param type_template_kwargs:
-        :return:
-        :rtype:
-        """
-        decorated_fun = deckorator(*type_template_args, **type_template_kwargs)
-        # add_decorator_rule = self.add_decorator_rule
-        def func_to_decorate(wrapped_obj):
-            # add_decorator_rule(self.deckorate, wrapped_obj)
-            return decorated_fun(wrapped_obj)
-        return func_to_decorate
 
     def pure(self, **kw) -> t.Callable:
         """
@@ -479,7 +483,7 @@ class Decko:
         # Register the function and add appropriate metadata
         self._add_function_decorator_rule(decorator_func, func, **kw)
 
-    @deckorator(t.Callable)
+    @deckorate_method(t.Callable)
     def execute_if(self,
                    function_to_wrap,
                    predicate: t.Callable,
@@ -512,6 +516,7 @@ class Decko:
         :param predicate: The condition for triggering the event
         :return: The wrapped function
         """
+        print(f"test: {self}")
         if predicate(*args, **kwargs):
             return function_to_wrap(*args, **kwargs)
 
