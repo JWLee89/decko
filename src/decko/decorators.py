@@ -242,6 +242,7 @@ def deckorator(*type_template_args,
                                                                                type_template_kwargs,
                                                                                decorator_args,
                                                                                decorator_kwargs)
+
             def newly_created_decorator(wrapped_object: t.Union[t.Callable, t.Type]):
                 """
                 :param wrapped_object: The function or class that was wrapped.
@@ -251,6 +252,8 @@ def deckorator(*type_template_args,
                     raise TypeError(f"Created a class decorator type "
                                     f"but wrapping a non-class type: {wrapped_object}")
 
+                print(f"Warpped obj: {wrapped_object}, func: {new_decorator_function}, "
+                      f"args: {decorator_args}")
                 if inspect.isclass(wrapped_object) or isinstance(wrapped_object, t.Callable):
                     """
                         There are two cases. Decorated object is a
@@ -287,9 +290,18 @@ def deckorator(*type_template_args,
                         def decorate_me():
                             ...
                     """
-                    decorator_args_applied_fn = partial(new_decorator_function,
-                                                        wrapped_object,
-                                                        *decorator_args)
+
+                    # Handle methods
+                    if items_to_add:
+                        decorator_args_applied_fn = partial(new_decorator_function,
+                                                            items_to_add,
+                                                            wrapped_object,
+                                                            *decorator_args)
+                    else:
+                        decorator_args_applied_fn = partial(new_decorator_function,
+                                                            wrapped_object,
+                                                            *decorator_args)
+
                 elif isinstance(wrapped_object, (staticmethod, classmethod)):
                     wrapped_object = wrapped_object.__func__
                     # Must add __func__ to call static or class method
@@ -302,6 +314,7 @@ def deckorator(*type_template_args,
                     # If we cannot handle this, then we really did wrap an invalid object
                     raise TypeError("Wrapped object must be either a class or callable object. "
                                     f"Passed in '{wrapped_object}'")
+                # print(f"wrapped: {wrapped_object}, args: {decorator_args}, addition: {items_to_add}")
 
                 # Wrap with wrapped object instead of new_decorator func to preserve metadata
                 @wraps(wrapped_object)
@@ -311,7 +324,15 @@ def deckorator(*type_template_args,
 
             # wrapped decorator called with zero args
             if len(decorator_args) > len(type_template_arguments):
-                function_to_wrap = decorator_args[0]
+                function_to_wrap = decorator_args[len(decorator_args) - 1]
+
+                # Method with self
+                if len(decorator_args) == 2:
+                    items_to_add = (decorator_args[0], )
+
+                # Just regular function
+                else:
+                    items_to_add = ()
                 # set argument to empty afterwards
                 decorator_args = ()
                 return newly_created_decorator(function_to_wrap)

@@ -486,9 +486,7 @@ class Decko:
         self._add_function_decorator_rule(decorator_func, func, **kw)
 
     def execute_if(self,
-                   function_to_wrap,
-                   predicate: t.Callable,
-                   *args, **kwargs) -> t.Callable:
+                   predicate: t.Callable) -> t.Callable:
         """
         Given a t.List of subscribed callables and an predicate function,
         create a wrapper that fires events when predicates are fulfilled
@@ -517,22 +515,18 @@ class Decko:
         :param predicate: The condition for triggering the event
         :return: The wrapped function
         """
-        print(f"test: {args}, {function_to_wrap}, predicate: {predicate}")
-        if predicate(*args, **kwargs):
-            return execute_if(function_to_wrap, *args, **kwargs)
+        def wrap(func: t.Callable) -> t.Callable:
+            @wraps(func)
+            def wrapped(*args, **kwargs):
+                fire_event = predicate(*args, **kwargs)
+                if fire_event:
+                    return func(*args, **kwargs)
 
-        # def wrap(func: t.Callable) -> t.Callable:
-        #     @wraps(func)
-        #     def wrapped(*args, **kwargs):
-        #         fire_event = predicate(*args, **kwargs)
-        #         if fire_event:
-        #             return func(*args, **kwargs)
-        #
-        #     self.add_decorator_rule(self.execute_if, func)
-        #
-        #     return wrapped
-        #
-        # return wrap
+            self.add_decorator_rule(self.execute_if, func)
+
+            return wrapped
+
+        return wrap
 
     @deckorator((float, int), callback=(None, t.Callable))
     def slower_than(self,
