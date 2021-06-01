@@ -2,7 +2,9 @@ import pytest
 import typing as t
 
 import src.decko.decorators as fd
+from tests.common.classes import Props
 from src.decko import decorators
+from src.decko.immutable import ImmutableError
 
 
 @pytest.mark.parametrize("iter_count", [
@@ -359,3 +361,44 @@ def test_set_defaults_if_not_defined(default_args,
         expected_type = default_args[prop_name][0]
         assert isinstance(value, expected_type), \
             f"Expected type: '{expected_type}', got '{type(value)}'"
+
+
+def test_freeze():
+    """
+    Frozen classes are completely immutable.
+    Users should not be able to mutate or add any
+    existing properties.
+    :return:
+    :rtype:
+    """
+
+    frozen_class = fd.freeze(Props)(1, 2)
+
+    with pytest.raises(ImmutableError):
+        frozen_class.a = 100
+
+    # Frozen version
+    @fd.freeze
+    class FrozenClass:
+        def __init__(self, lst):
+            self.list = lst
+
+        def method(self):
+            return self.list
+
+    frozen_class = FrozenClass([])
+
+    with pytest.raises(ImmutableError):
+        frozen_class.method = print
+
+    # Should not even be able to add new properties
+    # to frozen class
+    with pytest.raises(ImmutableError):
+        frozen_class.new_prop = 200
+
+    # However, users can add data to the frozen list
+    frozen_class.list.append(200)
+
+    # But they should not be able to assign a new list
+    with pytest.raises(ImmutableError):
+        frozen_class.list = 200

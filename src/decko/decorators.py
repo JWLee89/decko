@@ -442,17 +442,15 @@ def slower_than(wrapped_function: t.Callable,
     return output
 
 
-def freeze(cls: t.Type[t.Any]) -> t.Type[t.Any]:
+@deckorator
+def freeze(cls: t.Type[t.Any],
+           *args, **kwargs) -> t.Type[t.Any]:
     """
     Completely freeze a class.
     A frozen class will raise an error if any of its properties
     are mutated or if new classes are added
     :param cls: A Class
-    :return:
-    :rtype:
     """
-    raise_error_if_not_class_instance(cls)
-
     def do_freeze(slf, name, value):
         msg = f"Class {type(slf)} is frozen. " \
               f"Attempted to set attribute '{name}' to value: '{value}'"
@@ -463,11 +461,11 @@ def freeze(cls: t.Type[t.Any]) -> t.Type[t.Any]:
         A basic immutable class
         """
 
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
+        def __init__(self, *a, **kw):
+            super().__init__(*a, **kw)
             setattr(Immutable, '__setattr__', do_freeze)
 
-    return Immutable
+    return Immutable(*args, **kwargs)
 
 
 def singleton(thread_safe: bool = False) -> t.Type[t.Any]:
