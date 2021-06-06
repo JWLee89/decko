@@ -7,6 +7,7 @@ and debugging / profiling utilities will be provided
 by each Decko instance.
 """
 import inspect
+import traceback
 import typing as t
 from functools import wraps, partial
 from time import process_time
@@ -291,16 +292,9 @@ def deckorator(*type_template_args,
                             ...
                     """
 
-                    # Handle methods
-                    if items_to_add:
-                        decorator_args_applied_fn = partial(new_decorator_function,
-                                                            items_to_add,
-                                                            wrapped_object,
-                                                            *decorator_args)
-                    else:
-                        decorator_args_applied_fn = partial(new_decorator_function,
-                                                            wrapped_object,
-                                                            *decorator_args)
+                    decorator_args_applied_fn = partial(new_decorator_function,
+                                                        wrapped_object,
+                                                        *decorator_args)
 
                 elif isinstance(wrapped_object, (staticmethod, classmethod)):
                     wrapped_object = wrapped_object.__func__
@@ -310,11 +304,12 @@ def deckorator(*type_template_args,
                                                         wrapped_object,
                                                         *decorator_args)
                 else:
+                    print(f"wrapped: {wrapped_object}, args: {decorator_args}, addition: {items_to_add}")
+
                     # If we reach here, we likely decorated a class method and mishandled self.
                     # If we cannot handle this, then we really did wrap an invalid object
                     raise TypeError("Wrapped object must be either a class or callable object. "
                                     f"Passed in '{wrapped_object}'")
-                # print(f"wrapped: {wrapped_object}, args: {decorator_args}, addition: {items_to_add}")
 
                 # Wrap with wrapped object instead of new_decorator func to preserve metadata
                 @wraps(wrapped_object)
@@ -325,14 +320,6 @@ def deckorator(*type_template_args,
             # wrapped decorator called with zero args
             if len(decorator_args) > len(type_template_arguments):
                 function_to_wrap = decorator_args[len(decorator_args) - 1]
-
-                # Method with self
-                if len(decorator_args) == 2:
-                    items_to_add = (decorator_args[0], )
-
-                # Just regular function
-                else:
-                    items_to_add = ()
                 # set argument to empty afterwards
                 decorator_args = ()
                 return newly_created_decorator(function_to_wrap)
@@ -474,7 +461,6 @@ def freeze(cls: t.Type[t.Any],
     are mutated or if new classes are added
     :param cls: A Class
     """
-    print(f"freeez: {cls}, {args}")
 
     def do_freeze(slf, name, value):
         msg = f"Class {type(slf)} is frozen. " \
@@ -630,5 +616,29 @@ def truncate(wrapped_function: t.Callable,
     output: t.Union[str, t.List, t.Tuple] = wrapped_function(*args, **kwargs)
     try:
         return output[:limit]
-    except:
+    except Exception:
         raise TypeError(f"Cannot slice object: {output}")
+
+
+@deckorator(t.Tuple, t.Callable, raise_error=(False, bool))
+def try_except(wrapped_func: t.Callable,
+               errors_to_catch: t.Tuple[Exception],
+               error_callback: t.Callable,
+               raise_error: bool = False,
+               *args, **kwargs):
+    """
+    Wraps the entire function around a try-catch block and
+    catches the exception.
+    :param wrapped_func: The function that was wrapped
+    :param errors_to_catch: A tuple of exceptions to catch
+    :param error_callback: The error callback to call when exception is caught
+    :param raise_error: If set to true, after handling error_callback, an error will
+    be raised.
+    """
+    try:
+        return wrapped_func(*args, **kwargs)
+    except errors_to_catch as error:
+        tb = traceback.format_exc()
+        error_callback(error, tb)
+        if raise_error:
+            raise
