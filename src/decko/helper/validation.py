@@ -24,6 +24,25 @@ def is_class_instance(item) -> bool:
     return inspect.isclass(item)
 
 
+def is_method(function: t.Callable) -> bool:
+    """
+    As best check as possible to
+    detect whether the given function is a method or not.
+    Args:
+        function (t.Callable): The function to evaluate
+
+    Returns:
+        (bool) True if passed in object is a method.
+        Otherwise, return False.
+    """
+    # Methods, by definition, are callable
+    if not isinstance(function, t.Callable):
+        return False
+    # Methods have a 'dot' in their name
+    qual_name = function.__qualname__.split('.')
+    return len(qual_name) > 1
+
+
 def is_iterable(obj) -> bool:
     iterable = True
     try:

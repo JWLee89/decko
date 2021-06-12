@@ -1,9 +1,49 @@
+import pytest
+import typing as t
+
 from src.decko.helper.validation import (
     is_instancemethod,
+    is_method,
 )
 
 
-def test_is_method():
+@pytest.fixture(scope="module")
+def sample_class_instance():
+    class AClass:
+        def __init__(self):
+            pass
+
+        def method(self):
+            return "yaye"
+
+        @classmethod
+        def class_method(cls):
+            return "yee"
+
+        @staticmethod
+        def static_method():
+            return "naye"
+
+    return AClass()
+
+
+@pytest.fixture(scope="module")
+def sample_function():
+    def function():
+        return function.__qualname__
+    return function
+
+
+def test_is_method(sample_class_instance, sample_function):
+    function_is_not_method = not is_method(sample_function)
+    meth = sample_class_instance.method
+    bound_to: t.Type = getattr(meth, '__self__', None)
+    print(bound_to)
+
+    assert function_is_not_method, f"sample_function should not be a method: {bound_to}"
+
+
+def test_is_instance_method():
     """
     Should only return true for functions that
     have a dot in the __qualname__

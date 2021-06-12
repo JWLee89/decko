@@ -15,6 +15,7 @@ import threading
 
 from .helper.validation import (
     raise_error_if_not_class_instance,
+    is_method,
 )
 from .helper.util import (
     create_instance,
@@ -130,6 +131,24 @@ def _handle_decorator_kwargs(type_template_args: t.Tuple,
     return tuple(list(decorator_args) + decorator_values), \
            tuple(list(type_template_args) + decorator_types)
 
+
+def _handle_class_self_args(obj: t.Any,
+                            *args: t.Tuple) -> t.Tuple[t.Union[None, t.Type], t.Tuple]:
+    """
+
+    Args:
+        obj (t.Any):
+        *args (t.Tuple):
+
+    Returns:
+
+    """
+    cls = None
+    if obj:
+        pass
+
+    return cls, args
+
 # -------------------------------------------
 # ------------ Core decorators --------------
 # -------------------------------------------
@@ -240,7 +259,8 @@ def deckorator(*type_template_args,
             """
             # Sanity checks
             # -----------------------------------
-            if not isinstance(new_decorator_function, t.Callable):
+            print(f"New decorator function: {new_decorator_function}")
+            if not callable(new_decorator_function):
                 raise TypeError(f"{new_decorator_function} must be a callable object ... ")
 
             # Place kwargs into decorator args (handle default values as well)
@@ -253,14 +273,21 @@ def deckorator(*type_template_args,
                 """
                 :param wrapped_object: The function or class that was wrapped.
                 """
-                # If class decorator specified and type template
-                if dk_is_class_decorator is True and not inspect.isclass(wrapped_object):
-                    raise TypeError(f"Created a class decorator type "
-                                    f"but wrapping a non-class type: {wrapped_object}")
+                # # If class decorator specified and type template
+                # if dk_is_class_decorator is True and not inspect.isclass(wrapped_object):
+                #     raise TypeError(f"Created a class decorator type "
+                #                     f"but wrapping a non-class type: {wrapped_object}")
 
-                print(f"Wrapped obj: {wrapped_object}, func: {new_decorator_function}, "
-                      f"args: {decorator_args}")
-                if inspect.isclass(wrapped_object) or isinstance(wrapped_object, t.Callable):
+                is_class = inspect.isclass(wrapped_object)
+                is_function = callable(wrapped_object)
+                # print(f"Wrapped obj: {wrapped_object}, func: {new_decorator_function}, "
+                #       f"args: {decorator_args}, is_method: {new_decorator_function.__qualname__}")
+
+                # check if method
+                # print(f"Is method: {is_method(new_decorator_function)}, Is class: {is_class}, "
+                #       f"is function: {is_function}")
+
+                if is_class or is_function:
                     """
                         There are two cases. Decorated object is a
                         1. Class
@@ -296,18 +323,27 @@ def deckorator(*type_template_args,
                         def decorate_me():
                             ...
                     """
-
-                    decorator_args_applied_fn = partial(new_decorator_function,
-                                                        wrapped_object,
-                                                        *decorator_args)
+                    if is_method(new_decorator_function):
+                        print(f"creating new method: {new_decorator_function.__name__}, "
+                              f"{decorator_args}")
+                        decorator_args_applied_fn = partial(new_decorator_function,
+                                                            decorator_args[0],
+                                                            wrapped_object,
+                                                            decorator_args[1:])
+                    else:
+                        decorator_args_applied_fn = partial(new_decorator_function,
+                                                            wrapped_object,
+                                                            *decorator_args)
 
                 elif isinstance(wrapped_object, (staticmethod, classmethod)):
+                    print(f"Static or class method found: {wrapped_object}")
                     wrapped_object = wrapped_object.__func__
                     # Must add __func__ to call static or class method
                     # @see https://stackoverflow.com/questions/41921255/staticmethod-object-is-not-callable
                     decorator_args_applied_fn = partial(new_decorator_function,
+                                                        decorator_args[0],
                                                         wrapped_object,
-                                                        *decorator_args)
+                                                        decorator_args[1:])
                 else:
                     # If we reach here, we likely decorated a class method and mishandled self.
                     # If we cannot handle this, then we really did wrap an invalid object
@@ -320,8 +356,13 @@ def deckorator(*type_template_args,
                     return decorator_args_applied_fn(*args, **kwargs)
                 return return_func
 
+            # Handle self
+            num_of_decorator_args = len(decorator_args) if not is_method(new_decorator_function) else len(decorator_args) - 1
+            print(f"num of decorator args: {num_of_decorator_args}")
             # wrapped decorator called with zero args
-            if len(decorator_args) > len(type_template_arguments):
+            if num_of_decorator_args > len(type_template_arguments):
+                print("Called with zero args")
+
                 function_to_wrap = decorator_args[len(decorator_args) - 1]
                 # set argument to empty afterwards
                 decorator_args = ()
@@ -330,14 +371,15 @@ def deckorator(*type_template_args,
             # Decorator should have equal argument length
             # as specified by the template
             decorator_name = new_decorator_function.__name__
-            if len(decorator_args) != len(type_template_arguments):
+            if num_of_decorator_args != len(type_template_arguments):
                 raise ValueError(f"Passed '{len(decorator_args)}' arguments --> {decorator_args} "
                                  f"to decorator: '{decorator_name}'. "
                                  f"Should have '{len(type_template_arguments)}' arguments "
                                  f"of type: {type_template_arguments}")
 
             # And arguments that correspond to the specified types ...
-            for decorator_arg, target_type in zip(decorator_args, type_template_arguments):
+            for decorator_arg, target_type in zip(
+                    decorator_args if not is_method else decorator_args[1:], type_template_arguments):
                 if not isinstance(decorator_arg, target_type):
                     raise TypeError(f"Passed invalid type: {type(decorator_arg)}. "
                                     f"Expected type: '{target_type}'")
