@@ -39,10 +39,15 @@ def _set_defaults_if_not_defined(user_specs: t.Dict,
     Update user_specs with default values if not specified.
     Also does a type check on user specifications to ensure
     that type validity and sanity is maintained.
-    This modifies the original
+    This modifies the original user_specs provided
 
-    :param user_specs: The specifications provided by the user
-    :param default_specs: A dictionary of default specifications
+    Args:
+        user_specs (): The specifications provided by the user.
+        This is updated with default specifications as needed.
+        default_specs (): A dictionary of default specifications
+
+    Returns:
+
     """
     for prop_name, (prop_type, default_value) in default_specs.items():
         # Set default values if not defined by user
@@ -253,7 +258,7 @@ def deckorator(*type_template_args,
                     raise TypeError(f"Created a class decorator type "
                                     f"but wrapping a non-class type: {wrapped_object}")
 
-                print(f"Warpped obj: {wrapped_object}, func: {new_decorator_function}, "
+                print(f"Wrapped obj: {wrapped_object}, func: {new_decorator_function}, "
                       f"args: {decorator_args}")
                 if inspect.isclass(wrapped_object) or isinstance(wrapped_object, t.Callable):
                     """
@@ -304,8 +309,6 @@ def deckorator(*type_template_args,
                                                         wrapped_object,
                                                         *decorator_args)
                 else:
-                    print(f"wrapped: {wrapped_object}, args: {decorator_args}, addition: {items_to_add}")
-
                     # If we reach here, we likely decorated a class method and mishandled self.
                     # If we cannot handle this, then we really did wrap an invalid object
                     raise TypeError("Wrapped object must be either a class or callable object. "
