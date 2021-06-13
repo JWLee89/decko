@@ -15,7 +15,6 @@ import threading
 
 from .helper.validation import (
     raise_error_if_not_class_instance,
-    is_method,
 )
 from .helper.util import (
     create_instance,
@@ -464,8 +463,9 @@ def _handle_class_self_args(obj: t.Any,
 #     return wrapper
 
 
-def deckorator(*type_template_args: t.Dict,
-               **type_template_kwargs: t.Dict):
+def deckorator(*type_template_args,
+               is_class_decorator: bool = False,
+               **type_template_kwargs):
 
     def inner(new_decorator_function: t.Callable):
         """
@@ -518,23 +518,39 @@ def deckorator(*type_template_args: t.Dict,
 
             # Handle case where self or cls exists
             if cls_or_self:
-                def wrapped_func(func: t.Callable):
-                    @wraps(func)
+                def wrapped_func(wrapped_function: t.Callable):
                     def final_func(*args, **kwargs):
-                        return new_decorator_function(cls_or_self, func,
+                        return new_decorator_function(cls_or_self,
+                                                      wrapped_function,
                                                       *decorator_args,
                                                       *args, **kwargs)
                     return final_func
             else:
-                def wrapped_func(func: t.Callable):
-                    @wraps(func)
+                def wrapped_func(wrapped_object: t.Callable):
+
+                    # Class decorator
+                    wrapped_object_is_class = inspect.isclass(wrapped_object)
+                    if is_class_decorator and not wrapped_object_is_class:
+                        raise TypeError("Specified a class decorator, "
+                                        f"but passed in object of type: {type(wrapped_object)}")
+
                     def final_func(*args, **kwargs):
-                        return new_decorator_function(func, *decorator_args,
-                                                      *args, **kwargs)
+                        return new_decorator_function(wrapped_object,
+                                                      *decorator_args,
+                                                      *args,
+                                                      **kwargs)
+
                     return final_func
 
+            num_of_decorator_args = len(decorator_args)
+            # In case when called with zero args
+            if num_of_decorator_args == 1 and not len(type_template_arguments):
+                function_to_wrap = decorator_args[0]
+                # set argument to empty afterwards
+                decorator_args = ()
+                return wrapped_func(function_to_wrap)
+
             # Ensure that number of type template args matches
-            num_of_decorator_args = len (decorator_args)
             if num_of_decorator_args != len(type_template_arguments):
                 decorator_name = new_decorator_function.__name__
                 raise ValueError(f"Passed '{len(decorator_args)}' argument: '{decorator_args}' "
@@ -549,7 +565,6 @@ def deckorator(*type_template_args: t.Dict,
                 if not isinstance(decorator_arg, target_type):
                     raise TypeError(f"Passed invalid type: {type(decorator_arg)}. "
                                     f"Expected type: '{target_type}'")
-
             return wrapped_func
             # return new_decorator_function(*decorator_args, **decorator_kwargs)
 
@@ -673,7 +688,7 @@ def slower_than(wrapped_function: t.Callable,
     return output
 
 
-@deckorator()
+@deckorator(is_class_decorator=True)
 def freeze(cls: t.Type[t.Any],
            *args, **kwargs) -> t.Type[t.Any]:
     """
@@ -682,6 +697,7 @@ def freeze(cls: t.Type[t.Any],
     are mutated or if new classes are added
     :param cls: A Class
     """
+    print(f"Freezing: {cls}, {args}, {kwargs}")
 
     def do_freeze(slf, name, value):
         msg = f"Class {type(slf)} is frozen. " \

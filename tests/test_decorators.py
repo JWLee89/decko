@@ -241,6 +241,10 @@ def test_class_freeze():
 
 
 def test_instance_data():
+    """
+    Test instance_data decorator
+    TODO: Make a fixture for setter to prevent boilerplate code.
+    """
     def setter(self, new_val):
         if new_val > 20:
             raise ValueError("Value set is greater than 20 ... ")
@@ -373,7 +377,8 @@ def test_freeze():
     :return:
     :rtype:
     """
-
+    # Initialize props and set properties to
+    # 1 and 2, respectively
     frozen_class = fd.freeze(Props)(1, 2)
 
     with pytest.raises(ImmutableError):
