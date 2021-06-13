@@ -466,16 +466,86 @@ def _handle_class_self_args(obj: t.Any,
 def deckorator(*type_template_args,
                is_class_decorator: bool = False,
                **type_template_kwargs):
+    """
+    Decorate a function based on its type.
+    Decorators come in two forms:
+        - Function decorators
+        - Class decorators
+
+    Args:
+        *type_template_args ():
+
+        These are used to define the data types
+        that the decorator will be accepting. The type-safety ensures
+        that the behavior of the decorator is more predictable, making it easier
+        to write decorators whose behaviors are more predictable.
+
+        A tuple can be used as a placeholder. This means that the argument
+        can be an instance of two or more types.
+
+        E.g.
+
+        @deckorator((float, int), t.Callable)
+        def new_decorator(wrapped_func,
+                        float_or_int_arg,
+                        callable_arg,
+                        *args,
+                        **kwargs):
+            pass
+
+
+        is_class_decorator (bool):
+
+        Defaults to false. If set to true, we are specifying that the decorator created
+        is designed to be a class decorator.
+
+        **type_template_kwargs (): We also want users to be able to provide keyword
+        args with default behaviors if not specified, which helps reduce boilerplate
+        in some cases.
+
+        if a keyword argument is passed, the provided value can be
+        1. An object representing default value or
+        2. A non-empty tuple
+
+        In case of a tuple, the first item represents the default value and the
+        following values represents the allowed types.
+        In the example below, the keyword argument 'val' has a default value of '5'
+        and can either be an instance of type int or float.
+
+        E.g.
+
+        @deckorator((float, int), callback=(print, t.Callable))
+        def new_decorator(wrapped_func,
+                        float_or_int_arg,
+                        *args,
+                        **decorator_kwargs,
+                        **kwargs):
+            callback = decorator_kwargs['callback']
+
+        # callback does not need to be defined.
+        @new_decorator(100)
+        def function_to_decorate(arg1, arg2):
+            ..
+
+    Returns:
+
+    """
 
     def inner(new_decorator_function: t.Callable):
         """
 
         Args:
-            new_decorator_function (): The newly created
-            decorator function
+            new_decorator_function ():
 
-        Returns:
+            The newly created decorator.
 
+            e.g. "new_decorator_function" in the example below would be
+            "new_decorator_function"
+
+            @decorator
+            def new_decorator_function(decorated_function,
+                                        *args, **kwargs):
+                pass
         """
         # Check if input function applies descriptor protocol
         desc = next((desc for desc in (staticmethod, classmethod)
@@ -492,7 +562,6 @@ def deckorator(*type_template_args,
         def returned_func(*decorator_args,
                           **decorator_kwargs):
             """
-
             @deckorate(int)
             def new_decorator_function(wrapped_func,
                                         int_arg,
@@ -500,8 +569,30 @@ def deckorator(*type_template_args,
                 # The body of the function
 
             Args:
-                *decorator_args ():
-                **decorator_kwargs ():
+                *decorator_args (): The args object of the decorator.
+                This is the actual value
+
+                @deckorator(int)
+                def new_decorator(wrapped_func,
+                                     # an integer value.
+                                     # Has a value of 10, which is set below
+                                    int_arg,
+                                    *args,
+                                    **kwargs)
+
+                @new_decorator(10)
+                def add(a, b):
+                    return a + b
+
+                **decorator_kwargs (): The kwargs object of the decorator.
+
+                e.g.
+
+                @deckorator(kwarg_item="test")
+                def new_decorator(wrapped_func,
+                                    kwarg_item, # has value of "test"
+                                    *args,
+                                    **kwargs)
 
             Returns:
 
@@ -517,8 +608,15 @@ def deckorator(*type_template_args,
                                                                                decorator_kwargs)
 
             # Handle case where self or cls exists
+            # TODO: Clean this code up
             if cls_or_self:
                 def wrapped_func(wrapped_function: t.Callable):
+
+                    wrapped_object_is_class = inspect.isclass(wrapped_function)
+                    if is_class_decorator and not wrapped_object_is_class:
+                        raise TypeError("Specified a class decorator, "
+                                        f"but passed in object of type: {type(wrapped_function)}")
+
                     def final_func(*args, **kwargs):
                         return new_decorator_function(cls_or_self,
                                                       wrapped_function,
