@@ -3,8 +3,7 @@ import pytest
 from typing import Iterable, List
 
 from src.decko.app import Decko
-from src.decko.immutable import ImmutableError
-from .common.classes import Props
+
 
 dk = Decko(__name__)
 
@@ -127,6 +126,7 @@ def test_invalid_set_debug() -> None:
                          )
 def test_slower_than(input_size, milliseconds):
     dk = Decko(__name__)
+
     def raise_error(time_elapsed):
         raise ValueError(f"Took {time_elapsed} milliseconds")
 
@@ -140,35 +140,6 @@ def test_slower_than(input_size, milliseconds):
     # Ideally these functions should take longer than 300 milliseconds to execute
     with pytest.raises(ValueError) as err:
         long_func(input_size)
-
-
-@pytest.mark.parametrize('threshold',
-                         [
-                             100,
-                             200,
-                             300,
-                         ]
-                         )
-def test_execute_if(threshold):
-
-    decko = Decko(__name__)
-
-    def greater_than(output):
-        return output > threshold
-
-    @decko.execute_if(greater_than)
-    def run(output):
-        return output
-
-    answer_arr = []
-
-    for i in range(int(threshold * 2)):
-        output = run(i)
-        if output:
-            answer_arr.append(output)
-
-    assert len(answer_arr) == (threshold - 1), \
-        f"Array should be size: {len(answer_arr)}"
 
 
 def test_instance_data():
@@ -222,45 +193,3 @@ def test_pure():
     # this should also raise error
     with pytest.raises(ValueError) as error:
         yee = input_output_what_how(10, 20)
-
-
-def test_freeze():
-    """
-    Frozen classes are completely immutable.
-    Users should not be able to mutate or add any
-    existing properties.
-    :return:
-    :rtype:
-    """
-    dk = Decko(__name__, debug=True)
-
-    frozen_class = dk.freeze(Props)(1, 2)
-
-    with pytest.raises(ImmutableError) as err:
-        frozen_class.a = 100
-
-    # Frozen version
-    @dk.freeze
-    class FrozenClass:
-        def __init__(self, lst):
-            self.list = lst
-
-        def method(self):
-            return self.list
-
-    frozen_class = FrozenClass([])
-
-    with pytest.raises(ImmutableError) as err:
-        frozen_class.method = print
-
-    # Should not even be able to add new properties
-    # to frozen class
-    with pytest.raises(ImmutableError) as err:
-        frozen_class.new_prop = 200
-
-    # However, users can add data to the frozen list
-    frozen_class.list.append(200)
-
-    # But they should not be able to assign a new list
-    with pytest.raises(ImmutableError) as err:
-        frozen_class.list = 200

@@ -1,9 +1,38 @@
+import pytest
+
 from src.decko.helper.validation import (
     is_instancemethod,
 )
 
 
-def test_is_method():
+@pytest.fixture(scope="module")
+def sample_class_instance():
+    class AClass:
+        def __init__(self):
+            pass
+
+        def method(self):
+            return "yaye"
+
+        @classmethod
+        def class_method(cls):
+            return "yee"
+
+        @staticmethod
+        def static_method():
+            return "naye"
+
+    return AClass()
+
+
+@pytest.fixture(scope="module")
+def sample_function():
+    def function():
+        return function.__qualname__
+    return function
+
+
+def test_is_instance_method():
     """
     Should only return true for functions that
     have a dot in the __qualname__

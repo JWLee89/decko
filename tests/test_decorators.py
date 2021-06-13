@@ -1,7 +1,14 @@
+"""
+@Author Jay Lee
+Note: there is currently a lot of boilerplate.
+Take some time to refactor all the unit tests by using fixtures and whatnot.
+"""
 import pytest
 import typing as t
 
 import src.decko.decorators as fd
+from tests.common.classes import Props
+from src.decko.immutable import ImmutableError
 
 
 @pytest.mark.parametrize("iter_count", [
@@ -97,6 +104,147 @@ def test_check_valid_data_types():
         decorate_me(100)
 
 
+def test_decorator_kwarg():
+
+    arg_one = 20
+
+    @fd.deckorator((float, int), kwarg_val=10)
+    def a_decorator(wrapped_function,
+                    arg_1,
+                    kwarg_val,
+                    *args,
+                    **kwargs):
+        assert kwarg_val == 10 and arg_1 == arg_one
+        return wrapped_function(*args, **kwargs)
+
+    @a_decorator(arg_one)
+    def test(new_num):
+        return new_num
+
+    test(15)
+
+
+@pytest.mark.parametrize("invalid_inputs", [
+    10, 200.0, "string is also invalid",
+])
+def test_invalid_decorator_kwarg(invalid_inputs):
+
+    # This should raise an error, since default arg 10 is not Callable
+    @fd.deckorator(kwarg_val=(10, t.Callable))
+    def error_decorator(wrapped_function,
+                    kwarg_val,
+                    cowbell,
+                    *args,
+                    **kwargs):
+        return wrapped_function(*args, **kwargs)
+
+    with pytest.raises(TypeError):
+        @error_decorator()
+        def test(new_num):
+            return new_num
+
+    with pytest.raises(ValueError):
+        # Two values provided, since we are not specifying
+        # kwarg_val=invalid_inputs
+        @error_decorator(invalid_inputs)
+        def test(new_num):
+            return new_num
+
+
+@pytest.mark.parametrize("valid_input", [
+    10, 200.0, "a string"
+])
+def test_override_decorator_kwarg_val(valid_input):
+
+    # This should raise an error, since default arg 10 is not Callable
+    @fd.deckorator(kwarg_val=(10, int, float, str), new_kw=print)
+    def valid_decorator(wrapped_function,
+                        kwarg_val,
+                        new_kw,
+                        *args,
+                        **kwargs):
+        assert kwarg_val == valid_input, "This value should be overriden ..."
+        assert new_kw == print, "default new_kw should be print since not overridden"
+        return wrapped_function(*args, **kwargs)
+
+    # Override default values
+    @valid_decorator(kwarg_val=valid_input)
+    def test(new_num):
+        return new_num
+
+    test(10)
+
+
+def test_method_decoration():
+    class Dummy:
+
+        def __init__(self):
+            self.a = 1
+
+        @fd.deckorator(int)
+        def decorator_method(self,
+                             function_to_decorate,
+                             int_arg,
+                             *args, **kwargs):
+            return function_to_decorate(*args, **kwargs)
+
+    instance = Dummy()
+
+    @instance.decorator_method(10)
+    def add(a, b):
+        return a + b
+
+    assert add(1, 2) == 3, "Something is wrong ..."
+
+
+def test_static_method_decoration():
+    """
+    TODO: Remove boilerplate since Dummy is repeated many times
+    """
+    class Dummy:
+
+        def __init__(self):
+            self.a = 1
+
+        # TODO: find a working solution for
+        # @fd.deckorator and implement it
+        @fd.deckorator()
+        @staticmethod
+        def decorator_method(function_to_decorate,
+                             *args, **kwargs):
+            return function_to_decorate(*args, **kwargs)
+
+    @Dummy.decorator_method
+    def add(a, b):
+        return a + b
+
+    assert add(1, 2) == 3, "Something is wrong ..."
+
+
+def test_class_method_decoration():
+    class Dummy:
+
+        def __init__(self):
+            self.a = 1
+
+        # TODO: find a working solution for
+        # @fd.deckorator and implement it
+        @fd.deckorator()
+        @classmethod
+        def decorator_method(cls,
+                             function_to_decorate,
+                             *args, **kwargs):
+            return function_to_decorate(*args, **kwargs)
+
+    instance = Dummy()
+
+    @instance.decorator_method
+    def add(a, b):
+        return a + b
+
+    assert add(1, 2) == 3, "Something is wrong ..."
+
+
 @pytest.mark.parametrize("iter_count", [
     4, 8, 12
 ])
@@ -118,6 +266,31 @@ def test_stopwatch(iter_count):
         f"Should have {len(time_elapsed_arr)} items"
 
 
+@pytest.mark.parametrize("input_data",
+                         [
+                             (10000000, 50),
+                             (20000000, 100),
+                             (30000000, 150),
+                         ])
+def test_slower_than(input_data):
+    input_size, milliseconds = input_data
+
+    def raise_error(time_elapsed, threshold_time):
+        raise ValueError(f"Took {time_elapsed} milliseconds. "
+                         f"Should take less than {threshold_time}")
+
+    @fd.slower_than(milliseconds, raise_error)
+    def long_func(n):
+        x = 0
+        for i in range(n):
+            x += i
+        return x
+
+    # Ideally these functions should take some time to complete
+    with pytest.raises(ValueError):
+        long_func(input_size)
+
+
 def test_class_freeze():
     @fd.freeze
     class RandomClass:
@@ -135,13 +308,17 @@ def test_class_freeze():
         cls_instance.new_prop = 100
 
     # Decorating a function with freeze should raise an error
-    with pytest.raises(Exception):
+    with pytest.raises(TypeError):
         @fd.freeze
         def random_func(test):
             print(f"Test random_func: {test}")
 
 
 def test_instance_data():
+    """
+    Test instance_data decorator
+    TODO: Make a fixture for setter to prevent boilerplate code.
+    """
     def setter(self, new_val):
         if new_val > 20:
             raise ValueError("Value set is greater than 20 ... ")
@@ -264,3 +441,73 @@ def test_set_defaults_if_not_defined(default_args,
         expected_type = default_args[prop_name][0]
         assert isinstance(value, expected_type), \
             f"Expected type: '{expected_type}', got '{type(value)}'"
+
+
+def test_freeze():
+    """
+    Frozen classes are completely immutable.
+    Users should not be able to mutate or add any
+    existing properties.
+    :return:
+    :rtype:
+    """
+    # Initialize props and set properties to
+    # 1 and 2, respectively
+    frozen_class = fd.freeze(Props)(1, 2)
+
+    with pytest.raises(ImmutableError):
+        frozen_class.a = 100
+
+    # Frozen version
+    @fd.freeze
+    class FrozenClass:
+        def __init__(self, lst):
+            self.list = lst
+
+        def method(self):
+            return self.list
+
+    frozen_class = FrozenClass([])
+
+    with pytest.raises(ImmutableError):
+        frozen_class.method = print
+
+    # Should not even be able to add new properties
+    # to frozen class
+    with pytest.raises(ImmutableError):
+        frozen_class.new_prop = 200
+
+    # However, users can add data to the frozen list
+    frozen_class.list.append(200)
+
+    # But they should not be able to assign a new list
+    with pytest.raises(ImmutableError):
+        frozen_class.list = 200
+
+
+@pytest.mark.parametrize('threshold',
+                         [
+                             100,
+                             200,
+                             300,
+                         ]
+                         )
+def test_execute_if(threshold):
+
+
+    def greater_than(output):
+        return output > threshold
+
+    @fd.execute_if(greater_than)
+    def run(output):
+        return output
+
+    answer_arr = []
+
+    for i in range(int(threshold * 2)):
+        output = run(i)
+        if output:
+            answer_arr.append(output)
+
+    assert len(answer_arr) == (threshold - 1), \
+        f"Array should be size: {len(answer_arr)}"
