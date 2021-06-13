@@ -9,5 +9,5 @@ from .decorators import slower_than
 from .decorators import freeze
 
 
-__version__ = "0.0.2.3"
+__version__ = "0.0.3.0"
 PROJECT_NAME = "decko"
