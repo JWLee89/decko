@@ -1,9 +1,7 @@
 import pytest
-import typing as t
 
 from src.decko.helper.validation import (
     is_instancemethod,
-    is_method,
 )
 
 
@@ -32,15 +30,6 @@ def sample_function():
     def function():
         return function.__qualname__
     return function
-
-
-def test_is_method(sample_class_instance, sample_function):
-    function_is_not_method = not is_method(sample_function)
-    meth = sample_class_instance.method
-    bound_to: t.Type = getattr(meth, '__self__', None)
-    print(bound_to)
-
-    assert function_is_not_method, f"sample_function should not be a method: {bound_to}"
 
 
 def test_is_instance_method():
