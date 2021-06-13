@@ -1,10 +1,15 @@
+"""
+@Author Jay Lee
+Note: there is currently a lot of boilerplate.
+Take some time to refactor all the unit tests by using fixtures and whatnot.
+"""
 import pytest
 import typing as t
 
 import src.decko.decorators as fd
 from tests.common.classes import Props
-from src.decko import decorators
 from src.decko.immutable import ImmutableError
+
 
 
 @pytest.mark.parametrize("iter_count", [
@@ -171,6 +176,76 @@ def test_override_decorator_kwarg_val(valid_input):
     test(10)
 
 
+def test_method_decoration():
+    class Dummy:
+
+        def __init__(self):
+            self.a = 1
+
+        @fd.deckorator(int)
+        def decorator_method(self,
+                             function_to_decorate,
+                             int_arg,
+                             *args, **kwargs):
+            return function_to_decorate(*args, **kwargs)
+
+    instance = Dummy()
+
+    @instance.decorator_method(10)
+    def add(a, b):
+        return a + b
+
+    assert add(1, 2) == 3, "Something is wrong ..."
+
+
+def test_static_method_decoration():
+    """
+    TODO: Remove boilerplate since Dummy is repeated many times
+    """
+    class Dummy:
+
+        def __init__(self):
+            self.a = 1
+
+        # TODO: find a working solution for
+        # @fd.deckorator and implement it
+        @fd.deckorator()
+        @staticmethod
+        def decorator_method(function_to_decorate,
+                             *args, **kwargs):
+            return function_to_decorate(*args, **kwargs)
+
+    @Dummy.decorator_method
+    def add(a, b):
+        return a + b
+
+    assert add(1, 2) == 3, "Something is wrong ..."
+
+
+def test_class_method_decoration():
+    class Dummy:
+
+        def __init__(self):
+            self.a = 1
+
+        # TODO: find a working solution for
+        # @fd.deckorator and implement it
+        @fd.deckorator()
+        @classmethod
+        def decorator_method(cls,
+                             function_to_decorate,
+                             *args, **kwargs):
+            return function_to_decorate(*args, **kwargs)
+
+    instance = Dummy()
+
+    @instance.decorator_method
+    def add(a, b):
+        return a + b
+
+    assert add(1, 2) == 3, "Something is wrong ..."
+
+
 @pytest.mark.parametrize("iter_count", [
     4, 8, 12
 ])
@@ -205,7 +280,7 @@ def test_slower_than(input_data):
         raise ValueError(f"Took {time_elapsed} milliseconds. "
                          f"Should take less than {threshold_time}")
 
-    @decorators.slower_than(milliseconds, raise_error)
+    @fd.slower_than(milliseconds, raise_error)
     def long_func(n):
         x = 0
         for i in range(n):
@@ -424,7 +499,7 @@ def test_execute_if(threshold):
     def greater_than(output):
         return output > threshold
 
-    @decorators.execute_if(greater_than)
+    @fd.execute_if(greater_than)
     def run(output):
         return output
 

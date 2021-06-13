@@ -604,8 +604,9 @@ def deckorator(*type_template_args,
             # Place kwargs into decorator args (handle default values as well)
             decorator_args, type_template_arguments = _handle_decorator_kwargs(type_template_args,
                                                                                type_template_kwargs,
-                                                                               decorator_args,
+                                                                               new_args,
                                                                                decorator_kwargs)
+
 
             # Handle case where self or cls exists
             # TODO: Clean this code up
