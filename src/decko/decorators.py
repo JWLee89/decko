@@ -483,8 +483,6 @@ def freeze(cls: t.Type[t.Any],
     are mutated or if new classes are added
     :param cls: A Class
     """
-    print(f"Freezing: {cls}, {args}, {kwargs}")
-
     def do_freeze(slf, name, value):
         msg = f"Class {type(slf)} is frozen. " \
               f"Attempted to set attribute '{name}' to value: '{value}'"

@@ -122,29 +122,6 @@ class DeckoState(metaclass=Singleton):
         return ", ".join([f'{function_name}: {v}' for function_name, v in self.functions.items()])
 
 
-def deckorate_method(
-             self,
-              *type_template_args,
-              **type_template_kwargs):
-    """
-    The building block of
-    :param new_decorator:
-    :param type_template_args:
-    :param type_template_kwargs:
-    :return:
-    :rtype:
-    """
-    print(f"Type template args: {type_template_args}")
-    decorated_fun = deckorator(*type_template_args, **type_template_kwargs)
-
-    # add_decorator_rule = self.add_decorator_rule
-    def func_to_decorate(wrapped_obj):
-        # self.add_decorator_rule(self.deckorate, wrapped_obj)
-        return decorated_fun(wrapped_obj)
-
-    return func_to_decorate
-
-
 class Decko:
     """
     Yeeeee ....
