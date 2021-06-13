@@ -66,20 +66,6 @@ def _set_defaults_if_not_defined(user_specs: t.Dict,
                             f"of type: '{type(user_value)}'")
 
 
-def _merge_into_decorator_args(decorator_args, decorator_kwargs, default_kwargs) -> t.Tuple:
-    """
-    Merge the two properties together if
-    default value is not overriden.
-    :param decorator_kwargs: The kwargs passed to decorator
-    :param default_kwargs: The kwargs passed to decorator
-    """
-    for key in default_kwargs.keys():
-        if key not in decorator_kwargs:
-            decorator_kwargs[key] = default_kwargs[key]
-
-    return decorator_args + tuple(value for value in decorator_kwargs.values())
-
-
 def _handle_decorator_kwargs(type_template_args: t.Tuple,
                              type_template_kwargs: t.Dict,
                              decorator_args: t.Tuple,
@@ -131,8 +117,8 @@ def _handle_decorator_kwargs(type_template_args: t.Tuple,
            tuple(list(type_template_args) + decorator_types)
 
 
-def handle_method(function_to_evaluate: t.Callable,
-                  args: t.Tuple) -> t.Tuple:
+def _handle_method(function_to_evaluate: t.Callable,
+                   args: t.Tuple) -> t.Tuple:
     """
     This will return self or cls
     based on whether the given function is a
@@ -165,302 +151,6 @@ def handle_method(function_to_evaluate: t.Callable,
             if original is function_to_evaluate:
                 return self_or_cls, args[1:]
     return None, args
-
-
-def _handle_class_self_args(obj: t.Any,
-                            *args: t.Tuple) -> t.Tuple[t.Union[None, t.Type], t.Tuple]:
-    """
-
-    Args:
-        obj (t.Any):
-        *args (t.Tuple):
-
-    Returns:
-
-    """
-    cls = None
-    if obj:
-        pass
-
-    return cls, args
-
-# -------------------------------------------
-# ------------ Core decorators --------------
-# -------------------------------------------
-
-#
-# def deckorator(*type_template_args,
-#                dk_is_class_decorator: bool = None,
-#                attach_stats: bool = None,
-#                **type_template_kwargs) -> t.Any:
-#     """
-#     Decorate a function based on its type.
-#     Decorators come in two forms:
-#         - Function decorators
-#         - Class decorators
-#
-#     :param type_template_args: These are used to define the data types
-#     that the decorator will be accepting. The type-safety ensures
-#     that the behavior of the decorator is more predictable, making it easier
-#     to write decorators whose behaviors are more predictable.
-#
-#     A tuple can be used as a placeholder. This means that the argument
-#     can be an instance of two or more types.
-#
-#     E.g.
-#
-#     @deckorator((float, int), t.Callable)
-#     def new_decorator(wrapped_func,
-#                     float_or_int_arg,
-#                     callable_arg,
-#                     *args,
-#                     **kwargs):
-#         pass
-#
-#     :param type_template_kwargs: We also want users to be able to provide keyword
-#     args with default behaviors if not specified, which helps reduce boilerplate
-#     in some cases.
-#
-#     if a keyword argument is passed, the provided value can be
-#     1. An object representing default value or
-#     2. A non-empty tuple
-#
-#     In case of a tuple, the first item represents the default value and the
-#     following values represents the allowed types.
-#     In the example below, the keyword argument 'val' has a default value of '5'
-#     and can either be an instance of type int or float.
-#
-#     @deckorator(val=(5, int, float))
-#     def some_functi
-#     E.g.
-#
-#     Below is a more concrete example of the new decorator
-#
-#     @deckorator((float, int), callback=(print, t.Callable))
-#     def new_decorator(wrapped_func,
-#                     float_or_int_arg,
-#                     *args,
-#                     **decorator_kwargs,
-#                     **kwargs):
-#         callback = decorator_kwargs['callback']
-#
-#     # callback does not need to be defined.
-#     @new_decorator(100)
-#     def function_to_decorate(arg1, arg2):
-#         ..
-#
-#     """
-#     # compute_stats = 'dk_compute' in
-#     # _set_defaults_if_not_defined(kw, __DECORATOR_SPECS__)
-#
-#     def wrapper(new_decorator_function: t.Callable):
-#         """
-#         :param new_decorator_function: The newly defined decorator function,
-#         This function is the custom decorator defined by the consumer
-#
-#         e.g. the inner_wrapped_object in the example below would be
-#         "decorated_function"
-#
-#         @decorator
-#         def decorated_function(inputs):
-#             print(inputs)
-#         """
-#         # descriptor
-#         static_or_class_method = next((method_decorator for method_decorator in (staticmethod, classmethod)
-#                                        if isinstance(new_decorator_function, method_decorator)), None)
-#         # handle method decorations
-#         if static_or_class_method:
-#             new_decorator_function = new_decorator_function.__func__
-#
-#         # called without open brackets.
-#         # therefore, decorator func must be first argument in
-#         # "type_template_args"
-#         @wraps(new_decorator_function)
-#         def returned_obj(*decorator_args,
-#                          **decorator_kwargs) -> t.Callable:
-#             """
-#             Arguments passed to the "decorated_function".
-#             Ideally, the number of arguments in the decorator should be identical
-#             to what was defined below. The API will also perform a type check to ensure
-#             that the arguments passed are identical to what was specified.
-#             E.g.
-#
-#             @decorator(int)
-#             def decorated_function(inputs):
-#                 print(inputs)
-#
-#             - Argument passed to decorated_function must be an 'int' if type checking
-#             is set to True
-#
-#             @decorated_function(10)
-#             def another_function():
-#                 ... write your function code here ...
-#
-#             :param decorator_args:
-#             :param decorator_kwargs:
-#             """
-#             # Sanity checks
-#             # -----------------------------------
-#             if not isinstance(new_decorator_function, t.Callable):
-#                 raise TypeError(f"{new_decorator_function} must be a callable object ... ")
-#
-#             # Place kwargs into decorator args (handle default values as well)
-#             decorator_args, type_template_arguments = _handle_decorator_kwargs(type_template_args,
-#                                                                                type_template_kwargs,
-#                                                                                decorator_args,
-#                                                                                decorator_kwargs)
-#
-#             def newly_created_decorator(wrapped_object: t.Union[t.Callable, t.Type]):
-#                 """
-#                 We have the following cases: Where wrapped_object is a
-#
-#                 1. Class
-#                 2. Function
-#                 3. Method
-#                 4. Staticmethod
-#                 5. Classmethod
-#
-#                 Args:
-#                      wrapped_object (t.Union[t.Callable, t.Type]) - The wrapped object.
-#                 """
-#                 # # If class decorator specified and type template
-#                 # if dk_is_class_decorator is True and not inspect.isclass(wrapped_object):
-#                 #     raise TypeError(f"Created a class decorator type "
-#                 #                     f"but wrapping a non-class type: {wrapped_object}")
-#
-#                 is_class = inspect.isclass(wrapped_object)
-#                 is_normal_method = is_method(wrapped_object)
-#
-#                 # Methods decorated by @classmethod or @staticmethod
-#                 is_static_method = isinstance(wrapped_object, classmethod)
-#                 is_class_method = isinstance(wrapped_object, staticmethod)
-#                 is_function = callable(wrapped_object)
-#
-#                 # We process accordingly
-#                 # is_class_method or is_method
-#
-#                 print(f"wrapped object: {wrapped_object}, new deco func: {new_decorator_function}"
-#                       f"is static: {is_static_method}, is class: {is_class_method}, "
-#                       f"is func: {is_function}, is method: {is_class_method}")
-#
-#                 # print(f"Wrapped obj: {wrapped_object}, func: {new_decorator_function}, "
-#                 #       f"args: {decorator_args}, is_method: {new_decorator_function.__qualname__}")
-#                 # check if method
-#                 # print(f"Is method: {is_method(new_decorator_function)}, Is class: {is_class}, "
-#                 #       f"is function: {is_function}")
-#
-#                 if is_class or is_function:
-#                     """
-#                         There are two cases. Decorated object is a
-#                         1. Class
-#                         2. Function
-#                         -------------------------------------------------------------
-#                         Example 1)
-#                         In the example below, 'wrapped_object' would be 'decorate_me'
-#
-#                         @decorate
-#                         function decorate_class(class_to_decorate, args ...):
-#
-#                             class ExtendedClass(class_to_decorate):
-#                                 def __init__(self, *args, **kwargs):
-#                                     super().__init__(*args, **kwargs)
-#                                     print("Decorated a class!")
-#
-#                         @decorate_class
-#                         class NewClass:
-#                             def __init__(a):
-#                                 self.a = a
-#
-#                         new_cls = NewClass()
-#
-#                         -------------------------------------------------------------
-#                         Example 2)
-#                         In the example below, 'wrapped_object' would be 'decorate_me'
-#
-#                         @decorate
-#                         function time_it(args ...):
-#                             ...
-#
-#                         @time_it
-#                         def decorate_me():
-#                             ...
-#                     """
-#                     if is_normal_method or is_class_method:
-#                         print(f"creating new method: {new_decorator_function.__name__}, "
-#                               f"{decorator_args[0]}, {decorator_args[1:]}")
-#                         decorator_args_applied_fn = partial(new_decorator_function,
-#                                                             decorator_args[0],
-#                                                             wrapped_object,
-#                                                             decorator_args[1:])
-#                     else:
-#                         # Creating regular function or
-#                         decorator_args_applied_fn = partial(new_decorator_function,
-#                                                             wrapped_object,
-#                                                             *decorator_args)
-#
-#                 elif isinstance(wrapped_object, (staticmethod, classmethod)):
-#                     print(f"Static or class method found: {wrapped_object}")
-#                     wrapped_object = wrapped_object.__func__
-#                     # Must add __func__ to call static or class method
-#                     # @see https://stackoverflow.com/questions/41921255/staticmethod-object-is-not-callable
-#                     decorator_args_applied_fn = partial(new_decorator_function,
-#                                                         decorator_args[0],
-#                                                         wrapped_object,
-#                                                         decorator_args[1:])
-#                 else:
-#                     # If we reach here, we likely decorated a class method and mishandled self.
-#                     # If we cannot handle this, then we really did wrap an invalid object
-#                     raise TypeError("Wrapped object must be either a class or callable object. "
-#                                     f"Passed in '{wrapped_object}'")
-#
-#                 if is_static_method:
-#                     print("static detected")
-#                     decorator_args_applied_fn = static_or_class_method(decorator_args_applied_fn)
-#
-#                 # Wrap with wrapped object instead of new_decorator func to preserve metadata
-#                 @wraps(wrapped_object)
-#                 def return_func(*args, **kwargs):
-#                     return decorator_args_applied_fn(*args, **kwargs)
-#                 return return_func
-#
-#             # Handle self
-#             num_of_decorator_args = len(decorator_args)
-#             # wrapped decorator called with zero args
-#             if num_of_decorator_args > len(type_template_arguments):
-#                 print(f"More argasdasds: {decorator_args}")
-#                 function_to_wrap = decorator_args[0]
-#                 # set argument to empty afterwards
-#                 decorator_args = ()
-#                 return newly_created_decorator(function_to_wrap)
-#
-#             # Decorator should have equal argument length
-#             # as specified by the template
-#             decorator_name = new_decorator_function.__name__
-#             if num_of_decorator_args != len(type_template_arguments):
-#                 raise ValueError(f"Passed '{len(decorator_args)}' argument: '{decorator_args}' "
-#                                  f"to decorator: '{decorator_name}'. "
-#                                  f"Should have '{len(type_template_arguments)}' arguments "
-#                                  f"of type: {type_template_arguments}")
-#
-#             # And arguments that correspond to the specified types ...
-#             for decorator_arg, target_type in zip(
-#                     decorator_args if not is_method else decorator_args[1:], type_template_arguments):
-#                 if not isinstance(decorator_arg, target_type):
-#                     raise TypeError(f"Passed invalid type: {type(decorator_arg)}. "
-#                                     f"Expected type: '{target_type}'")
-#             return newly_created_decorator
-#         return returned_obj
-#
-#     # Triggered when called as follows
-#     # @decorator instead of @decorator(...)
-#     if len(type_template_args) == 1 and inspect.isfunction(type_template_args[0]):
-#         # This is the wrapped function
-#         wrapped_function = type_template_args[0]
-#         # Since wrapped function is not a type template args,
-#         # set type_template_args to empty tuple
-#         type_template_args = ()
-#         return wrapper(wrapped_function)
-#     return wrapper
 
 
 def deckorator(*type_template_args,
@@ -597,16 +287,12 @@ def deckorator(*type_template_args,
             Returns:
 
             """
-            cls_or_self, new_args = handle_method(new_decorator_function, decorator_args)
-            # print('class: %-10s func: %-15s args: %-10s kwargs: %-10s' %
-            #       (cls_or_self, new_decorator_function.__name__, new_args, decorator_kwargs))
-
+            cls_or_self, new_args = _handle_method(new_decorator_function, decorator_args)
             # Place kwargs into decorator args (handle default values as well)
             decorator_args, type_template_arguments = _handle_decorator_kwargs(type_template_args,
                                                                                type_template_kwargs,
                                                                                new_args,
                                                                                decorator_kwargs)
-
 
             # Handle case where self or cls exists
             # TODO: Clean this code up
