@@ -14,6 +14,9 @@ However, one may choose to extend with external libraries such as numba to impro
 
 Self-contained decorators that can be used without creating a `Decko` instance is under development.
 
+In the most recent release, support for default keyword args is supported. 
+Additionally, support for `@classmethod`, `@staticmethod` and class instance method is also added.
+
 ## Install
 
 Install and update using [pip](https://pypi.org/project/pip/):
