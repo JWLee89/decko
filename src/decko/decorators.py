@@ -5,6 +5,8 @@ to decorator functions.
 The bells and whistles such as state management
 and debugging / profiling utilities will be provided
 by each Decko instance.
+
+TODO: Decide on which style of documentation to use
 """
 import inspect
 import traceback
