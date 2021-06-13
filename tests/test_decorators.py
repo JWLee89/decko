@@ -11,7 +11,6 @@ from tests.common.classes import Props
 from src.decko.immutable import ImmutableError
 
 
-
 @pytest.mark.parametrize("iter_count", [
     10, 50, 7
 ])

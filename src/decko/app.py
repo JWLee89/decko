@@ -66,7 +66,6 @@ from .helper.util import get_unique_func_name
 from .immutable import ImmutableError
 from .decorators import (
     deckorator,
-    execute_if
 )
 
 

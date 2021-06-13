@@ -113,7 +113,7 @@ def time_it(wrapped_function,
 time_it.called = 0
 
 
-@deckorator
+@deckorator(is_class_decorator=True)
 def immutable(wrapped_class,
               *args,
               **kwargs):
