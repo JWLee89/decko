@@ -345,8 +345,7 @@ def deckorator(*type_template_args,
 
             # Then, perform validation to check whether
             # arguments are that of correspond to the specified types ...
-            for decorator_arg, target_type in zip(
-                    decorator_args if not cls_or_self else decorator_args[1:], type_template_arguments):
+            for decorator_arg, target_type in zip(decorator_args, type_template_arguments):
                 if not isinstance(decorator_arg, target_type):
                     raise TypeError(f"Passed invalid type: {type(decorator_arg)}. "
                                     f"Expected type: '{target_type}'")

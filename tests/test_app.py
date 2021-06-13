@@ -3,8 +3,7 @@ import pytest
 from typing import Iterable, List
 
 from src.decko.app import Decko
-from src.decko.immutable import ImmutableError
-from .common.classes import Props
+
 
 dk = Decko(__name__)
 

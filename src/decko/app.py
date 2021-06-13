@@ -547,7 +547,6 @@ class Decko:
         start = process_time() * 1000
         output = wrapped_func(*args, **kwargs)
         elapsed = (process_time() * 1000) - start
-        print(f"elapsed: {elapsed}")
         self.log_debug(f"Function {func_name} called. Time elapsed: "
                        f"{elapsed} milliseconds.")
         if elapsed > time_ms:
