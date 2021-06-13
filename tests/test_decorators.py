@@ -139,7 +139,9 @@ def test_invalid_decorator_kwarg(invalid_inputs):
         def test(new_num):
             return new_num
 
-    with pytest.raises(TypeError):
+    with pytest.raises(ValueError):
+        # Two values provided, since we are not specifying
+        # kwarg_val=invalid_inputs
         @error_decorator(invalid_inputs)
         def test(new_num):
             return new_num
