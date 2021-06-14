@@ -35,36 +35,6 @@ pip uninstall decko
 
 ## Example
 
-Decko is a decorated-based module for debugging. 
-It also provides useful decorators to speed up programming and provides utility 
-function for easier decorator usage. Here is an example
-
-```python
-from src.decko import Decko
-
-if __name__ == "__main__":
-
-    # Create decko instance
-    dk = Decko(__name__)
-
-    # Attach a profiling function
-    @dk.profile
-    def create_list(n):
-        return list(range(n))
-
-
-    for i in range(20):
-        create_list(100000)
-
-    # print profiled result
-    dk.print_profile()
-```
-
-Decko also provides standalone decorators that can be applied immediately to your projects. 
-It also has built-in decorator functions to help developers quickly build debuggable custom 
-decorators. This allows developers to modify and extend code with minimal modifications to 
-the existing codebase.
-
 ### Deckorator
 
 `deckorator` creates function decorators that can be used to decorate both functions and
@@ -161,6 +131,37 @@ if __name__ == "__main__":
     print(deco_cls.a)
 ```
 
+### Decko (under development)
+
+Decko is a decorated-based module for debugging. 
+It also provides useful decorators to speed up programming and provides utility 
+function for easier decorator usage. Here is an example
+
+```python
+from src.decko import Decko
+
+if __name__ == "__main__":
+
+    # Create decko instance
+    dk = Decko(__name__)
+
+    # Attach a profiling function
+    @dk.profile
+    def create_list(n):
+        return list(range(n))
+
+
+    for i in range(20):
+        create_list(100000)
+
+    # print profiled result
+    dk.print_profile()
+```
+
+Decko also provides standalone decorators that can be applied immediately to your projects. 
+It also has built-in decorator functions to help developers quickly build debuggable custom 
+decorators. This allows developers to modify and extend code with minimal modifications to 
+the existing codebase.
 
 ### Features
 
