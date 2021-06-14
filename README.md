@@ -65,7 +65,9 @@ It also has built-in decorator functions to help developers quickly build debugg
 decorators. This allows developers to modify and extend code with minimal modifications to 
 the existing codebase.
 
-`decorator` creates function decorators that can be used to decorate both functions and
+### Deckorator
+
+`deckorator` creates function decorators that can be used to decorate both functions and
 classes. Demo for creating class and function decorators is shown below.
 
 ```python
