@@ -10,5 +10,7 @@ if __name__ == "__main__":
     @raise_error_if(lambda x: True)
     def run(a):
         return a
-
-    run(10)
+    try:
+        run(10)
+    except RuntimeError:
+        print("Run time error raised")
