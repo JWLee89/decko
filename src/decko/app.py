@@ -122,27 +122,27 @@ class DeckoState(metaclass=Singleton):
         return ", ".join([f'{function_name}: {v}' for function_name, v in self.functions.items()])
 
 
-def deckorate_method(
-             self,
-              *type_template_args,
-              **type_template_kwargs):
+@deckorator(t.Callable, t.Callable)
+def deckorate_method(self,
+                     decorator_function,
+                     function_to_wrap,
+                     *args, **kwargs) -> None:
     """
-    The building block of
-    :param new_decorator:
-    :param type_template_args:
-    :param type_template_kwargs:
-    :return:
-    :rtype:
+    Add decorator state information and output the decorator
+    Args:
+        self: The decko instance
+        decorator_function: The decorator function
+        function_to_wrap: The function that will be wrapped using the
+        decorator function
+        *args: The argument object
+        **kwargs: Kwarg objects
+
+    Returns:
+        A new decorator that adds decorator rules to the decorator and
+        updates the newly formed method
     """
-    print(f"Type template args: {type_template_args}")
-    decorated_fun = deckorator(*type_template_args, **type_template_kwargs)
-
-    # add_decorator_rule = self.add_decorator_rule
-    def func_to_decorate(wrapped_obj):
-        # self.add_decorator_rule(self.deckorate, wrapped_obj)
-        return decorated_fun(wrapped_obj)
-
-    return func_to_decorate
+    self.add_decorator_rule(decorator_function, function_to_wrap)
+    return decorator_function(self, function_to_wrap, *args, **kwargs)
 
 
 class Decko:
@@ -330,17 +330,21 @@ class Decko:
         return cls
 
     def _add_function_decorator_rule(self,
-                                     decorator_func: t.Callable,
-                                     func: t.Callable, **kwargs) -> None:
+                                     decorator_function: t.Callable,
+                                     function_to_decorate: t.Callable, **kwargs) -> None:
         """
         Add common metadata regarding the decorated function.
-        :param decorator_func:
-        :param func:
-        :param kwargs:
-        :return:
+
+        Args:
+            decorator_function: The decorator function
+            function_to_decorate: The function to decorate with the decorator function
+            **kwargs: Keyword argument object
+
+        Returns:
+            Nothing. This function is used to mutate the state of Decko.
         """
         properties: t.Dict = util.create_properties(Decko.FUNCTION_PROPS, **kwargs)
-        self._update_decoration_info(decorator_func, func, properties)
+        self._update_decoration_info(decorator_function, function_to_decorate, properties)
 
     def add_decorator_rule(self,
                            decorator_func: t.Callable,
@@ -485,7 +489,9 @@ class Decko:
         self._add_function_decorator_rule(decorator_func, func, **kw)
 
     def execute_if(self,
-                   predicate: t.Callable) -> t.Callable:
+                   wrapped_func: t.Callable,
+                   predicate: t.Callable,
+                   *args, **kwargs) -> t.Callable:
         """
         Given a t.List of subscribed callables and an predicate function,
         create a wrapper that fires events when predicates are fulfilled
@@ -514,18 +520,13 @@ class Decko:
         :param predicate: The condition for triggering the event
         :return: The wrapped function
         """
-        def wrap(func: t.Callable) -> t.Callable:
-            @wraps(func)
-            def wrapped(*args, **kwargs):
-                fire_event = predicate(*args, **kwargs)
-                if fire_event:
-                    return func(*args, **kwargs)
 
-            self.add_decorator_rule(self.execute_if, func)
+        return deckorate_method(self, wrapped_func)
 
-            return wrapped
-
-        return wrap
+        print(f"wrapped func: {wrapped_func}")
+        fire_event = predicate(*args, **kwargs)
+        if fire_event:
+            return wrapped_func(*args, **kwargs)
 
     @deckorator((float, int), callback=(None, t.Callable))
     def slower_than(self,

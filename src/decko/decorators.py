@@ -11,7 +11,8 @@ TODO: Decide on which style of documentation to use
 import inspect
 import traceback
 import typing as t
-from functools import wraps, partial
+import logging
+from functools import wraps
 from time import process_time
 import threading
 
@@ -157,6 +158,7 @@ def _handle_method(function_to_evaluate: t.Callable,
 
 def deckorator(*type_template_args,
                is_class_decorator: bool = False,
+               on_decorator_creation: t.Callable = None,
                **type_template_kwargs):
     """
     Decorate a function based on its type.
@@ -190,6 +192,12 @@ def deckorator(*type_template_args,
 
         Defaults to false. If set to true, we are specifying that the decorator created
         is designed to be a class decorator.
+
+        on_decorator_creation (t.Callable):
+
+        This function handles pre-processing logic that will run only once when
+        creating the decorator. Useful for adding hooks or events to manage states
+        when initializing decorators.
 
         **type_template_kwargs (): We also want users to be able to provide keyword
         args with default behaviors if not specified, which helps reduce boilerplate
@@ -297,20 +305,27 @@ def deckorator(*type_template_args,
                                                                                decorator_kwargs)
 
             # Handle case where self or cls exists
-            # TODO: Clean this code up
+            # TODO: Clean up code and reduce boilerplate
             if cls_or_self:
-                def wrapped_func(wrapped_function: t.Callable):
+                def wrapped_func(decorated_function: t.Callable):
 
-                    wrapped_object_is_class = inspect.isclass(wrapped_function)
+                    # If on_decorator_creation is defined
+                    if isinstance(decorated_function, t.Callable) and isinstance(on_decorator_creation, t.Callable):
+                        preprocessed_output = on_decorator_creation(new_decorator_function,
+                                                                    decorated_function,
+                                                                    *decorator_args)
+
+                    wrapped_object_is_class = inspect.isclass(decorated_function)
                     if is_class_decorator and not wrapped_object_is_class:
                         raise TypeError("Specified a class decorator, "
-                                        f"but passed in object of type: {type(wrapped_function)}")
+                                        f"but passed in object of type: {type(decorated_function)}")
 
                     def final_func(*args, **kwargs):
                         return new_decorator_function(cls_or_self,
-                                                      wrapped_function,
+                                                      decorated_function,
                                                       *decorator_args,
-                                                      *args, **kwargs)
+                                                      *args,
+                                                      **kwargs)
                     return final_func
             else:
                 def wrapped_func(wrapped_object: t.Callable):
@@ -321,11 +336,25 @@ def deckorator(*type_template_args,
                         raise TypeError("Specified a class decorator, "
                                         f"but passed in object of type: {type(wrapped_object)}")
 
-                    def final_func(*args, **kwargs):
-                        return new_decorator_function(wrapped_object,
-                                                      *decorator_args,
-                                                      *args,
-                                                      **kwargs)
+                    # If on_decorator_creation is defined
+                    # Eww ... Find way to
+                    if isinstance(wrapped_object, t.Callable) and isinstance(on_decorator_creation, t.Callable):
+                        preprocessed_output = on_decorator_creation(new_decorator_function,
+                                                                    wrapped_object,
+                                                                    *decorator_args)
+
+                        def final_func(*args, **kwargs):
+                            return new_decorator_function(wrapped_object,
+                                                          *preprocessed_output,
+                                                          *decorator_args,
+                                                          *args,
+                                                          **kwargs)
+                    else:
+                        def final_func(*args, **kwargs):
+                            return new_decorator_function(wrapped_object,
+                                                          *decorator_args,
+                                                          *args,
+                                                          **kwargs)
 
                     return final_func
 
@@ -375,42 +404,37 @@ def deckorator(*type_template_args,
     return inner
 
 
-def optional_args(wrapped_func: t.Callable = None,
-                  **kw) -> t.Callable:
-    """
-    Create function with optional arguments
-    :param wrapped_func: The function to be wrapped
-    :return:
-    """
-    if wrapped_func is None:
-        return partial(optional_args, **kw)
-
-    @wraps(wrapped_func)
-    def returned_func(*args, **kwargs):
-        output = returned_func(*args, **kwargs)
-        return output
-
-    return returned_func
-
-
 # --------------------------------------------
 # ------------ Utility decorators ------------
 # --------------------------------------------
 
 @deckorator(t.Callable)
-def stopwatch(wrapped_func: t.Callable,
+def stopwatch(decorated_function: t.Callable,
               callback: t.Callable = print,
               *args,
               **kwargs):
+    """
+    A stopwatch function that measures the amount of time
+    taken to execute a function.
+    Args:
+        decorated_function: The decorated function
+        callback: A callback function that is executed to handle
+        the calculation of the amount of time taken to execute
+        decorated function
+    Returns:
+        A callable object that executes decorated function
+        but with the additional feature of processing the amount of
+        time taken to execute function.
+    """
     start_time = process_time()
-    output = wrapped_func(*args, **kwargs)
+    output = decorated_function(*args, **kwargs)
     time_elapsed = process_time() - start_time
     callback(time_elapsed)
     return output
 
 
 @deckorator(t.Callable)
-def execute_if(function_to_decorate: t.Callable,
+def execute_if(decorated_function: t.Callable,
                predicate: t.Callable,
                *args, **kwargs) -> t.Callable:
     """
@@ -438,13 +462,13 @@ def execute_if(function_to_decorate: t.Callable,
 
     >> End code sample
     ----------------------------------
-    :param function_to_decorate: Function decorated by this function
+    :param decorated_function: Function decorated by this function
     :param predicate: The condition for triggering the event
     :return: The wrapped function
     """
     fire_event = predicate(*args, **kwargs)
     if fire_event:
-        return function_to_decorate(*args, **kwargs)
+        return decorated_function(*args, **kwargs)
 
 
 def _default_slower_than_callback(time_elapsed, threshold_time):
@@ -454,20 +478,20 @@ def _default_slower_than_callback(time_elapsed, threshold_time):
 
 
 @deckorator((float, int), t.Callable)
-def slower_than(wrapped_function: t.Callable,
+def slower_than(decorated_function: t.Callable,
                 time_ms: float,
                 callback: t.Callable,
                 *args,
                 **kwargs) -> t.Any:
     """
     Executes callback if time taken takes longer than specified time
-    :param wrapped_function: The function that was wrapped.
+    :param decorated_function: The function that was wrapped.
     :param time_ms: If the function does not complete in specified time,
     :param callback: The function that is called if decorator is triggered
     a warning will be raised.
     """
     start = process_time() * 1000
-    output = wrapped_function(*args, **kwargs)
+    output = decorated_function(*args, **kwargs)
     elapsed = (process_time() * 1000) - start
     if elapsed > time_ms:
         callback(elapsed, time_ms)
@@ -483,8 +507,6 @@ def freeze(cls: t.Type[t.Any],
     are mutated or if new classes are added
     :param cls: A Class
     """
-    print(f"Freezing: {cls}, {args}, {kwargs}")
-
     def do_freeze(slf, name, value):
         msg = f"Class {type(slf)} is frozen. " \
               f"Attempted to set attribute '{name}' to value: '{value}'"
@@ -647,7 +669,7 @@ def truncate(wrapped_function: t.Callable,
 
 
 @deckorator(t.Tuple, t.Callable, raise_error=(False, bool))
-def try_except(wrapped_func: t.Callable,
+def try_except(decorated_function: t.Callable,
                errors_to_catch: t.Tuple[Exception],
                error_callback: t.Callable,
                raise_error: bool = False,
@@ -655,16 +677,133 @@ def try_except(wrapped_func: t.Callable,
     """
     Wraps the entire function around a try-catch block and
     catches the exception.
-    :param wrapped_func: The function that was wrapped
+    :param decorated_function: The function that was wrapped
     :param errors_to_catch: A tuple of exceptions to catch
     :param error_callback: The error callback to call when exception is caught
     :param raise_error: If set to true, after handling error_callback, an error will
     be raised.
     """
     try:
-        return wrapped_func(*args, **kwargs)
+        return decorated_function(*args, **kwargs)
     except errors_to_catch as error:
         tb = traceback.format_exc()
         error_callback(error, tb)
         if raise_error:
             raise
+
+
+__FORMATTER__ = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+
+
+def setup_logger(name, log_file, level=logging.INFO):
+    """To setup as many loggers as you want"""
+
+    handler = logging.FileHandler(log_file)
+    handler.setFormatter(__FORMATTER__)
+
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    logger.addHandler(handler)
+
+    return logger
+
+
+def get_default_args(func):
+    signature = inspect.signature(func)
+    return {
+        k: v.default
+        for k, v in signature.parameters.items()
+        if v.default is not inspect.Parameter.empty
+    }
+
+
+def _init_logger(decorator_function: t.Callable,
+                 function_to_decorate: t.Callable,
+                 file_path: str,
+                 logging_level: int,
+                 truncate_longer_than: int) -> t.Tuple[str, t.Dict, logging.Logger]:
+    """
+    Private function for initializing logger.
+    Users may choose to override this when decorating a function
+
+    Args:
+        decorator_function: The decorator function applied
+        function_to_decorate: The function that will be decorated.
+        In the example below, this would be
+        file_path: The path where logger will log output to
+        logging_level: The logging level threshold for which to trigger event
+        truncate_longer_than: Truncate arguments and outputs longer than specified
+
+    Returns:
+        A two-tuple containing
+    """
+    name = f"{__name__}.{function_to_decorate.__name__}"
+    logger = setup_logger(name, file_path, logging_level)
+    argspec = ', '.join(inspect.getfullargspec(function_to_decorate)[0])
+    default_args = get_default_args(function_to_decorate)
+    return argspec, default_args, logger
+
+
+@deckorator(str,
+            logging_level=(logging.INFO, int),
+            truncate_longer_than=(100, int),
+            on_decorator_creation=_init_logger,
+            )
+def log_trace(decorated_function,
+              # Init_logger returns a logger
+              arguments: t.Tuple,
+              default_args: t.Dict,
+              logger: logging.Logger,
+              file_path: str,            # Specified arg template of type 'str'
+              logging_level: int,        # Specified arg template of type 'int' with default: logging.INFO
+              truncate_longer_than: int,
+              *args,
+              **kwargs):
+    """
+    log_trace is a powerful function that does the following:
+
+    1. Logs the function called plus the argument passed to a user-defined file
+    2. Logs the output of that function
+    3. Measures and logs the amount of time taken to execute that function
+
+    Args:
+        decorated_function (t.Callable):
+        arguments (t.Tuple):
+        default_args (t.Dict):
+        logger (logger.Logger):
+        file_path (str):
+        logging_level (int):
+        truncate_longer_than (int):
+        *args:
+        **kwargs:
+
+    Returns:
+
+    """
+    func_name = decorated_function.__name__
+    args_to_log = list(args)
+
+    # Handle kwargs
+    for key in default_args.keys():
+        if key in kwargs:
+            args_to_log.append(kwargs[key])
+        else:
+            args_to_log.append(default_args[key])
+
+    # Create argument string
+    args_to_log = ", ".join(str(argument) for argument in args_to_log)[:truncate_longer_than]
+
+    # Measure execution time
+    start_time = process_time()
+    output = decorated_function(*args, **kwargs)
+    time_elapsed = process_time() - start_time
+
+    # Create output to log
+    try:
+        output_to_log = output[:truncate_longer_than]
+    except Exception:
+        output_to_log = output
+    # Log outputs
+    logger.log(logging_level,
+               f"{func_name}({args_to_log}) -> {output_to_log}, '{time_elapsed * 1000} milliseconds'")
+    return output
