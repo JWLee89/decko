@@ -720,7 +720,8 @@ def get_default_args(func):
 def _init_logger(decorator_function: t.Callable,
                  function_to_decorate: t.Callable,
                  file_path: str,
-                 logging_level: int) -> t.Tuple[str, t.Dict, logging.Logger]:
+                 logging_level: int,
+                 truncate_longer_than: int) -> t.Tuple[str, t.Dict, logging.Logger]:
     """
     Private function for initializing logger.
     Users may choose to override this when decorating a function
@@ -731,6 +732,7 @@ def _init_logger(decorator_function: t.Callable,
         In the example below, this would be
         file_path: The path where logger will log output to
         logging_level: The logging level threshold for which to trigger event
+        truncate_longer_than: Truncate arguments and outputs longer than specified
 
     Returns:
         A two-tuple containing
@@ -742,7 +744,11 @@ def _init_logger(decorator_function: t.Callable,
     return argspec, default_args, logger
 
 
-@deckorator(str, (int, logging.INFO), on_decorator_creation=_init_logger)
+@deckorator(str,
+            logging_level=(logging.INFO, int),
+            truncate_longer_than=(100, int),
+            on_decorator_creation=_init_logger,
+            )
 def log_trace(decorated_function,
               # Init_logger returns a logger
               arguments: t.Tuple,
@@ -750,8 +756,30 @@ def log_trace(decorated_function,
               logger: logging.Logger,
               file_path: str,            # Specified arg template of type 'str'
               logging_level: int,        # Specified arg template of type 'int' with default: logging.INFO
+              truncate_longer_than: int,
               *args,
               **kwargs):
+    """
+    log_trace is a powerful function that does the following:
+
+    1. Logs the function called plus the argument passed to a user-defined file
+    2. Logs the output of that function
+    3. Measures and logs the amount of time taken to execute that function
+
+    Args:
+        decorated_function (t.Callable):
+        arguments (t.Tuple):
+        default_args (t.Dict):
+        logger (logger.Logger):
+        file_path (str):
+        logging_level (int):
+        truncate_longer_than (int):
+        *args:
+        **kwargs:
+
+    Returns:
+
+    """
     func_name = decorated_function.__name__
     args_to_log = list(args)
 
@@ -763,13 +791,19 @@ def log_trace(decorated_function,
             args_to_log.append(default_args[key])
 
     # Create argument string
-    args_to_log = ", ".join(str(argument) for argument in args_to_log)
+    args_to_log = ", ".join(str(argument) for argument in args_to_log)[:truncate_longer_than]
 
+    # Measure execution time
     start_time = process_time()
     output = decorated_function(*args, **kwargs)
     time_elapsed = process_time() - start_time
 
+    # Create output to log
+    try:
+        output_to_log = output[:truncate_longer_than]
+    except Exception:
+        output_to_log = output
     # Log outputs
     logger.log(logging_level,
-               f"{func_name}({args_to_log}) -> {output}, '{time_elapsed * 1000} millseconds'")
+               f"{func_name}({args_to_log}) -> {output_to_log}, '{time_elapsed * 1000} milliseconds'")
     return output
