@@ -1,4 +1,4 @@
-from src.decko.decorators import (
+from src.decko.debug import (
     log_trace
 )
 from tests.common.util import (

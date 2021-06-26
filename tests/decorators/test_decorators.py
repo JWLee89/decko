@@ -7,6 +7,8 @@ import pytest
 import typing as t
 
 import src.decko.decorators as fd
+
+from src.decko.debug import try_except, stopwatch
 from tests.common.classes import Props
 from src.decko.immutable import ImmutableError
 
@@ -243,27 +245,6 @@ def test_class_method_decoration():
         return a + b
 
     assert add(1, 2) == 3, "Something is wrong ..."
-
-
-@pytest.mark.parametrize("iter_count", [
-    4, 8, 12
-])
-def test_stopwatch(iter_count):
-    time_elapsed_arr = []
-
-    def callback(val):
-        time_elapsed_arr.append(val)
-        return val
-
-    @fd.stopwatch(callback)
-    def create_list(n):
-        return list(range(n))
-
-    for i in range(iter_count):
-        create_list(1000000 * i)
-
-    assert len(time_elapsed_arr) == iter_count, \
-        f"Should have {len(time_elapsed_arr)} items"
 
 
 @pytest.mark.parametrize("input_data",
@@ -510,3 +491,21 @@ def test_execute_if(threshold):
 
     assert len(answer_arr) == (threshold - 1), \
         f"Array should be size: {len(answer_arr)}"
+
+
+def test_multiple_decoration():
+    """
+    For multiple decorations, the function must output
+    the same results
+    """
+
+    @stopwatch(print)
+    @try_except((ValueError, ), print)
+    def add(a, b):
+        return a + b
+
+    def add_undecorated(a, b):
+        return a + b
+
+    assert add(1, 2) == add_undecorated(1, 2), \
+        "Decorated function should output same result as undecorated"

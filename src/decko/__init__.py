@@ -2,12 +2,21 @@
 from .app import Decko
 
 # Function decorators
-from .decorators import deckorator
-from .decorators import stopwatch
-from .decorators import execute_if
-from .decorators import slower_than
-from .decorators import freeze
+from .decorators import (
+    deckorator,
+    execute_if,
+    slower_than,
+    freeze,
+    filter_by_output,
+    raise_error_if,
+)
+
+from .debug import (
+    try_except,
+    stopwatch,
+    log_trace,
+)
 
 
-__version__ = "0.0.3.0"
+__version__ = "0.0.3.1"
 PROJECT_NAME = "decko"
