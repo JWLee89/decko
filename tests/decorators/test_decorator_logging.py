@@ -10,14 +10,14 @@ def test_log_trace():
     add_log, subtract_log = "file.log", "test.log"
 
     @log_trace(add_log, 20)
-    def add(a, b):
+    def add(a, b, new_kwargs=20):
         return a + b
 
     add(1, 2)
 
     @log_trace(subtract_log, 20)
-    def subtract(a, b):
+    def subtract(a, b, kw=None):
         return a - b
 
-    subtract(10, 7)
+    subtract(10, 7, kw=30)
     # assert cleanup_files(add_log, subtract_log), "Failed to clean up files properly."

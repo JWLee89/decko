@@ -304,7 +304,6 @@ def deckorator(*type_template_args,
                                                                                new_args,
                                                                                decorator_kwargs)
 
-
             # Handle case where self or cls exists
             # TODO: Clean up code and reduce boilerplate
             if cls_or_self:
@@ -346,7 +345,7 @@ def deckorator(*type_template_args,
 
                         def final_func(*args, **kwargs):
                             return new_decorator_function(wrapped_object,
-                                                          preprocessed_output,
+                                                          *preprocessed_output,
                                                           *decorator_args,
                                                           *args,
                                                           **kwargs)
@@ -709,37 +708,68 @@ def setup_logger(name, log_file, level=logging.INFO):
     return logger
 
 
+def get_default_args(func):
+    signature = inspect.signature(func)
+    return {
+        k: v.default
+        for k, v in signature.parameters.items()
+        if v.default is not inspect.Parameter.empty
+    }
+
+
 def _init_logger(decorator_function: t.Callable,
                  function_to_decorate: t.Callable,
                  file_path: str,
-                 logging_level: int):
+                 logging_level: int) -> t.Tuple[str, t.Dict, logging.Logger]:
     """
     Private function for initializing logger.
+    Users may choose to override this when decorating a function
 
     Args:
-        decorator_function:
-        function_to_decorate:
-        file_path:
-        is_debug:
+        decorator_function: The decorator function applied
+        function_to_decorate: The function that will be decorated.
+        In the example below, this would be
+        file_path: The path where logger will log output to
+        logging_level: The logging level threshold for which to trigger event
 
     Returns:
-        A logger object for logging
+        A two-tuple containing
     """
     name = f"{__name__}.{function_to_decorate.__name__}"
-    return setup_logger(name, file_path, logging_level)
+    logger = setup_logger(name, file_path, logging_level)
+    argspec = ', '.join(inspect.getfullargspec(function_to_decorate)[0])
+    default_args = get_default_args(function_to_decorate)
+    return argspec, default_args, logger
 
 
 @deckorator(str, (int, logging.INFO), on_decorator_creation=_init_logger)
 def log_trace(decorated_function,
+              # Init_logger returns a logger
+              arguments: t.Tuple,
+              default_args: t.Dict,
               logger: logging.Logger,
-              file_path: str,            #
-              logging_level: int,        # Default is logging.INFO
+              file_path: str,            # Specified arg template of type 'str'
+              logging_level: int,        # Specified arg template of type 'int' with default: logging.INFO
               *args,
               **kwargs):
-    logger.log(logging_level,
-               f"function: '{decorated_function.__name__}' "
-               f"decorated with: '{log_trace.__name__}' "
-               f"called with args: {args}, {kwargs}")
+    func_name = decorated_function.__name__
+    args_to_log = list(args)
+
+    # Handle kwargs
+    for key in default_args.keys():
+        if key in kwargs:
+            args_to_log.append(kwargs[key])
+        else:
+            args_to_log.append(default_args[key])
+
+    # Create argument string
+    args_to_log = ", ".join(str(argument) for argument in args_to_log)
+
+    start_time = process_time()
     output = decorated_function(*args, **kwargs)
-    logger.log(logging_level, f"{decorated_function.__name__} output: {output}")
+    time_elapsed = process_time() - start_time
+
+    # Log outputs
+    logger.log(logging_level,
+               f"{func_name}({args_to_log}) -> {output}, '{time_elapsed * 1000} millseconds'")
     return output
