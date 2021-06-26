@@ -10,11 +10,28 @@ from .decorators import deckorator
 
 __FORMATTER__ = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
 
+# -----------------------------------
+# -------- Private Functions --------
+# -----------------------------------
 
-def setup_logger(name, log_file, level=logging.INFO):
-    """To setup as many loggers as you want"""
 
-    handler = logging.FileHandler(log_file)
+def _setup_logger(name: str,
+                  log_file_path: str,
+                  level=logging.INFO):
+    """
+    To setup as many loggers as you want
+
+    Args:
+        name: The name of the logger. 
+        log_file_path: The path where log will be stored
+        level: The threshold level for logging
+
+    Returns:
+        A logger designed for handling logging.
+        Ensures that only the necessary loggers are created
+        for each module
+    """
+    handler = logging.FileHandler(log_file_path)
     handler.setFormatter(__FORMATTER__)
 
     logger = logging.getLogger(name)
@@ -24,7 +41,16 @@ def setup_logger(name, log_file, level=logging.INFO):
     return logger
 
 
-def _get_default_args(func):
+def _get_default_args(func: t.Callable) -> t.Dict:
+    """
+    Get the default arguments for a function
+    Args:
+        func: The function to retrieve default arguments for
+
+    Returns:
+        A dictionary containing the name of the argument
+        and the default value assigned to the argument.
+    """
     signature = inspect.signature(func)
     return {
         k: v.default
@@ -53,8 +79,7 @@ def _init_logger(decorator_function: t.Callable,
     Returns:
         A two-tuple containing
     """
-    name = f"{__name__}.{function_to_decorate.__name__}"
-    logger = setup_logger(name, file_path, logging_level)
+    logger = _setup_logger(__name__, file_path, logging_level)
     default_args = _get_default_args(function_to_decorate)
     return default_args, logger
 
