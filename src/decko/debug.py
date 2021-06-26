@@ -17,26 +17,35 @@ __FORMATTER__ = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
 
 def _setup_logger(name: str,
                   log_file_path: str,
+                  log_to_console: bool = True,
                   level=logging.INFO):
     """
     To setup as many loggers as you want
 
     Args:
-        name: The name of the logger. 
-        log_file_path: The path where log will be stored
-        level: The threshold level for logging
+        name (str): The name of the logger.
+        log_file_path (str): The path where log will be stored
+        log_to_console (bool): If set to true, log also to console
+        level (int): The threshold level for logging
 
     Returns:
         A logger designed for handling logging.
         Ensures that only the necessary loggers are created
         for each module
     """
-    handler = logging.FileHandler(log_file_path)
-    handler.setFormatter(__FORMATTER__)
+    file_handler = logging.FileHandler(log_file_path)
+    file_handler.setFormatter(__FORMATTER__)
 
     logger = logging.getLogger(name)
+
+    # Add file handler
     logger.setLevel(level)
-    logger.addHandler(handler)
+    logger.addHandler(file_handler)
+
+    if log_to_console:
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(__FORMATTER__)
+        logger.addHandler(console_handler)
 
     return logger
 
@@ -63,7 +72,8 @@ def _init_logger(decorator_function: t.Callable,
                  function_to_decorate: t.Callable,
                  file_path: str,
                  logging_level: int,
-                 truncate_longer_than: int) -> t.Tuple[t.Dict, logging.Logger]:
+                 truncate_longer_than: int,
+                 log_to_console: bool) -> t.Tuple[t.Dict, logging.Logger]:
     """
     Private function for initializing logger.
     Users may choose to override this when decorating a function
@@ -75,11 +85,11 @@ def _init_logger(decorator_function: t.Callable,
         file_path: The path where logger will log output to
         logging_level: The logging level threshold for which to trigger event
         truncate_longer_than: Truncate arguments and outputs longer than specified
-
+        log_to_console: Log to console if set to true
     Returns:
         A two-tuple containing
     """
-    logger = _setup_logger(__name__, file_path, logging_level)
+    logger = _setup_logger(__name__, file_path, log_to_console, logging_level)
     default_args = _get_default_args(function_to_decorate)
     return default_args, logger
 
@@ -87,6 +97,7 @@ def _init_logger(decorator_function: t.Callable,
 @deckorator(str,
             logging_level=(logging.INFO, int),
             truncate_longer_than=(100, int),
+            log_to_console=(True, bool),
             on_decorator_creation=_init_logger,
             )
 def log_trace(decorated_function,
@@ -98,7 +109,7 @@ def log_trace(decorated_function,
               file_path: str,            # Specified arg template of type 'str'
               logging_level: int,        # Specified arg template of type 'int' with default: logging.INFO
               truncate_longer_than: int,
-
+              log_to_console: bool,
               *args,
               **kwargs):
     """
@@ -109,11 +120,11 @@ def log_trace(decorated_function,
     3. Measures and logs the amount of time taken to execute that function
 
     Args:
-        decorated_function (t.Callable):
-        arguments (t.Tuple):
-        default_args (t.Dict):
-        logger (logger.Logger):
-        file_path (str):
+        decorated_function (t.Callable): The function that is decorated with log_trace
+        default_args (t.Dict): A dictionary containing default_argument name as keys
+        and its corresponding default value
+        logger (logger.Logger): The logger object used for logging
+        file_path (str): the path with file is stored
         logging_level (int):
         truncate_longer_than (int):
         *args:
