@@ -510,3 +510,21 @@ def test_execute_if(threshold):
 
     assert len(answer_arr) == (threshold - 1), \
         f"Array should be size: {len(answer_arr)}"
+
+
+def test_multiple_decoration():
+    """
+    For multiple decorations, the function must output
+    the same results
+    """
+
+    @fd.stopwatch()
+    @fd.try_except((ValueError, ), print)
+    def add(a, b):
+        return a + b
+
+    def add_undecorated(a, b):
+        return a + b
+
+    assert add(1, 2) == add_undecorated(1, 2), \
+        "Decorated function should output same result as undecorated"

@@ -320,6 +320,7 @@ def deckorator(*type_template_args,
                         raise TypeError("Specified a class decorator, "
                                         f"but passed in object of type: {type(decorated_function)}")
 
+                    @wraps(decorated_function)
                     def final_func(*args, **kwargs):
                         return new_decorator_function(cls_or_self,
                                                       decorated_function,
@@ -343,6 +344,7 @@ def deckorator(*type_template_args,
                                                                     wrapped_object,
                                                                     *decorator_args)
 
+                        @wraps(wrapped_object)
                         def final_func(*args, **kwargs):
                             return new_decorator_function(wrapped_object,
                                                           *preprocessed_output,
@@ -350,6 +352,7 @@ def deckorator(*type_template_args,
                                                           *args,
                                                           **kwargs)
                     else:
+                        @wraps(wrapped_object)
                         def final_func(*args, **kwargs):
                             return new_decorator_function(wrapped_object,
                                                           *decorator_args,
@@ -408,9 +411,9 @@ def deckorator(*type_template_args,
 # ------------ Utility decorators ------------
 # --------------------------------------------
 
-@deckorator(t.Callable)
+@deckorator(callback=(print, t.Callable))
 def stopwatch(decorated_function: t.Callable,
-              callback: t.Callable = print,
+              callback: t.Callable,
               *args,
               **kwargs):
     """
@@ -420,7 +423,8 @@ def stopwatch(decorated_function: t.Callable,
         decorated_function: The decorated function
         callback: A callback function that is executed to handle
         the calculation of the amount of time taken to execute
-        decorated function
+        decorated function.
+        Defaults to print.
     Returns:
         A callable object that executes decorated function
         but with the additional feature of processing the amount of
@@ -665,7 +669,8 @@ def truncate(wrapped_function: t.Callable,
     try:
         return output[:limit]
     except Exception:
-        raise TypeError(f"Cannot slice object: {output}")
+        raise TypeError(f"Output of function '{wrapped_function.__name__()}' is not slice-able. "
+                        f"Output: '{output}' ")
 
 
 @deckorator(t.Tuple, t.Callable, raise_error=(False, bool))
@@ -721,7 +726,7 @@ def _init_logger(decorator_function: t.Callable,
                  function_to_decorate: t.Callable,
                  file_path: str,
                  logging_level: int,
-                 truncate_longer_than: int) -> t.Tuple[str, t.Dict, logging.Logger]:
+                 truncate_longer_than: int) -> t.Tuple[t.Dict, logging.Logger]:
     """
     Private function for initializing logger.
     Users may choose to override this when decorating a function
@@ -739,9 +744,8 @@ def _init_logger(decorator_function: t.Callable,
     """
     name = f"{__name__}.{function_to_decorate.__name__}"
     logger = setup_logger(name, file_path, logging_level)
-    argspec = ', '.join(inspect.getfullargspec(function_to_decorate)[0])
     default_args = get_default_args(function_to_decorate)
-    return argspec, default_args, logger
+    return default_args, logger
 
 
 @deckorator(str,
@@ -750,13 +754,15 @@ def _init_logger(decorator_function: t.Callable,
             on_decorator_creation=_init_logger,
             )
 def log_trace(decorated_function,
-              # Init_logger returns a logger
-              arguments: t.Tuple,
+              # From on_decorator_creation
               default_args: t.Dict,
               logger: logging.Logger,
+
+              # Function arguments
               file_path: str,            # Specified arg template of type 'str'
               logging_level: int,        # Specified arg template of type 'int' with default: logging.INFO
               truncate_longer_than: int,
+
               *args,
               **kwargs):
     """
