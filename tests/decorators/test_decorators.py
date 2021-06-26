@@ -518,7 +518,7 @@ def test_multiple_decoration():
     the same results
     """
 
-    @fd.stopwatch()
+    @fd.stopwatch(print)
     @fd.try_except((ValueError, ), print)
     def add(a, b):
         return a + b

@@ -411,7 +411,7 @@ def deckorator(*type_template_args,
 # ------------ Utility decorators ------------
 # --------------------------------------------
 
-@deckorator(callback=(print, t.Callable))
+@deckorator(t.Callable)
 def stopwatch(decorated_function: t.Callable,
               callback: t.Callable,
               *args,
