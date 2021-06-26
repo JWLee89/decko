@@ -488,6 +488,7 @@ class Decko:
         # Register the function and add appropriate metadata
         self._add_function_decorator_rule(decorator_func, func, **kw)
 
+    @deckorator(t.Callable)
     def execute_if(self,
                    wrapped_func: t.Callable,
                    predicate: t.Callable,
@@ -520,10 +521,6 @@ class Decko:
         :param predicate: The condition for triggering the event
         :return: The wrapped function
         """
-
-        return deckorate_method(self, wrapped_func)
-
-        print(f"wrapped func: {wrapped_func}")
         fire_event = predicate(*args, **kwargs)
         if fire_event:
             return wrapped_func(*args, **kwargs)
@@ -556,7 +553,6 @@ class Decko:
                 self.log(f"Function: {func_name} took longer than"
                          f"{time_ms} milliseconds. Total time taken: {elapsed}",
                          logging.WARNING)
-        self.add_decorator_rule(self.slower_than, wrapped_func)
         return output
 
     def instance_data(self,
@@ -753,7 +749,7 @@ class Decko:
 
             return race
 
-        self.add_decorator_rule(self.trace, wrapper, obj, **kw)
+        self.add_decorator_rule(self.trace, wrapper)
         if callable(obj):
             return wrapper(obj)
         if inspect.isclass(obj):
