@@ -312,8 +312,9 @@ def deckorator(*type_template_args,
 
                     # If on_decorator_creation is defined
                     if isinstance(decorated_function, t.Callable) and isinstance(on_decorator_creation, t.Callable):
-                        on_decorator_creation(new_decorator_function, decorated_function,
-                                              *decorator_args)
+                        preprocessed_output = on_decorator_creation(new_decorator_function,
+                                                                    decorated_function,
+                                                                    *decorator_args)
 
                     wrapped_object_is_class = inspect.isclass(decorated_function)
                     if is_class_decorator and not wrapped_object_is_class:
@@ -324,7 +325,8 @@ def deckorator(*type_template_args,
                         return new_decorator_function(cls_or_self,
                                                       decorated_function,
                                                       *decorator_args,
-                                                      *args, **kwargs)
+                                                      *args,
+                                                      **kwargs)
                     return final_func
             else:
                 def wrapped_func(wrapped_object: t.Callable):
@@ -336,15 +338,24 @@ def deckorator(*type_template_args,
                                         f"but passed in object of type: {type(wrapped_object)}")
 
                     # If on_decorator_creation is defined
+                    # Eww ... Find way to
                     if isinstance(wrapped_object, t.Callable) and isinstance(on_decorator_creation, t.Callable):
-                        on_decorator_creation(new_decorator_function, wrapped_object,
-                                              *decorator_args)
+                        preprocessed_output = on_decorator_creation(new_decorator_function,
+                                                                    wrapped_object,
+                                                                    *decorator_args)
 
-                    def final_func(*args, **kwargs):
-                        return new_decorator_function(wrapped_object,
-                                                      *decorator_args,
-                                                      *args,
-                                                      **kwargs)
+                        def final_func(*args, **kwargs):
+                            return new_decorator_function(wrapped_object,
+                                                          preprocessed_output,
+                                                          *decorator_args,
+                                                          *args,
+                                                          **kwargs)
+                    else:
+                        def final_func(*args, **kwargs):
+                            return new_decorator_function(wrapped_object,
+                                                          *decorator_args,
+                                                          *args,
+                                                          **kwargs)
 
                     return final_func
 
@@ -712,21 +723,23 @@ def _init_logger(decorator_function: t.Callable,
         is_debug:
 
     Returns:
-
+        A logger object for logging
     """
     name = f"{__name__}.{function_to_decorate.__name__}"
-    function_to_decorate._decko_logger = setup_logger(name, file_path, logging_level)
+    return setup_logger(name, file_path, logging_level)
 
 
 @deckorator(str, (int, logging.INFO), on_decorator_creation=_init_logger)
 def log_trace(decorated_function,
-              file_path: str,       #
-              logging_level,        # Default is logging.INFO
+              logger: logging.Logger,
+              file_path: str,            #
+              logging_level: int,        # Default is logging.INFO
               *args,
               **kwargs):
-    decorated_function.__dict__['_decko_logger'].log(logging_level,
-                                                     f"Log trace: {log_trace}, func: {decorated_function} "
-                                                     f"called with args: {args}, {kwargs}")
+    logger.log(logging_level,
+               f"function: '{decorated_function.__name__}' "
+               f"decorated with: '{log_trace.__name__}' "
+               f"called with args: {args}, {kwargs}")
     output = decorated_function(*args, **kwargs)
-    decorated_function.__dict__['_decko_logger'].log(logging_level, "Function finished executing.")
+    logger.log(logging_level, f"{decorated_function.__name__} output: {output}")
     return output
