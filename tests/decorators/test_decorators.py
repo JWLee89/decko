@@ -494,7 +494,6 @@ def test_freeze():
                          )
 def test_execute_if(threshold):
 
-
     def greater_than(output):
         return output > threshold
 
