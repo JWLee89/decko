@@ -7,6 +7,8 @@ import pytest
 import typing as t
 
 import src.decko.decorators as fd
+
+from src.decko.debug import try_except
 from tests.common.classes import Props
 from src.decko.immutable import ImmutableError
 
@@ -519,7 +521,7 @@ def test_multiple_decoration():
     """
 
     @fd.stopwatch(print)
-    @fd.try_except((ValueError, ), print)
+    @try_except((ValueError, ), print)
     def add(a, b):
         return a + b
 
