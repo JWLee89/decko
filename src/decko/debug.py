@@ -1,5 +1,6 @@
 import logging
 import inspect
+import traceback
 import typing as t
 from time import process_time
 
@@ -147,3 +148,29 @@ def try_except(decorated_function: t.Callable,
         error_callback(error, tb)
         if raise_error:
             raise
+
+
+@deckorator(t.Callable)
+def stopwatch(decorated_function: t.Callable,
+              callback: t.Callable,
+              *args,
+              **kwargs):
+    """
+    A stopwatch function that measures the amount of time
+    taken to execute a function.
+    Args:
+        decorated_function: The decorated function
+        callback: A callback function that is executed to handle
+        the calculation of the amount of time taken to execute
+        decorated function.
+        Defaults to print.
+    Returns:
+        A callable object that executes decorated function
+        but with the additional feature of processing the amount of
+        time taken to execute function.
+    """
+    start_time = process_time()
+    output = decorated_function(*args, **kwargs)
+    time_elapsed = process_time() - start_time
+    callback(time_elapsed)
+    return output

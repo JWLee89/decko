@@ -19,11 +19,11 @@ def test_basic_pure():
     item = []
 
     with pytest.raises(MutatedReferenceError):
-        output = input_output_what_how(10, 20, item)
+        input_output_what_how(10, 20, item)
 
     # Even mutation of default variable should raise Error
     with pytest.raises(MutatedReferenceError):
-        output = input_output_what_how(10, 20)
+        input_output_what_how(10, 20)
         # If this is not caught, "yee" will be an array of size 2.
         # yee = [10, 10]
         yee = input_output_what_how(10, 20)
