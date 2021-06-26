@@ -52,7 +52,7 @@ import sys
 import threading
 from time import process_time
 from collections import OrderedDict
-from functools import wraps
+from functools import wraps, partial
 import typing as t
 
 # Local imports
@@ -122,27 +122,39 @@ class DeckoState(metaclass=Singleton):
         return ", ".join([f'{function_name}: {v}' for function_name, v in self.functions.items()])
 
 
-@deckorator(t.Callable, t.Callable)
-def deckorate_method(self,
-                     decorator_function,
-                     function_to_wrap,
-                     *args, **kwargs) -> None:
+def register_object(self,
+                    decorator_function: t.Callable,
+                    function_to_decorate: t.Callable,
+                    *args,
+                    **kwargs):
     """
-    Add decorator state information and output the decorator
+    Register object to the decko class.
+    Used in conjunction with the @deckorate decorator
+    to add functions to be observed with minimal boilerplate
     Args:
-        self: The decko instance
-        decorator_function: The decorator function
-        function_to_wrap: The function that will be wrapped using the
-        decorator function
-        *args: The argument object
-        **kwargs: Kwarg objects
+        self:
+        decorator_function: The decorator function that was applied
+        function_to_decorate: The function that will be decorated by decorator_function
 
     Returns:
-        A new decorator that adds decorator rules to the decorator and
-        updates the newly formed method
+        The decorated function that handles registration of the decorator to the decko instance.
     """
-    self.add_decorator_rule(decorator_function, function_to_wrap)
-    return decorator_function(self, function_to_wrap, *args, **kwargs)
+    self.add_decorator_rule(decorator_function, function_to_decorate)
+    return partial(register_object,
+                   decorator_function,
+                   function_to_decorate,
+                   *args, **kwargs)
+
+
+def deckorate_method() -> t.Callable:
+    """
+    Add common metadata to functions and register
+    the decorated function to keep track of its performance
+
+    Returns:
+        Decorator designed to register objects
+    """
+    return partial(deckorator, on_decorator_creation=register_object)
 
 
 class Decko:
@@ -488,9 +500,9 @@ class Decko:
         # Register the function and add appropriate metadata
         self._add_function_decorator_rule(decorator_func, func, **kw)
 
-    @deckorator(t.Callable)
+    @deckorate_method()
     def execute_if(self,
-                   wrapped_func: t.Callable,
+                   decorated_function: t.Callable,
                    predicate: t.Callable,
                    *args, **kwargs) -> t.Callable:
         """
@@ -518,31 +530,42 @@ class Decko:
 
         >> End code sample
         ----------------------------------
-        :param predicate: The condition for triggering the event
-        :return: The wrapped function
+
+        Args:
+            decorated_function(t.Callable): The function decorated with execute_if
+            predicate(t.Callable): The predicate function for triggering the event
+
+        Returns:
+            A decorator that ensures that the triggered function runs
+            only when the predicate condition is met.
         """
         fire_event = predicate(*args, **kwargs)
         if fire_event:
-            return wrapped_func(*args, **kwargs)
+            return decorated_function(*args, **kwargs)
 
     @deckorator((float, int), callback=(None, t.Callable))
     def slower_than(self,
-                    wrapped_func: t.Callable,
+                    decorated_function: t.Callable,
                     time_ms: t.Union[float, int],
                     callback: t.Callable,
                     *args, **kwargs):
         """
         Raise a warning if time taken takes longer than
         specified time
-        :param time_ms: If the function does not complete in specified time,
-        a warning will be raised.
-        :param kw: Additional
-        :return:
-        :rtype:
+        Args:
+            decorated_function: The decorated function
+            time_ms: If the function does not complete in specified time,
+            a warning will be raised.
+            callback: The callback function to be executed if the function
+            runs slower than the specified time in milliseconds
+
+        Returns:
+            A decorator that triggers the passed in callback
+            if function runs slower than time_ms
         """
-        func_name = get_unique_func_name(wrapped_func)
+        func_name = get_unique_func_name(decorated_function)
         start = process_time() * 1000
-        output = wrapped_func(*args, **kwargs)
+        output = decorated_function(*args, **kwargs)
         elapsed = (process_time() * 1000) - start
         self.log_debug(f"Function {func_name} called. Time elapsed: "
                        f"{elapsed} milliseconds.")
@@ -673,34 +696,43 @@ class Decko:
                                 func_to_decorate: t.Callable,
                                 props: t.Dict) -> None:
         # Common function for handling duplicates
-        func_name: str = get_unique_func_name(func_to_decorate)
+        func_to_decorate_name: str = get_unique_func_name(func_to_decorate)
         decorator_func_name: str = get_unique_func_name(decorator_func)
-        if func_name in self.functions:
+
+        # Function to decorate has already been decoratored
+        # multiple decoration. E.g.
+        # @decorator_1
+        # @decorator_2
+        # def function_to_decorate( ... )
+        if func_to_decorate_name in self.functions:
+
             # Check if function is already decorated with same decorator
-            registered_decorators: t.List = self.functions[func_name][API_KEYS.DECORATED_WITH]
+            decorator_repository: t.List = self.functions[func_to_decorate_name][API_KEYS.DECORATED_WITH]
 
             # If decorated, we disallow duplicate decorator since it serves no purpose
-            if decorator_func_name in registered_decorators:
-                self.handle_error(f"Found duplicate decorator with identity: {func_name}",
+            if decorator_func_name in decorator_repository:
+                self.handle_error(f"Found duplicate decorator with identity: {func_to_decorate_name}",
                                   exceptions.DuplicateDecoratorError)
-
             # If the actual function is different, we allow
-            # Plus, we don't need to register. We just simply add to the list of decorated function
+            # Plus, we don't need to register.
+            # We just simply add to the list of decorated function
             else:
-                registered_decorators.append(decorator_func_name)
+                decorator_repository.append(decorator_func_name)
+
+        # decorated for the first time with decko
         else:
             # Register new function Locally
-            self.functions[func_name] = {
+            self.functions[func_to_decorate_name] = {
                 API_KEYS.FUNCTION: func_to_decorate,
                 API_KEYS.PROPS: props,
                 API_KEYS.DECORATED_WITH: [decorator_func_name]
             }
 
             # Add to global state
-            self.global_state.functions[func_name] = self.functions[func_name]
+            self.global_state.functions[func_to_decorate_name] = self.functions[func_to_decorate_name]
 
         # Add message if set to debug
-        self.log_debug(f"Decorated {func_name} with: {decorator_func_name}")
+        self.log_debug(f"Decorated {func_to_decorate_name} with: {decorator_func_name}")
 
     def run_before(self,
                    functions: t.Union[t.List[t.Callable], t.Callable],
