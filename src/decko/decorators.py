@@ -24,8 +24,7 @@ from .helper.util import (
     attach_property,
 )
 
-from .helper.exceptions import TooSlowError
-from .immutable import ImmutableError
+from .helper.exceptions import TooSlowError, ImmutableError
 from types import MappingProxyType
 
 # List of specific checks required when creating a decorator

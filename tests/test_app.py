@@ -2,6 +2,7 @@ import os
 import pytest
 from typing import Iterable, List
 from tests.common.fixtures import decko_fixture
+from src.decko.helper.exceptions import ImmutableError
 
 
 def get_src_python_files(root_folder: str, exclude: Iterable):
@@ -199,3 +200,15 @@ def test_profile(decko_fixture):
         create_list(1000 * i)
 
     decko_fixture.print_profile()
+
+
+def test_freeze(decko_fixture):
+
+    @decko_fixture.freeze
+    class Dummy:
+        def __init__(self):
+            self.a = 1
+
+    instance = Dummy()
+    with pytest.raises(ImmutableError):
+        instance.a = 200

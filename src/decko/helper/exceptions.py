@@ -49,3 +49,8 @@ class TooSlowError(Exception):
     def __init__(self, message: str, errors: Dict = None) -> None:
         super().__init__(message)
         self.errors = errors
+
+
+class ImmutableError(TypeError):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, *kwargs)

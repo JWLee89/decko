@@ -63,7 +63,6 @@ from .helper.validation import (
 )
 from .helper.validation import is_class_instance, is_iterable
 from .helper.util import get_unique_func_name
-from .immutable import ImmutableError
 from .decorators import (
     deckorator,
 )
@@ -652,13 +651,12 @@ class Decko:
         def do_freeze(slf, name, value):
             msg = f"Class {type(slf)} is frozen. " \
                   f"Attempted to set attribute '{name}' to value: '{value}'"
-            raise ImmutableError(msg)
+            raise exceptions.ImmutableError(msg)
 
         class Immutable(cls):
             """
             A basic immutable class
             """
-
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
                 setattr(Immutable, '__setattr__', do_freeze)
