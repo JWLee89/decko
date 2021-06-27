@@ -423,6 +423,38 @@ class Decko:
 
         return os.getcwd()
 
+    def _register_class(self,
+                        class_to_register: object,
+                        target_dict,
+                        decorator_fn: t.Callable,
+                        property_obj) -> None:
+        """
+        Scan through class and add all related classes.
+        TODO: Add registration method
+        
+        Args:
+            class_to_register: The class that we will be registering
+            target_dict:
+            decorator_fn:
+            property_obj:
+
+        Returns:
+
+        """
+        for item in dir(class_to_register):
+            if callable(getattr(class_to_register, item)) and not item.startswith("__"):
+                # Get the class method
+                fn = getattr(class_to_register, item)
+                # Add name in front of method
+                fn_name = f"{class_to_register.__name__}.{fn.__name__}"
+
+                # self._register_object(fn, fn_name, target_dict, decorator_fn, property_obj)
+
+                # # Decorate function and update method
+                # we already registered above
+                decorated_func = decorator_fn(fn)
+                setattr(class_to_register, item, decorated_func)
+
     # ------------------------
     # ------ Properties ------
     # ------------------------
@@ -507,6 +539,13 @@ class Decko:
         self._add_function_decorator_rule(decorator_func, func, **kw)
 
     @deckorate_method(t.Callable)
+    def time(self,
+             decorated_function: t.Callable,
+             callback: t.Callable,
+             *args, **kwargs):
+        pass
+
+    @deckorate_method(t.Callable)
     def execute_if(self,
                    decorated_function: t.Callable,
                    predicate: t.Callable,
@@ -549,11 +588,14 @@ class Decko:
         if fire_event:
             return decorated_function(*args, **kwargs)
 
-    @deckorate_method((float, int), callback=(None, t.Callable))
+    @deckorate_method((float, int),
+                      callback=(None, t.Callable),
+                      state_computer=(t.Callable, ))
     def slower_than(self,
                     decorated_function: t.Callable,
                     time_ms: t.Union[float, int],
                     callback: t.Callable,
+                    state_computer: t.Callable,
                     *args, **kwargs):
         """
         Raise a warning if time taken takes longer than
@@ -794,29 +836,6 @@ class Decko:
         if inspect.isclass(obj):
             return obj
         return wrapper
-
-    def _register_class(self,
-                        class_definition: object,
-                        target_dict,
-                        decorator_fn: t.Callable,
-                        property_obj) -> None:
-        """
-        Scan through class and add all related classes
-        """
-        for item in dir(class_definition):
-            if callable(getattr(class_definition, item)) and not item.startswith("__"):
-                # Get the class method
-                fn = getattr(class_definition, item)
-                # Add name in front of method
-                fn_name = f"{class_definition.__name__}.{fn.__name__}"
-
-                # TODO: Register the function
-                # self._register_object(fn, fn_name, target_dict, decorator_fn, property_obj)
-
-                # # Decorate function and update method
-                # we already registered above
-                decorated_func = decorator_fn(fn)
-                setattr(class_definition, item, decorated_func)
 
     def __repr__(self) -> str:
         return f"decko: {self.functions}"
