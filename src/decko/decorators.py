@@ -321,22 +321,24 @@ def deckorator(*type_template_args,
                                                                     decorated_function,
                                                                     *decorator_args)
 
-                        @wraps(decorated_function)
-                        def final_func(*args, **kwargs):
-                            return new_decorator_function(cls_or_self,
-                                                          decorated_function,
-                                                          *preprocessed_output,
-                                                          *decorator_args,
-                                                          *args,
-                                                          **kwargs)
-                    else:
-                        @wraps(decorated_function)
-                        def final_func(*args, **kwargs):
-                            return new_decorator_function(cls_or_self,
-                                                          decorated_function,
-                                                          *decorator_args,
-                                                          *args,
-                                                          **kwargs)
+                        if preprocessed_output:
+                            @wraps(decorated_function)
+                            def final_func(*args, **kwargs):
+                                return new_decorator_function(cls_or_self,
+                                                              decorated_function,
+                                                              *preprocessed_output,
+                                                              *decorator_args,
+                                                              *args,
+                                                              **kwargs)
+                            return final_func
+
+                    @wraps(decorated_function)
+                    def final_func(*args, **kwargs):
+                        return new_decorator_function(cls_or_self,
+                                                      decorated_function,
+                                                      *decorator_args,
+                                                      *args,
+                                                      **kwargs)
                     return final_func
             else:
                 def wrapped_func(wrapped_object: t.Callable):

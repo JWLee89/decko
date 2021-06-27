@@ -1,11 +1,7 @@
 import os
 import pytest
 from typing import Iterable, List
-
-from src.decko.app import Decko
-
-
-dk = Decko(__name__)
+from tests.common.fixtures import decko_fixture
 
 
 def get_src_python_files(root_folder: str, exclude: Iterable):
@@ -80,27 +76,27 @@ def get_test_python_files(root_folder: str):
 """
 
 
-def test_set_debug() -> None:
+def test_set_debug(decko_fixture) -> None:
     """
     This should not trigger a type error, since we are
     setting debug to a boolean value
     """
     try:
-        dk.debug = True
-        dk.debug = False
+        decko_fixture.debug = True
+        decko_fixture.debug = False
     except TypeError:
         pytest.fail("This should not occur since .debug must "
                     "be set to boolean value.")
-    assert not dk.debug, f"Expected: 'False', actual: {dk.debug}"
+    assert not decko_fixture.debug, f"Expected: 'False', actual: {decko_fixture.debug}"
 
 
-def test_invalid_set_debug() -> None:
+def test_invalid_set_debug(decko_fixture) -> None:
     """
     This should trigger a type error, since we are
     setting debug to a string value
     """
     with pytest.raises(TypeError) as e_info:
-        dk.debug = "False"
+        decko_fixture.debug = "False"
 
 
 """
@@ -124,13 +120,12 @@ def test_invalid_set_debug() -> None:
                              300,
                          ]
                          )
-def test_slower_than(input_size, milliseconds):
-    dk = Decko(__name__)
+def test_slower_than(input_size, milliseconds, decko_fixture):
 
     def raise_error(time_elapsed):
         raise ValueError(f"Took {time_elapsed} milliseconds")
 
-    @dk.slower_than(milliseconds, callback=raise_error)
+    @decko_fixture.slower_than(milliseconds, callback=raise_error)
     def long_func(n):
         x = 0
         for i in range(n):
@@ -142,13 +137,13 @@ def test_slower_than(input_size, milliseconds):
         long_func(input_size)
 
 
-def test_instance_data():
+def test_instance_data(decko_fixture):
 
     def setter(self, new_val):
         if new_val > 20:
             raise ValueError("Value set is greater than 20 ... ")
 
-    @dk.instance_data(setter=setter)
+    @decko_fixture.instance_data(setter=setter)
     class ClassSample:
 
         class_var_data = 3
@@ -166,19 +161,18 @@ def test_instance_data():
         class_sample.a = 22
 
 
-def test_pure():
+def test_pure(decko_fixture):
     """
     The function below modifies the input array c:
     This should throw a value error.
     :return:
     """
-    dk = Decko(__name__, debug=True)
 
     def raise_error(*args, **kwargs):
         print("yee")
         raise ValueError(f"Modified inputs: {args}, {kwargs}")
 
-    @dk.pure(callback=raise_error)
+    @decko_fixture.pure(callback=raise_error)
     def input_output_what_how(a, b, c=[]):
         c.append(10)
         return c
@@ -188,8 +182,20 @@ def test_pure():
     # Should raise ValueError since 'item'
     # is being modified (values are added)
     with pytest.raises(ValueError) as error:
-        yee = input_output_what_how(10, 20, item)
+        input_output_what_how(10, 20, item)
 
     # this should also raise error
     with pytest.raises(ValueError) as error:
-        yee = input_output_what_how(10, 20)
+        input_output_what_how(10, 20)
+
+
+def test_profile(decko_fixture):
+
+    @decko_fixture.profile()
+    def create_list(n):
+        return list(range(n))
+
+    for i in range(1, 10):
+        create_list(1000 * i)
+
+    decko_fixture.print_profile()
