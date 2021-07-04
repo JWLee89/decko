@@ -171,11 +171,14 @@ def try_except(decorated_function: t.Callable,
     """
     Wraps the entire function around a try-catch block and
     catches the exception.
-    :param decorated_function: The function that was wrapped
-    :param errors_to_catch: A tuple of exceptions to catch
-    :param error_callback: The error callback to call when exception is caught
-    :param raise_error: If set to true, after handling error_callback, an error will
-    be raised.
+    Args:
+        decorated_function: The function that was wrapped
+        errors_to_catch: A tuple of exceptions to catch
+        error_callback: The error callback to call when exception is caught
+        raise_error: If set to true, after handling error_callback, an error will
+        be raised.
+    Returns:
+        A decorator that handles errors.
     """
     try:
         return decorated_function(*args, **kwargs)

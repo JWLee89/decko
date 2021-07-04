@@ -22,7 +22,7 @@ class NotClassOrCallableError(TypeError):
     """
     Called when users perform the following action:
     User attaches decorator to objects that are not
-       - Classses
+       - Classes
        - callable (functions)
     """
 

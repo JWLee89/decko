@@ -543,6 +543,17 @@ class Decko:
              decorated_function: t.Callable,
              callback: t.Callable,
              *args, **kwargs):
+        """
+        TODO:
+        Args:
+            decorated_function:
+            callback:
+            *args:
+            **kwargs:
+
+        Returns:
+
+        """
         pass
 
     @deckorate_method(t.Callable)
