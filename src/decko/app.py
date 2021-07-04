@@ -600,13 +600,11 @@ class Decko:
             return decorated_function(*args, **kwargs)
 
     @deckorate_method((float, int),
-                      callback=(None, t.Callable),
-                      state_computer=(t.Callable, ))
+                      callback=(None, t.Callable))
     def slower_than(self,
                     decorated_function: t.Callable,
                     time_ms: t.Union[float, int],
                     callback: t.Callable,
-                    state_computer: t.Callable,
                     *args, **kwargs):
         """
         Raise a warning if time taken takes longer than
