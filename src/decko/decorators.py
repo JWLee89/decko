@@ -9,9 +9,7 @@ by each Decko instance.
 TODO: Decide on which style of documentation to use
 """
 import inspect
-import traceback
 import typing as t
-import logging
 from functools import wraps
 from time import process_time
 import threading
