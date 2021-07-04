@@ -641,17 +641,20 @@ def raise_error_if(wrapped_function: t.Callable,
 
 
 @deckorator(int)
-def truncate(wrapped_function: t.Callable,
+def truncate(decorated_function: t.Callable,
              limit: int,
              *args, **kwargs) -> t.Callable:
     """
     Truncate a slice-able object
-    :param wrapped_function: The function that was wrapped
-    :param limit: The maximum size of the target object
+    Args:
+        decorated_function: The function that was wrapped
+        limit: The maximum size of the target object
+    Returns:
+        A decorator that truncates the output of the wrapped function
     """
-    output: t.Union[str, t.List, t.Tuple] = wrapped_function(*args, **kwargs)
+    output: t.Union[str, t.List, t.Tuple] = decorated_function(*args, **kwargs)
     try:
         return output[:limit]
     except Exception:
-        raise TypeError(f"Output of function '{wrapped_function.__name__()}' is not slice-able. "
+        raise TypeError(f"Output of function '{decorated_function.__name__()}' is not slice-able. "
                         f"Output: '{output}' ")

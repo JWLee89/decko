@@ -10,7 +10,7 @@ import src.decko.decorators as fd
 
 from src.decko.debug import try_except, stopwatch
 from tests.common.classes import Props
-from src.decko.immutable import ImmutableError
+from src.decko.helper.exceptions import ImmutableError
 
 
 @pytest.mark.parametrize("iter_count", [
