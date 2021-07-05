@@ -3,7 +3,7 @@ from src.decko import Decko
 
 if __name__ == "__main__":
 
-    dk = Decko(__name__, debug=True, log_path="test.log")
+    dk = Decko(__name__, debug=True, log_path="test.logger")
 
     # def print_list_size(size, **kwargs):
     #     print(f"Size of list is: {size}")

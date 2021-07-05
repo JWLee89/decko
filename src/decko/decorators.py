@@ -512,7 +512,7 @@ def freeze(cls: t.Type[t.Any],
     return Immutable(*args, **kwargs)
 
 
-def singleton(thread_safe: bool = False) -> t.Type[t.Any]:
+def singleton(thread_safe: bool = True) -> t.Type[t.Any]:
     """
     If decorated with singleton,
     this class will be a singleton object

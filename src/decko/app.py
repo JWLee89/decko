@@ -202,7 +202,7 @@ class Decko:
                  inspect_mode: int = InspectMode.PUBLIC_ONLY,
                  debug: bool = False,
                  log_path: str = None,
-                 register_globally = True):
+                 register_globally: bool = True):
 
         #: The name of the package or module that this object belongs
         #: to. Do not change this once it is set by the constructor.
@@ -240,7 +240,7 @@ class Decko:
 
         # Logging function
         # If not specified, the default fallback method will be print()
-        self.log = util.logger_factory(module_name, file_name=log_path) if log_path else \
+        self.logger = util.logger_factory(module_name, file_name=log_path) if log_path else \
             util.logger_factory(module_name)
 
         # Initialize cProfiler
@@ -252,6 +252,8 @@ class Decko:
         # Register globally
         self.global_state = DeckoState()
 
+        self.log_debug(f"Decko at module '{module_name}' is initialized")
+
     def pure(self, **kw) -> t.Callable:
         """
         Check to see whether a given function is pure.
@@ -262,7 +264,7 @@ class Decko:
         """
 
         def wrapper(func: t.Union[t.Type, t.Callable]):
-            # Decorate with common properties such as debug log messages
+            # Decorate with common properties such as debug logger messages
             # And registration
             # func: t.Callable = self._decorate_func(self.pure, func, **kw)
 
@@ -491,12 +493,12 @@ class Decko:
         """
         Print debug message if mode is set to
         debug mode
-        :param msg: The message to log
+        :param msg: The message to logger
         :param logging_type: The logging type as specified
         in the logging module
         """
         if self.debug:
-            self.log(' ' + msg, logging_type)
+            self.logger.log(logging_type, ' ' + msg)
 
     def handle_error(self,
                      msg: str,
@@ -506,7 +508,7 @@ class Decko:
         :param msg: The message to display
         :param error_type: The type of error to raise. E.g. ValueError()
         """
-        self.log(msg, logging.ERROR)
+        self.logger(msg, logging.ERROR)
         raise error_type(msg)
 
     def _decorate_func(self,
@@ -517,7 +519,7 @@ class Decko:
         Common function for decorating functions such as registration
         And adding debug messages if decko is being run on debug mode.
         Note: For performance, in order to run debug, the function must be
-        decorated with debug set to true. Otherwise, the function will not log
+        decorated with debug set to true. Otherwise, the function will not logger
         t.Any messages.
 
         Decoration is as follows:
@@ -630,9 +632,9 @@ class Decko:
             if callback:
                 callback(time_ms)
             else:
-                self.log(f"Function: {func_name} took longer than"
+                self.logger(f"Function: {func_name} took longer than"
                          f"{time_ms} milliseconds. Total time taken: {elapsed}",
-                         logging.WARNING)
+                            logging.WARNING)
         return output
 
     def instance_data(self,

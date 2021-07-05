@@ -51,7 +51,7 @@ def get_test_python_files(root_folder: str):
 #     src_files = sorted(get_src_python_files(src_path, exclude=TESTS_TO_EXCLUDE))
 #     test_files = sorted(get_test_python_files(test_path))
 #     missing_unit_tests = []
-#     # Now, log each missing test file
+#     # Now, logger each missing test file
 #     i, j = 0, 0
 #     while i < len(src_files) and j < len(test_files):
 #         src_file, test_file = src_files[i], test_files[j]

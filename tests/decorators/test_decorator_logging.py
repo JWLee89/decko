@@ -7,7 +7,7 @@ from tests.common.util import (
 
 
 def test_log_trace():
-    add_log, subtract_log, long_list_log = "file.log", "test.log", "create_long_list.log"
+    add_log, subtract_log, long_list_log = "file.logger", "test.logger", "create_long_list.logger"
 
     @log_trace(add_log)
     def add(a, b, new_kwargs=20):

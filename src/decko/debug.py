@@ -24,8 +24,8 @@ def _setup_logger(name: str,
 
     Args:
         name (str): The name of the logger.
-        log_file_path (str): The path where log will be stored
-        log_to_console (bool): If set to true, log also to console
+        log_file_path (str): The path where logger will be stored
+        log_to_console (bool): If set to true, logger also to console
         level (int): The threshold level for logging
 
     Returns:
@@ -82,7 +82,7 @@ def _init_logger(decorator_function: t.Callable,
         decorator_function: The decorator function applied
         function_to_decorate: The function that will be decorated.
         In the example below, this would be
-        file_path: The path where logger will log output to
+        file_path: The path where logger will logger output to
         logging_level: The logging level threshold for which to trigger event
         truncate_longer_than: Truncate arguments and outputs longer than specified
         log_to_console: Log to console if set to true
@@ -151,7 +151,7 @@ def log_trace(decorated_function,
     output = decorated_function(*args, **kwargs)
     time_elapsed = process_time() - start_time
 
-    # Create output to log
+    # Create output to logger
     try:
         output_to_log = output[:truncate_longer_than]
     except Exception:
