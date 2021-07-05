@@ -6,7 +6,11 @@ The bells and whistles such as state management
 and debugging / profiling utilities will be provided
 by each Decko instance.
 
-TODO: Decide on which style of documentation to use
+TODO: Update comments to google style
+TODO: Move all non-core decorators out of this file and into separate files
+based on their features.
+This file will only hold the core building blocks used to create decorators.
+
 """
 import inspect
 import typing as t
