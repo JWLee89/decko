@@ -22,7 +22,7 @@ from time import process_time
 import threading
 
 # Local imports
-from .api import MODULE_METHOD_DECORATOR_API
+from .api import ModuleApi
 from .helper.validation import (
     raise_error_if_not_class_instance,
     is_public_method,
@@ -459,7 +459,7 @@ def register_object(self,
     method_name = decorator_method.__name__
     functions = self._functions
     if method_name in functions:
-        functions[method_name][MODULE_METHOD_DECORATOR_API.DECORATED].append(function_to_decorate.__name__)
+        functions[method_name][ModuleApi.DECORATED].append(function_to_decorate.__name__)
     else:
         raise ValueError("This should never happen. Programmer made a mistake")
 
@@ -545,9 +545,10 @@ class Module(ABC):
             def compute(func):
                 @wraps(func)
                 def inner(inner_self, *args, **kwargs):
-                    print(f"timo tee : {args}, {func}")
+                    start_time = process_time()
                     output = func(*args, **kwargs)
-                    print("yee")
+                    elapsed = process_time() - start_time
+                    ModuleApi.update_stats(self._functions[method_name], elapsed)
                     return output
                 return inner
             bind_method(self, compute(method))
@@ -580,10 +581,7 @@ class Module(ABC):
             method: The actual method object
         """
         # Register new function Locally
-        self._functions[method_name] = {
-            MODULE_METHOD_DECORATOR_API.METHOD: method,
-            MODULE_METHOD_DECORATOR_API.DECORATED: [],
-        }
+        self._functions[method_name] = ModuleApi.create_dict(method)
 
     def __len__(self):
         """
