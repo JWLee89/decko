@@ -460,7 +460,8 @@ def register_object(self,
     functions = self._functions
     if method_name in functions:
         functions[method_name][MODULE_METHOD_DECORATOR_API.DECORATED].append(function_to_decorate.__name__)
-    raise ValueError("This should never happen. Programmer made a mistake")
+    else:
+        raise ValueError("This should never happen. Programmer made a mistake")
 
 
 def deckorate_method() -> t.Callable:
@@ -475,6 +476,19 @@ def deckorate_method() -> t.Callable:
 
 
 deckorate_method = deckorate_method()
+
+
+def bind_method(instance, func, as_name=None):
+    """
+    Bind the function *func* to *instance*, with either provided name *as_name*
+    or the existing name of *func*. The provided *func* should accept the
+    instance as the first argument, i.e. "self".
+    """
+    if as_name is None:
+        as_name = func.__name__
+    bound_method = func.__get__(instance, instance.__class__)
+    setattr(instance, as_name, bound_method)
+    return bound_method
 
 
 class Module(ABC):
@@ -526,8 +540,17 @@ class Module(ABC):
         """
         public_methods = inspect.getmembers(self, predicate=is_public_method)
         for method_name, method in public_methods:
-            print(f"Method name: {method_name}, {method}")
             self._register_method(method_name, method)
+
+            def compute(func):
+                @wraps(func)
+                def inner(inner_self, *args, **kwargs):
+                    print(f"timo tee : {args}, {func}")
+                    output = func(*args, **kwargs)
+                    print("yee")
+                    return output
+                return inner
+            bind_method(self, compute(method))
 
     def _add_to_event_queue(self, msg: str) -> None:
         """
