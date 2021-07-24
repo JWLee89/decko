@@ -24,8 +24,8 @@ def _setup_logger(name: str,
 
     Args:
         name (str): The name of the logger.
-        log_file_path (str): The path where log will be stored
-        log_to_console (bool): If set to true, log also to console
+        log_file_path (str): The path where logger will be stored
+        log_to_console (bool): If set to true, logger also to console
         level (int): The threshold level for logging
 
     Returns:
@@ -82,7 +82,7 @@ def _init_logger(decorator_function: t.Callable,
         decorator_function: The decorator function applied
         function_to_decorate: The function that will be decorated.
         In the example below, this would be
-        file_path: The path where logger will log output to
+        file_path: The path where logger will logger output to
         logging_level: The logging level threshold for which to trigger event
         truncate_longer_than: Truncate arguments and outputs longer than specified
         log_to_console: Log to console if set to true
@@ -151,7 +151,7 @@ def log_trace(decorated_function,
     output = decorated_function(*args, **kwargs)
     time_elapsed = process_time() - start_time
 
-    # Create output to log
+    # Create output to logger
     try:
         output_to_log = output[:truncate_longer_than]
     except Exception:
@@ -171,11 +171,14 @@ def try_except(decorated_function: t.Callable,
     """
     Wraps the entire function around a try-catch block and
     catches the exception.
-    :param decorated_function: The function that was wrapped
-    :param errors_to_catch: A tuple of exceptions to catch
-    :param error_callback: The error callback to call when exception is caught
-    :param raise_error: If set to true, after handling error_callback, an error will
-    be raised.
+    Args:
+        decorated_function: The function that was wrapped
+        errors_to_catch: A tuple of exceptions to catch
+        error_callback: The error callback to call when exception is caught
+        raise_error: If set to true, after handling error_callback, an error will
+        be raised.
+    Returns:
+        A decorator that handles errors.
     """
     try:
         return decorated_function(*args, **kwargs)
@@ -210,3 +213,44 @@ def stopwatch(decorated_function: t.Callable,
     time_elapsed = process_time() - start_time
     callback(time_elapsed)
     return output
+
+
+@deckorator((float, int), t.Callable)
+def slower_than(decorated_function: t.Callable,
+                time_ms: float,
+                callback: t.Callable,
+                *args,
+                **kwargs) -> t.Any:
+    """
+    Executes callback if time taken takes longer than specified time
+    :param decorated_function: The function that was wrapped.
+    :param time_ms: If the function does not complete in specified time,
+    :param callback: The function that is called if decorator is triggered
+    a warning will be raised.
+    """
+    start = process_time() * 1000
+    output = decorated_function(*args, **kwargs)
+    elapsed = (process_time() * 1000) - start
+    if elapsed > time_ms:
+        callback(elapsed, time_ms)
+    return output
+
+
+@deckorator(t.Callable)
+def raise_error_if(wrapped_function: t.Callable,
+                   trigger_condition: t.Callable,
+                   *args, **kwargs) -> t.Any:
+    """
+    Raise exception if a condition is met
+    Args:
+        wrapped_function (): The function that was wrapped
+        trigger_condition (): A function that returns true when
+        a certain condition is met. Otherwise, the error will not
+        be raised.
+    """
+    output = wrapped_function(*args, **kwargs)
+    if trigger_condition(output):
+        raise RuntimeError(f"{raise_error_if.__name__}({trigger_condition.__name__}) "
+                           "triggered because condition was met.\n"
+                           f"Wrapped function: '{wrapped_function.__name__}()' "
+                           f"yielded output value {output}")

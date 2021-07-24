@@ -63,7 +63,6 @@ from .helper.validation import (
 )
 from .helper.validation import is_class_instance, is_iterable
 from .helper.util import get_unique_func_name
-from .immutable import ImmutableError
 from .decorators import (
     deckorator,
 )
@@ -122,6 +121,17 @@ class DeckoState(metaclass=Singleton):
         return ", ".join([f'{function_name}: {v}' for function_name, v in self.functions.items()])
 
 
+class bind(partial):
+    """
+    An improved version of partial which accepts Ellipsis (...) as a placeholder
+    """
+    def __call__(self, *args, **keywords):
+        keywords = {**self.keywords, **keywords}
+        iargs = iter(args)
+        args = (next(iargs) if arg is ... else arg for arg in self.args)
+        return self.func(*args, *iargs, **keywords)
+
+
 def register_object(self,
                     decorator_function: t.Callable,
                     function_to_decorate: t.Callable,
@@ -140,10 +150,6 @@ def register_object(self,
         The decorated function that handles registration of the decorator to the decko instance.
     """
     self.add_decorator_rule(decorator_function, function_to_decorate)
-    return partial(register_object,
-                   decorator_function,
-                   function_to_decorate,
-                   *args, **kwargs)
 
 
 def deckorate_method() -> t.Callable:
@@ -154,15 +160,15 @@ def deckorate_method() -> t.Callable:
     Returns:
         Decorator designed to register objects
     """
-    return partial(deckorator, on_decorator_creation=register_object)
+    return bind(deckorator, on_decorator_creation=register_object)
+
+
+deckorate_method = deckorate_method()
 
 
 class Decko:
     """
-    Yeeeee ....
     Entry point of the application.
-    Architected as follows: Note: TODO
-    -
     """
 
     # Properties utilized by Yeezy
@@ -196,7 +202,7 @@ class Decko:
                  inspect_mode: int = InspectMode.PUBLIC_ONLY,
                  debug: bool = False,
                  log_path: str = None,
-                 register_globally = True):
+                 register_globally: bool = True):
 
         #: The name of the package or module that this object belongs
         #: to. Do not change this once it is set by the constructor.
@@ -234,7 +240,7 @@ class Decko:
 
         # Logging function
         # If not specified, the default fallback method will be print()
-        self.log = util.logger_factory(module_name, file_name=log_path) if log_path else \
+        self.logger = util.logger_factory(module_name, file_name=log_path) if log_path else \
             util.logger_factory(module_name)
 
         # Initialize cProfiler
@@ -246,6 +252,8 @@ class Decko:
         # Register globally
         self.global_state = DeckoState()
 
+        self.log_debug(f"Decko at module '{module_name}' is initialized")
+
     def pure(self, **kw) -> t.Callable:
         """
         Check to see whether a given function is pure.
@@ -256,7 +264,7 @@ class Decko:
         """
 
         def wrapper(func: t.Union[t.Type, t.Callable]):
-            # Decorate with common properties such as debug log messages
+            # Decorate with common properties such as debug logger messages
             # And registration
             # func: t.Callable = self._decorate_func(self.pure, func, **kw)
 
@@ -417,6 +425,38 @@ class Decko:
 
         return os.getcwd()
 
+    def _register_class(self,
+                        class_to_register: object,
+                        target_dict,
+                        decorator_fn: t.Callable,
+                        property_obj) -> None:
+        """
+        Scan through class and add all related classes.
+        TODO: Add registration method
+        
+        Args:
+            class_to_register: The class that we will be registering
+            target_dict:
+            decorator_fn:
+            property_obj:
+
+        Returns:
+
+        """
+        for item in dir(class_to_register):
+            if callable(getattr(class_to_register, item)) and not item.startswith("__"):
+                # Get the class method
+                fn = getattr(class_to_register, item)
+                # Add name in front of method
+                fn_name = f"{class_to_register.__name__}.{fn.__name__}"
+
+                # self._register_object(fn, fn_name, target_dict, decorator_fn, property_obj)
+
+                # # Decorate function and update method
+                # we already registered above
+                decorated_func = decorator_fn(fn)
+                setattr(class_to_register, item, decorated_func)
+
     # ------------------------
     # ------ Properties ------
     # ------------------------
@@ -453,12 +493,12 @@ class Decko:
         """
         Print debug message if mode is set to
         debug mode
-        :param msg: The message to log
+        :param msg: The message to logger
         :param logging_type: The logging type as specified
         in the logging module
         """
         if self.debug:
-            self.log(' ' + msg, logging_type)
+            self.logger.log(logging_type, ' ' + msg)
 
     def handle_error(self,
                      msg: str,
@@ -468,7 +508,7 @@ class Decko:
         :param msg: The message to display
         :param error_type: The type of error to raise. E.g. ValueError()
         """
-        self.log(msg, logging.ERROR)
+        self.logger(msg, logging.ERROR)
         raise error_type(msg)
 
     def _decorate_func(self,
@@ -479,7 +519,7 @@ class Decko:
         Common function for decorating functions such as registration
         And adding debug messages if decko is being run on debug mode.
         Note: For performance, in order to run debug, the function must be
-        decorated with debug set to true. Otherwise, the function will not log
+        decorated with debug set to true. Otherwise, the function will not logger
         t.Any messages.
 
         Decoration is as follows:
@@ -500,7 +540,25 @@ class Decko:
         # Register the function and add appropriate metadata
         self._add_function_decorator_rule(decorator_func, func, **kw)
 
-    @deckorate_method()
+    @deckorate_method(t.Callable)
+    def time(self,
+             decorated_function: t.Callable,
+             callback: t.Callable,
+             *args, **kwargs):
+        """
+        TODO:
+        Args:
+            decorated_function:
+            callback:
+            *args:
+            **kwargs:
+
+        Returns:
+
+        """
+        pass
+
+    @deckorate_method(t.Callable)
     def execute_if(self,
                    decorated_function: t.Callable,
                    predicate: t.Callable,
@@ -543,7 +601,8 @@ class Decko:
         if fire_event:
             return decorated_function(*args, **kwargs)
 
-    @deckorator((float, int), callback=(None, t.Callable))
+    @deckorate_method((float, int),
+                      callback=(None, t.Callable))
     def slower_than(self,
                     decorated_function: t.Callable,
                     time_ms: t.Union[float, int],
@@ -573,9 +632,9 @@ class Decko:
             if callback:
                 callback(time_ms)
             else:
-                self.log(f"Function: {func_name} took longer than"
+                self.logger(f"Function: {func_name} took longer than"
                          f"{time_ms} milliseconds. Total time taken: {elapsed}",
-                         logging.WARNING)
+                            logging.WARNING)
         return output
 
     def instance_data(self,
@@ -645,13 +704,12 @@ class Decko:
         def do_freeze(slf, name, value):
             msg = f"Class {type(slf)} is frozen. " \
                   f"Attempted to set attribute '{name}' to value: '{value}'"
-            raise ImmutableError(msg)
+            raise exceptions.ImmutableError(msg)
 
         class Immutable(cls):
             """
             A basic immutable class
             """
-
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
                 setattr(Immutable, '__setattr__', do_freeze)
@@ -672,24 +730,26 @@ class Decko:
 
         return self.instance_data(filter_predicate, setter=raise_value_error)(cls)
 
-    def profile(self, func: t.Callable) -> t.Callable:
+    @deckorate_method()
+    def profile(self,
+                decorated_function: t.Callable,
+                *args,
+                **kwargs) -> t.Callable:
         """
         Profile target functions with default cProfiler.
         For multi-threaded programs, it is recommended to use
         yappy.
-        :param func: The function to profile
-        :return: wrapped function with profiling logic
+
+        Args:
+            decorated_function: The function to profile
+        Returns:
+            The original function wrapped with profiling feature
+
         """
-
-        @wraps(func)
-        def wrapped(*args, **kwargs):
-            self._profiler.enable()
-            output = func(*args, **kwargs)
-            self._profiler.disable()
-            return output
-
-        self.add_decorator_rule(self.profile, func)
-        return wrapped
+        self._profiler.enable()
+        output = decorated_function(*args, **kwargs)
+        self._profiler.disable()
+        return output
 
     def _update_decoration_info(self,
                                 decorator_func,
@@ -787,29 +847,6 @@ class Decko:
         if inspect.isclass(obj):
             return obj
         return wrapper
-
-    def _register_class(self,
-                        class_definition: object,
-                        target_dict,
-                        decorator_fn: t.Callable,
-                        property_obj) -> None:
-        """
-        Scan through class and add all related classes
-        """
-        for item in dir(class_definition):
-            if callable(getattr(class_definition, item)) and not item.startswith("__"):
-                # Get the class method
-                fn = getattr(class_definition, item)
-                # Add name in front of method
-                fn_name = f"{class_definition.__name__}.{fn.__name__}"
-
-                # TODO: Register the function
-                # self._register_object(fn, fn_name, target_dict, decorator_fn, property_obj)
-
-                # # Decorate function and update method
-                # we already registered above
-                decorated_func = decorator_fn(fn)
-                setattr(class_definition, item, decorated_func)
 
     def __repr__(self) -> str:
         return f"decko: {self.functions}"

@@ -6,12 +6,14 @@ The bells and whistles such as state management
 and debugging / profiling utilities will be provided
 by each Decko instance.
 
-TODO: Decide on which style of documentation to use
+TODO: Update comments to google style
+TODO: Move all non-core decorators out of this file and into separate files
+based on their features.
+This file will only hold the core building blocks used to create decorators.
+
 """
 import inspect
-import traceback
 import typing as t
-import logging
 from functools import wraps
 from time import process_time
 import threading
@@ -24,8 +26,7 @@ from .helper.util import (
     attach_property,
 )
 
-from .helper.exceptions import TooSlowError
-from .immutable import ImmutableError
+from .helper.exceptions import TooSlowError, ImmutableError
 from types import MappingProxyType
 
 # List of specific checks required when creating a decorator
@@ -321,22 +322,24 @@ def deckorator(*type_template_args,
                                                                     decorated_function,
                                                                     *decorator_args)
 
-                        @wraps(decorated_function)
-                        def final_func(*args, **kwargs):
-                            return new_decorator_function(cls_or_self,
-                                                          decorated_function,
-                                                          *preprocessed_output,
-                                                          *decorator_args,
-                                                          *args,
-                                                          **kwargs)
-                    else:
-                        @wraps(decorated_function)
-                        def final_func(*args, **kwargs):
-                            return new_decorator_function(cls_or_self,
-                                                          decorated_function,
-                                                          *decorator_args,
-                                                          *args,
-                                                          **kwargs)
+                        if preprocessed_output:
+                            @wraps(decorated_function)
+                            def final_func(*args, **kwargs):
+                                return new_decorator_function(cls_or_self,
+                                                              decorated_function,
+                                                              *preprocessed_output,
+                                                              *decorator_args,
+                                                              *args,
+                                                              **kwargs)
+                            return final_func
+
+                    @wraps(decorated_function)
+                    def final_func(*args, **kwargs):
+                        return new_decorator_function(cls_or_self,
+                                                      decorated_function,
+                                                      *decorator_args,
+                                                      *args,
+                                                      **kwargs)
                     return final_func
             else:
                 def wrapped_func(wrapped_object: t.Callable):
@@ -466,27 +469,6 @@ def _default_slower_than_callback(time_elapsed, threshold_time):
                        f"ms but took {time_elapsed} ms")
 
 
-@deckorator((float, int), t.Callable)
-def slower_than(decorated_function: t.Callable,
-                time_ms: float,
-                callback: t.Callable,
-                *args,
-                **kwargs) -> t.Any:
-    """
-    Executes callback if time taken takes longer than specified time
-    :param decorated_function: The function that was wrapped.
-    :param time_ms: If the function does not complete in specified time,
-    :param callback: The function that is called if decorator is triggered
-    a warning will be raised.
-    """
-    start = process_time() * 1000
-    output = decorated_function(*args, **kwargs)
-    elapsed = (process_time() * 1000) - start
-    if elapsed > time_ms:
-        callback(elapsed, time_ms)
-    return output
-
-
 @deckorator(is_class_decorator=True)
 def freeze(cls: t.Type[t.Any],
            *args, **kwargs) -> t.Type[t.Any]:
@@ -513,7 +495,7 @@ def freeze(cls: t.Type[t.Any],
     return Immutable(*args, **kwargs)
 
 
-def singleton(thread_safe: bool = False) -> t.Type[t.Any]:
+def singleton(thread_safe: bool = True) -> t.Type[t.Any]:
     """
     If decorated with singleton,
     this class will be a singleton object
@@ -621,38 +603,21 @@ def filter_by_output(wrapped_func,
         return output
 
 
-@deckorator(t.Callable)
-def raise_error_if(wrapped_function: t.Callable,
-                   trigger_condition: t.Callable,
-                   *args, **kwargs) -> t.Any:
-    """
-    Raise exception if a condition is met
-    Args:
-        wrapped_function (): The function that was wrapped
-        trigger_condition (): A function that returns true when
-        a certain condition is met. Otherwise, the error will not
-        be raised.
-    """
-    output = wrapped_function(*args, **kwargs)
-    if trigger_condition(output):
-        raise RuntimeError(f"{raise_error_if.__name__}({trigger_condition.__name__}) "
-                           "triggered because condition was met.\n"
-                           f"Wrapped function: '{wrapped_function.__name__}()' "
-                           f"yielded output value {output}")
-
-
 @deckorator(int)
-def truncate(wrapped_function: t.Callable,
+def truncate(decorated_function: t.Callable,
              limit: int,
              *args, **kwargs) -> t.Callable:
     """
     Truncate a slice-able object
-    :param wrapped_function: The function that was wrapped
-    :param limit: The maximum size of the target object
+    Args:
+        decorated_function: The function that was wrapped
+        limit: The maximum size of the target object
+    Returns:
+        A decorator that truncates the output of the wrapped function
     """
-    output: t.Union[str, t.List, t.Tuple] = wrapped_function(*args, **kwargs)
+    output: t.Union[str, t.List, t.Tuple] = decorated_function(*args, **kwargs)
     try:
         return output[:limit]
     except Exception:
-        raise TypeError(f"Output of function '{wrapped_function.__name__()}' is not slice-able. "
+        raise TypeError(f"Output of function '{decorated_function.__name__()}' is not slice-able. "
                         f"Output: '{output}' ")

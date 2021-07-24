@@ -4,10 +4,7 @@ Note: there is currently a lot of boilerplate.
 Take some time to refactor all the unit tests by using fixtures and whatnot.
 """
 import pytest
-import typing as t
-
 import src.decko.debug as debug
-
 
 
 @pytest.mark.parametrize("iter_count", [
