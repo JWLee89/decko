@@ -8,7 +8,11 @@ import typing as t
 
 import src.decko.decorators as fd
 
-from src.decko.debug import try_except, stopwatch
+from src.decko.debug import (
+    try_except,
+    stopwatch,
+    slower_than,
+)
 from tests.common.classes import Props
 from src.decko.helper.exceptions import ImmutableError
 
@@ -260,7 +264,7 @@ def test_slower_than(input_data):
         raise ValueError(f"Took {time_elapsed} milliseconds. "
                          f"Should take less than {threshold_time}")
 
-    @fd.slower_than(milliseconds, raise_error)
+    @slower_than(milliseconds, raise_error)
     def long_func(n):
         x = 0
         for i in range(n):

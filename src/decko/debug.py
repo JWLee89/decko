@@ -213,3 +213,44 @@ def stopwatch(decorated_function: t.Callable,
     time_elapsed = process_time() - start_time
     callback(time_elapsed)
     return output
+
+
+@deckorator((float, int), t.Callable)
+def slower_than(decorated_function: t.Callable,
+                time_ms: float,
+                callback: t.Callable,
+                *args,
+                **kwargs) -> t.Any:
+    """
+    Executes callback if time taken takes longer than specified time
+    :param decorated_function: The function that was wrapped.
+    :param time_ms: If the function does not complete in specified time,
+    :param callback: The function that is called if decorator is triggered
+    a warning will be raised.
+    """
+    start = process_time() * 1000
+    output = decorated_function(*args, **kwargs)
+    elapsed = (process_time() * 1000) - start
+    if elapsed > time_ms:
+        callback(elapsed, time_ms)
+    return output
+
+
+@deckorator(t.Callable)
+def raise_error_if(wrapped_function: t.Callable,
+                   trigger_condition: t.Callable,
+                   *args, **kwargs) -> t.Any:
+    """
+    Raise exception if a condition is met
+    Args:
+        wrapped_function (): The function that was wrapped
+        trigger_condition (): A function that returns true when
+        a certain condition is met. Otherwise, the error will not
+        be raised.
+    """
+    output = wrapped_function(*args, **kwargs)
+    if trigger_condition(output):
+        raise RuntimeError(f"{raise_error_if.__name__}({trigger_condition.__name__}) "
+                           "triggered because condition was met.\n"
+                           f"Wrapped function: '{wrapped_function.__name__}()' "
+                           f"yielded output value {output}")
