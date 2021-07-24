@@ -14,20 +14,25 @@ This file will only hold the core building blocks used to create decorators.
 """
 import inspect
 import typing as t
-from functools import wraps
-from time import process_time
+from types import MappingProxyType
+from functools import wraps, partial
+from collections import OrderedDict, deque
+from abc import ABC
 import threading
 
+# Local imports
+from .api import MODULE_METHOD_DECORATOR_API
 from .helper.validation import (
     raise_error_if_not_class_instance,
+    is_public_method,
 )
 from .helper.util import (
     create_instance,
     attach_property,
+    create_properties,
 )
 
 from .helper.exceptions import TooSlowError, ImmutableError
-from types import MappingProxyType
 
 # List of specific checks required when creating a decorator
 __DECORATOR_SPECS__ = MappingProxyType({
@@ -331,6 +336,7 @@ def deckorator(*type_template_args,
                                                               *decorator_args,
                                                               *args,
                                                               **kwargs)
+
                             return final_func
 
                     @wraps(decorated_function)
@@ -340,6 +346,7 @@ def deckorator(*type_template_args,
                                                       *decorator_args,
                                                       *args,
                                                       **kwargs)
+
                     return final_func
             else:
                 def wrapped_func(wrapped_object: t.Callable):
@@ -420,6 +427,158 @@ def deckorator(*type_template_args,
     return inner
 
 
+class bind(partial):
+    """
+    An improved version of partial which accepts Ellipsis (...) as a placeholder
+    """
+    def __call__(self, *args, **keywords):
+        keywords = {**self.keywords, **keywords}
+        iargs = iter(args)
+        args = (next(iargs) if arg is ... else arg for arg in self.args)
+        return self.func(*args, *iargs, **keywords)
+
+
+def register_object(self,
+                    decorator_function: t.Callable,
+                    function_to_decorate: t.Callable,
+                    *args,
+                    **kwargs):
+    """
+    Register object to the decko class.
+    Used in conjunction with the @deckorate decorator
+    to add functions to be observed with minimal boilerplate
+    Args:
+        self:
+        decorator_function: The decorator function that was applied
+        function_to_decorate: The function that will be decorated by decorator_function
+
+    Returns:
+        The decorated function that handles registration of the decorator to the decko instance.
+    """
+    print("yeeee")
+
+
+def deckorate_method() -> t.Callable:
+    """
+    Add common metadata to functions and register
+    the decorated function to keep track of its performance
+
+    Returns:
+        Decorator designed to register objects
+    """
+    return bind(deckorator, on_decorator_creation=register_object)
+
+
+deckorate_method = deckorate_method()
+
+
+class Module(ABC):
+    # Key value pairs of required properties
+    # First element is the type of the keyword parameter
+    # The second is the default value to assign
+    FUNCTION_PROPS = OrderedDict({
+        # Users can choose to not compute statistics
+        # Or define their own statistics by calling a custom function
+        # By definition, all statistics are dictionary values, which can be accessed or
+        # printed during runtime.
+        'compute_statistics': ([bool, t.Callable], True),
+        # Callbacks can be specified to perform an event
+        'callback': (t.Callable, None),
+    })
+
+    """
+    A self-contained decko module which is used
+    to manage decorator states.
+    By default, all methods on the module are decorators and are used
+    to wrap functions.
+    All custom modules must extend this function
+    """
+
+    def __init__(self):
+
+        # If set to true, the original
+        # function is returned without decoration
+        self.is_disabled = False
+
+        # A list of functions along with corresponding states
+        self._functions = OrderedDict()
+
+        # Register the function
+        self._register_public_methods()
+
+        self.event_queue = deque()
+
+        # Unlimited size
+        self.event_queue_size_limit = -1
+
+    def _register_public_methods(self, **kwargs):
+        """
+        Register all public methods to compute and update state variables used for debugging.
+        Returns:
+            None. Updates the local state of the current module
+
+        """
+        public_methods = inspect.getmembers(self, predicate=is_public_method)
+        for method_name, method in public_methods:
+            self._register_method(method_name)
+            self._decorate(method)()
+
+    def _add_to_event_queue(self, msg: str) -> None:
+        """
+        Add message to event queue.
+        Args:
+            msg: The message to add. Can be something like
+            "decorator has been successfully registered."
+        """
+        # limited
+        size_limit = self.event_queue_size_limit
+        current_size = len(self.event_queue)
+        if current_size > size_limit:
+            remove_up_to = size_limit - current_size
+            while remove_up_to != 0:
+                self.event_queue.popleft()
+
+        # Lastly, add
+        self.event_queue.append(msg)
+
+    def _register_method(self,
+                         method_name: str):
+        """
+        Register function as a decorator
+        Returns:
+        """
+        # Register new function Locally
+        self._functions[method_name] = {
+            MODULE_METHOD_DECORATOR_API.METHOD: method_name,
+            MODULE_METHOD_DECORATOR_API.DECORATED: [],
+        }
+
+    def __len__(self):
+        """
+        Returns:
+            The number of decorators added to the function.
+        """
+        return len(self._functions.keys())
+
+    @deckorate_method()
+    def _decorate(self,
+                  decorated_function: t.Callable,
+                  *args,
+                  **kwargs):
+        """
+
+        Args:
+            decorated_function:
+            *args:
+            **kwargs:
+
+        Returns:
+
+        """
+        print(f"decorated: {decorated_function.__name__}, {args}, {kwargs}")
+        return deckorator(*args, *kwargs)(decorated_function)
+
+
 # --------------------------------------------
 # ------------ Utility decorators ------------
 # --------------------------------------------
@@ -478,6 +637,7 @@ def freeze(cls: t.Type[t.Any],
     are mutated or if new classes are added
     :param cls: A Class
     """
+
     def do_freeze(slf, name, value):
         msg = f"Class {type(slf)} is frozen. " \
               f"Attempted to set attribute '{name}' to value: '{value}'"

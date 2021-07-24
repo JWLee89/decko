@@ -56,6 +56,7 @@ from functools import wraps, partial
 import typing as t
 
 # Local imports
+from .api import FUNCTION_DECORATOR_API
 from .helper import exceptions
 from .helper import util
 from .helper.validation import (
@@ -72,18 +73,6 @@ class InspectMode:
     ALL = 0
     PUBLIC_ONLY = 1
     PRIVATE_ONLY = 2
-
-
-class API_KEYS:
-    # Properties
-    PROPS = 'props'
-    STATS_INPUT = 'input'
-    FUNC_NAME = 'name'
-    FUNCTION = 'func'
-    DECORATED_WITH = 'decorated_with'
-
-    # Used with callback
-    CALLBACK = 'callback'
 
 
 class CustomFunction(dict):
@@ -269,14 +258,14 @@ class Decko:
             # func: t.Callable = self._decorate_func(self.pure, func, **kw)
 
             # Raise exception by default if modified.
-            if API_KEYS.CALLBACK not in kw:
+            if FUNCTION_DECORATOR_API.CALLBACK not in kw:
                 def event_cb(argument_name, before, after):
                     raise exceptions.MutatedReferenceError(
                         f"Original input modified: {argument_name}. Before: {before}, "
                         f"after: {after}"
                     )
             else:
-                event_cb = kw[API_KEYS.CALLBACK]
+                event_cb = kw[FUNCTION_DECORATOR_API.CALLBACK]
 
             @wraps(func)
             def inner(*args, **kwargs):
@@ -767,7 +756,7 @@ class Decko:
         if func_to_decorate_name in self.functions:
 
             # Check if function is already decorated with same decorator
-            decorator_repository: t.List = self.functions[func_to_decorate_name][API_KEYS.DECORATED_WITH]
+            decorator_repository: t.List = self.functions[func_to_decorate_name][FUNCTION_DECORATOR_API.DECORATED_WITH]
 
             # If decorated, we disallow duplicate decorator since it serves no purpose
             if decorator_func_name in decorator_repository:
@@ -783,9 +772,9 @@ class Decko:
         else:
             # Register new function Locally
             self.functions[func_to_decorate_name] = {
-                API_KEYS.FUNCTION: func_to_decorate,
-                API_KEYS.PROPS: props,
-                API_KEYS.DECORATED_WITH: [decorator_func_name]
+                FUNCTION_DECORATOR_API.FUNCTION: func_to_decorate,
+                FUNCTION_DECORATOR_API.PROPS: props,
+                FUNCTION_DECORATOR_API.DECORATED_WITH: [decorator_func_name]
             }
 
             # Add to global state
@@ -829,8 +818,8 @@ class Decko:
               **kw):
         def wrapper(func):
             func_name: str = get_unique_func_name(func)
-            if API_KEYS.CALLBACK in kw and callable(kw[API_KEYS.CALLBACK]):
-                callback = kw[API_KEYS.CALLBACK]
+            if FUNCTION_DECORATOR_API.CALLBACK in kw and callable(kw[FUNCTION_DECORATOR_API.CALLBACK]):
+                callback = kw[FUNCTION_DECORATOR_API.CALLBACK]
             else:
                 callback = self.log_debug
 

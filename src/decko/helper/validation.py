@@ -93,3 +93,7 @@ def is_instancemethod(func: t.Callable) -> bool:
 
     return not is_classmethod(func) and not is_staticmethod(func) \
            and getattr(func, '__self__', None) is not None
+
+
+def is_public_method(func: t.Callable) -> bool:
+    return inspect.ismethod(func) and not func.__name__.startswith('_')
