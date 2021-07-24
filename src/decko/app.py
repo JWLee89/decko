@@ -133,7 +133,7 @@ def register_object(self,
     Args:
         self:
         decorator_function: The decorator function that was applied
-        function_to_decorate: The function that will be decorated by decorator_function
+        function_to_decorate: The function that will be decorated by decorator_method
 
     Returns:
         The decorated function that handles registration of the decorator to the decko instance.

@@ -18,6 +18,7 @@ from types import MappingProxyType
 from functools import wraps, partial
 from collections import OrderedDict, deque
 from abc import ABC
+from time import process_time
 import threading
 
 # Local imports
@@ -439,7 +440,7 @@ class bind(partial):
 
 
 def register_object(self,
-                    decorator_function: t.Callable,
+                    decorator_method: t.Callable,
                     function_to_decorate: t.Callable,
                     *args,
                     **kwargs):
@@ -449,13 +450,17 @@ def register_object(self,
     to add functions to be observed with minimal boilerplate
     Args:
         self:
-        decorator_function: The decorator function that was applied
+        decorator_method: The decorator function that was applied
         function_to_decorate: The function that will be decorated by decorator_function
 
     Returns:
         The decorated function that handles registration of the decorator to the decko instance.
     """
-    print("yeeee")
+    method_name = decorator_method.__name__
+    functions = self._functions
+    if method_name in functions:
+        functions[method_name][MODULE_METHOD_DECORATOR_API.DECORATED].append(function_to_decorate.__name__)
+    raise ValueError("This should never happen. Programmer made a mistake")
 
 
 def deckorate_method() -> t.Callable:
@@ -506,12 +511,13 @@ class Module(ABC):
         # Register the function
         self._register_public_methods()
 
+        # list takes O(N) to remove from the front.
         self.event_queue = deque()
 
         # Unlimited size
         self.event_queue_size_limit = -1
 
-    def _register_public_methods(self, **kwargs):
+    def _register_public_methods(self):
         """
         Register all public methods to compute and update state variables used for debugging.
         Returns:
@@ -520,8 +526,8 @@ class Module(ABC):
         """
         public_methods = inspect.getmembers(self, predicate=is_public_method)
         for method_name, method in public_methods:
-            self._register_method(method_name)
-            self._decorate(method)()
+            print(f"Method name: {method_name}, {method}")
+            self._register_method(method_name, method)
 
     def _add_to_event_queue(self, msg: str) -> None:
         """
@@ -542,14 +548,17 @@ class Module(ABC):
         self.event_queue.append(msg)
 
     def _register_method(self,
-                         method_name: str):
+                         method_name: str,
+                         method: t.Callable):
         """
         Register function as a decorator
-        Returns:
+        Args:
+            method_name: The name of the method
+            method: The actual method object
         """
         # Register new function Locally
         self._functions[method_name] = {
-            MODULE_METHOD_DECORATOR_API.METHOD: method_name,
+            MODULE_METHOD_DECORATOR_API.METHOD: method,
             MODULE_METHOD_DECORATOR_API.DECORATED: [],
         }
 
@@ -559,25 +568,6 @@ class Module(ABC):
             The number of decorators added to the function.
         """
         return len(self._functions.keys())
-
-    @deckorate_method()
-    def _decorate(self,
-                  decorated_function: t.Callable,
-                  *args,
-                  **kwargs):
-        """
-
-        Args:
-            decorated_function:
-            *args:
-            **kwargs:
-
-        Returns:
-
-        """
-        print(f"decorated: {decorated_function.__name__}, {args}, {kwargs}")
-        return deckorator(*args, *kwargs)(decorated_function)
-
 
 # --------------------------------------------
 # ------------ Utility decorators ------------
