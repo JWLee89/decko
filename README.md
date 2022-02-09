@@ -63,7 +63,7 @@ def timer(func):
     return inner
 
 # Create decorator called "time_it" that accepts the following args
-# 1. Int value
+# 1. Int or float value
 # 2. A callable object or a List
 @deckorator((int, float), (t.Callable, t.List))
 def time_it(wrapped_function,
